@@ -170,34 +170,34 @@ export default function AdminUsersPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/admin"
-            className="p-2 rounded-xl bg-[#161a29] border border-[#232a40] text-gray-300 hover:text-white"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="relative min-w-[280px]">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="নাম, ইমেইল, ব্যবসা বা FB Page URL খুঁজুন..."
-              className="w-full pl-9 pr-3 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
             />
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          মোট ব্যবহারকারী: <strong className="text-white">{filteredUsers.length}</strong> জন
+        <div className="text-xs text-slate-500">
+          মোট ব্যবহারকারী: <strong className="text-slate-900">{filteredUsers.length}</strong> জন
         </div>
       </div>
 
       {loading ? (
-        <div className="py-24 text-center text-sm text-gray-400">ব্যবহারকারী তালিকা লোড হচ্ছে...</div>
+        <div className="py-24 text-center text-sm text-slate-500">ব্যবহারকারী তালিকা লোড হচ্ছে...</div>
       ) : (
-        <div className="bg-[#12141c] border border-[#1f2433] rounded-2xl shadow-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-300">
-              <thead className="bg-[#0d0f17] text-gray-400 border-b border-[#1f2433] uppercase text-[10px] tracking-wider">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 font-semibold">ব্যবহারকারী</th>
                   <th className="py-3.5 px-4 font-semibold">ব্যবসা ও ফেসবুক পেজ</th>
@@ -209,11 +209,11 @@ export default function AdminUsersPage() {
                   <th className="py-3.5 px-4 font-semibold text-right">একশন</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1a1f2e]">
+              <tbody className="divide-y divide-slate-100">
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-[#161a29]/60 transition-colors">
+                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white">{u.fullName}</div>
+                      <div className="font-semibold text-slate-900">{u.fullName}</div>
                       <div className="text-[11px] text-gray-400 font-mono">{u.email}</div>
                       {u.phone && (
                         <div className="flex items-center gap-1 mt-0.5">
@@ -338,21 +338,21 @@ export default function AdminUsersPage() {
 
       {/* Edit User Modal */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#12141c] border border-[#1f2433] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               onClick={() => setEditingUser(null)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-bold text-white mb-1">ব্যবহারকারী তথ্য এডিট (Edit Profile)</h3>
-            <p className="text-xs text-gray-400 mb-6">{editingUser.email}</p>
+            <h3 className="text-base font-bold text-slate-900 mb-1">ব্যবহারকারী তথ্য এডিট (Edit Profile)</h3>
+            <p className="text-xs text-slate-500 mb-6">{editingUser.email}</p>
 
             <form onSubmit={handleSaveUser} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   নাম
                 </label>
                 <input
@@ -360,12 +360,12 @@ export default function AdminUsersPage() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   ব্যবসার নাম
                 </label>
                 <input
@@ -373,12 +373,12 @@ export default function AdminUsersPage() {
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   ফেসবুক পেজ লিঙ্ক (Facebook Page URL)
                 </label>
                 <input
@@ -386,12 +386,12 @@ export default function AdminUsersPage() {
                   value={facebookPageUrl}
                   onChange={(e) => setFacebookPageUrl(e.target.value)}
                   placeholder="https://facebook.com/yourpage"
-                  className="w-full px-3.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   মোবাইল / WhatsApp নম্বর (Mobile/WhatsApp Number)
                 </label>
                 <input
@@ -399,18 +399,18 @@ export default function AdminUsersPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="যেমন: +8801521716613"
-                  className="w-full px-3.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
               {/* Set New Password for User */}
-              <div className="p-3.5 rounded-2xl bg-[#090b14] border border-purple-900/30">
-                <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80">
+                <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-purple-400" />
+                    <Key className="w-3.5 h-3.5 text-purple-600" />
                     <span>নতুন পাসওয়ার্ড সেট করুন (Set New Password)</span>
                   </span>
-                  <span className="text-[10px] text-gray-500 font-normal">পরিবর্তন করতে চাইলে লিখুন</span>
+                  <span className="text-[10px] text-purple-600 font-normal">পরিবর্তন করতে চাইলে লিখুন</span>
                 </label>
                 <div className="relative">
                   <input
@@ -418,12 +418,12 @@ export default function AdminUsersPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)..."
-                    className="w-full pl-3.5 pr-10 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full pl-3.5 pr-10 py-2 bg-white border border-purple-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
                     title={showNewPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন'}
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -433,11 +433,11 @@ export default function AdminUsersPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">রোল (Role)</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">রোল (Role)</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
                   >
                     <option value="USER">USER</option>
                     <option value="ADMIN">ADMIN</option>
@@ -445,11 +445,11 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">স্ট্যাটাস</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">স্ট্যাটাস</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
                   >
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="DISABLED">DISABLED</option>
@@ -457,11 +457,11 @@ export default function AdminUsersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-gray-300 mb-1">প্ল্যান (Plan)</label>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">প্ল্যান (Plan)</label>
                   <select
                     value={plan}
                     onChange={(e) => setPlan(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-[#090b14] border border-[#1f2433] rounded-xl text-white text-xs"
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
                   >
                     <option value="STARTER">STARTER</option>
                     <option value="BUSINESS">BUSINESS</option>
@@ -470,18 +470,18 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1f2433]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 rounded-xl bg-[#090b14] text-gray-400 text-xs font-semibold hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-colors"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 disabled:opacity-50 transition-all"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-purple-500/20 disabled:opacity-50 transition-all"
                 >
                   {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
                 </button>

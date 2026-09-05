@@ -51,10 +51,10 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#090710] flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-purple-300 font-medium">অ্যাডমিন অধিকার যাচাই করা হচ্ছে...</p>
+          <div className="w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-purple-700 font-medium">অ্যাডমিন অধিকার যাচাই করা হচ্ছে...</p>
         </div>
       </div>
     );
@@ -62,18 +62,18 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
 
   if (isUnauthorized) {
     return (
-      <div className="min-h-screen bg-[#090710] flex items-center justify-center p-4">
-        <div className="bg-[#140f24] border border-red-500/30 rounded-3xl p-8 sm:p-12 text-center max-w-md w-full shadow-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 text-red-400 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4">
+        <div className="bg-white border border-rose-200 rounded-3xl p-8 sm:p-12 text-center max-w-md w-full shadow-xl">
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
             <ShieldAlert className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-white mb-2">অ্যাক্সেস ডিনাইড (Access Denied)</h3>
-          <p className="text-xs text-red-300 mb-6 leading-relaxed">
+          <h3 className="text-lg font-bold text-slate-900 mb-2">অ্যাক্সেস ডিনাইড (Access Denied)</h3>
+          <p className="text-xs text-rose-600 mb-6 leading-relaxed">
             এই পেজটি শুধুমাত্র সিস্টেম অ্যাডমিনিস্ট্রেটরদের জন্য সংরক্ষিত। আপনার অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই।
           </p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs transition-colors shadow-xs"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>ইউজার ড্যাশবোর্ডে ফিরে যান</span>
@@ -85,21 +85,21 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[#090710] text-gray-100 flex flex-col">
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col min-w-0 max-w-full overflow-x-hidden">
         <AdminSidebar
           user={user}
           isOpenMobile={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
         />
 
-        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen">
+        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen min-w-0 max-w-full">
           <Header
             title={title}
             subtitle={subtitle}
             onOpenMobile={() => setMobileOpen(true)}
           />
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">
             {children}
           </main>
         </div>

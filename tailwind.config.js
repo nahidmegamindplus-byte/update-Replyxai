@@ -10,10 +10,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#090a0f',
-        card: '#12141c',
-        'card-hover': '#181b26',
-        border: '#1f2433',
+        background: '#f8fafc',
+        card: '#ffffff',
+        'card-hover': '#f1f5f9',
+        border: '#e2e8f0',
         primary: {
           50: '#ecfdf5',
           100: '#d1fae5',

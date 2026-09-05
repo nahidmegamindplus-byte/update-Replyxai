@@ -47,6 +47,9 @@ model User {
 model Page {
   id                        String        @id @default(uuid())
   userId                    String
+  channel                   String        @default("FACEBOOK") // FACEBOOK, WHATSAPP, INSTAGRAM, X, TELEGRAM
+  channelIdentifier         String?
+  extraConfig               String?
   facebookPageId            String
   pageName                  String
   pageUsername              String?
@@ -60,11 +63,20 @@ model Page {
   humanHandoffEnabled       Boolean       @default(true)
   replyLanguage             String        @default("AUTO") // AUTO, BANGLA, ENGLISH, BANGLISH
   replyStyle                String        @default("FRIENDLY") // PROFESSIONAL, FRIENDLY, SALES_FOCUSED, SHORT, CASUAL
+  replyDelaySeconds         Int           @default(3) // 0 for instant, 2-30 for natural human pacing
   aiInstructions            String?
   productImageReply         Boolean       @default(true)
+  maxImagesPerConversation  Int           @default(2) // 0 for unlimited, or 1, 2, 3, etc.
   orderDetection            Boolean       @default(true)
   voiceProcessing           Boolean       @default(true)
   imageUnderstanding        Boolean       @default(true)
+  followUpEnabled           Boolean       @default(false)
+  followUpWaitMinutes       Int           @default(30) // Minutes to wait after seen/last message (e.g. 1, 5, 15, 30, 60)
+  followUpMessage           String?       // Custom follow-up message template
+  followUpOnlySeen          Boolean       @default(true) // Only send if customer seen/read the message
+  followUpMaxCount          Int           @default(1) // How many times total: 1 (only once), 2, 3, 5, or 99 (unlimited until reply)
+  followUpFrequency         String        @default("ONCE") // "ONCE" (only 1 time ever), "DAILY" (every day), "CUSTOM_INTERVAL" (every N hours)
+  followUpIntervalHours     Int           @default(24) // If DAILY or CUSTOM_INTERVAL: gap in hours between subsequent follow-ups
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
 
@@ -78,6 +90,7 @@ model Page {
   @@unique([userId, facebookPageId])
   @@index([userId])
   @@index([facebookPageId])
+  @@index([channel])
 }
 
 model Product {
@@ -111,6 +124,7 @@ model Conversation {
   id            String        @id @default(uuid())
   userId        String
   pageId        String
+  channel       String        @default("FACEBOOK") // FACEBOOK, WHATSAPP, INSTAGRAM, X, TELEGRAM
   senderPsid    String
   customerName  String?
   lastMessage   String?
@@ -118,6 +132,10 @@ model Conversation {
   status        String        @default("ACTIVE") // ACTIVE, HUMAN_MODE, RESOLVED
   aiEnabled     Boolean       @default(true)
   unreadCount   Int           @default(0)
+  lastSeenAt    DateTime?     // When the customer seen / read the last reply
+  lastFollowUpSentAt DateTime? // When the automated follow-up was dispatched
+  followUpSentCount  Int           @default(0) // How many automated follow-up messages have been dispatched
+  imagesSentCount    Int           @default(0) // How many product images have been sent in this conversation
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -129,6 +147,7 @@ model Conversation {
   @@unique([pageId, senderPsid])
   @@index([userId])
   @@index([pageId])
+  @@index([channel])
   @@index([senderPsid])
   @@index([lastMessageAt])
 }

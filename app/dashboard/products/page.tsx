@@ -227,27 +227,27 @@ export default function ProductsPage() {
         <div className="flex flex-wrap items-center gap-3 flex-1">
           {/* Search Box */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="নাম, কোড (SKU) দিয়ে খুঁজুন..."
-              className="w-full pl-10 pr-4 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-emerald-500"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 transition-all"
             />
           </div>
 
           {/* Facebook Page Filter */}
-          <div className="flex items-center gap-1.5 bg-[#12141c] border border-[#1f2433] rounded-xl px-2 py-1">
-            <Layers className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1">
+            <Layers className="w-3.5 h-3.5 text-indigo-600" />
             <select
               value={selectedPage}
               onChange={(e) => setSelectedPage(e.target.value)}
-              className="bg-transparent text-xs text-gray-300 focus:outline-none py-1 pr-2"
+              className="bg-transparent text-xs text-slate-700 focus:outline-none py-1 pr-2"
             >
-              <option value="ALL" className="bg-[#12141c] text-white">সকল Facebook Pages</option>
+              <option value="ALL">সকল Facebook Pages</option>
               {pages.map((pg) => (
-                <option key={pg.id} value={pg.id} className="bg-[#12141c] text-white">
+                <option key={pg.id} value={pg.id}>
                   📄 {pg.pageName}
                 </option>
               ))}
@@ -258,7 +258,7 @@ export default function ProductsPage() {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-xs text-gray-300 focus:outline-none focus:border-emerald-500"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="ALL">সকল ক্যাটাগরি</option>
             {categories.map((c) => (
@@ -272,7 +272,7 @@ export default function ProductsPage() {
           <select
             value={selectedStock}
             onChange={(e) => setSelectedStock(e.target.value)}
-            className="px-3 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-xs text-gray-300 focus:outline-none focus:border-emerald-500"
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="ALL">সকল স্টক অবস্থা</option>
             <option value="IN_STOCK">স্টকে আছে (In Stock)</option>
@@ -283,7 +283,7 @@ export default function ProductsPage() {
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-xs transition-all shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>নতুন প্রোডাক্ট যোগ করুন</span>
@@ -292,19 +292,19 @@ export default function ProductsPage() {
 
       {/* Product Grid / Cards */}
       {loading ? (
-        <div className="py-24 text-center text-sm text-gray-400">প্রোডাক্ট লোড হচ্ছে...</div>
+        <div className="py-24 text-center text-sm text-slate-500">প্রোডাক্ট লোড হচ্ছে...</div>
       ) : products.length === 0 ? (
-        <div className="bg-[#12141c] border border-[#1f2433] rounded-3xl p-12 text-center max-w-xl mx-auto my-8">
-          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mx-auto mb-4 border border-cyan-500/20">
+        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-xl mx-auto my-8 shadow-2xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 border border-indigo-200">
             <Package className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-white mb-2">কোনো প্রোডাক্ট পাওয়া যায়নি</h3>
-          <p className="text-xs text-gray-400 mb-6 leading-relaxed">
+          <h3 className="text-lg font-bold text-slate-900 mb-2">কোনো প্রোডাক্ট পাওয়া যায়নি</h3>
+          <p className="text-xs text-slate-500 mb-6 leading-relaxed">
             AI যেন মেসেঞ্জারে গ্রাহকদের সঠিক দাম, বিবরণ ও পণ্যের ছবি দেখাতে পারে, সেজন্য আপনার প্রোডাক্টগুলো এখানে যুক্ত করুন।
           </p>
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-xs"
           >
             <Plus className="w-4 h-4" /> নতুন প্রোডাক্ট যোগ করুন
           </button>
@@ -314,11 +314,11 @@ export default function ProductsPage() {
           {products.map((p) => (
             <div
               key={p.id}
-              className="bg-[#12141c] border border-[#1f2433] hover:border-emerald-500/30 rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between group"
+              className="bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-5 transition-all shadow-xs hover:shadow-md flex flex-col justify-between group"
             >
               <div>
                 {/* Product Image & Badges */}
-                <div className="relative w-full h-48 rounded-xl bg-[#0a0c13] border border-[#1e2538] overflow-hidden mb-4 flex items-center justify-center">
+                <div className="relative w-full h-48 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden mb-4 flex items-center justify-center">
                   {p.imageUrl ? (
                     <img
                       src={p.imageUrl}
@@ -326,73 +326,73 @@ export default function ProductsPage() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-1 text-gray-600">
+                    <div className="flex flex-col items-center gap-1 text-slate-400">
                       <ImageIcon className="w-10 h-10 stroke-1" />
                       <span className="text-[11px]">ছবি নেই</span>
                     </div>
                   )}
 
                   {/* Price Tag */}
-                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-xs font-bold text-emerald-400">
+                  <div className="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-slate-200 text-xs font-bold text-indigo-700 shadow-xs">
                     {p.discountPrice ? `${p.discountPrice} ৳` : `${p.price} ৳`}
                     {p.discountPrice && (
-                      <span className="text-[10px] line-through text-gray-400 ml-1.5">{p.price} ৳</span>
+                      <span className="text-[10px] line-through text-slate-400 ml-1.5">{p.price} ৳</span>
                     )}
                   </div>
 
                   {/* Category Badge */}
                   {p.category && (
-                    <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-[#12141c]/90 backdrop-blur-md text-[10px] font-semibold text-gray-300 border border-white/10">
+                    <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-white/90 backdrop-blur-md text-[10px] font-semibold text-slate-700 border border-slate-200 shadow-2xs">
                       {p.category}
                     </div>
                   )}
 
                   {/* Connected Page Badge */}
-                  <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md text-[10px] font-semibold text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
-                    <Layers className="w-3 h-3 text-cyan-400" />
+                  <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-md text-[10px] font-semibold text-slate-700 border border-slate-200 flex items-center gap-1 shadow-2xs">
+                    <Layers className="w-3 h-3 text-indigo-600" />
                     <span>{p.page ? p.page.pageName : 'সকল Page (Global)'}</span>
                   </div>
                 </div>
 
                 {/* Title & Description */}
-                <h3 className="text-base font-bold text-white mb-1 line-clamp-1">{p.name}</h3>
-                <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed mb-3">
+                <h3 className="text-base font-bold text-slate-900 mb-1 line-clamp-1">{p.name}</h3>
+                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
                   {p.description || 'কোনো বিবরণ যোগ করা হয়নি।'}
                 </p>
 
                 {/* Stock and SKU */}
-                <div className="flex items-center justify-between text-xs py-2 border-t border-[#1a1f2e] text-gray-400">
+                <div className="flex items-center justify-between text-xs py-2 border-t border-slate-100 text-slate-500">
                   <div className="flex items-center gap-1.5">
                     {p.stockStatus === 'IN_STOCK' ? (
-                      <span className="text-emerald-400 flex items-center gap-1 text-[11px] font-medium">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> স্টকে আছে ({p.stockQuantity}টি)
+                      <span className="text-emerald-700 flex items-center gap-1 text-[11px] font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> স্টকে আছে ({p.stockQuantity}টি)
                       </span>
                     ) : p.stockStatus === 'PRE_ORDER' ? (
-                      <span className="text-amber-400 flex items-center gap-1 text-[11px] font-medium">
-                        <Clock className="w-3.5 h-3.5" /> প্রি-অর্ডার
+                      <span className="text-amber-700 flex items-center gap-1 text-[11px] font-medium">
+                        <Clock className="w-3.5 h-3.5 text-amber-600" /> প্রি-অর্ডার
                       </span>
                     ) : (
-                      <span className="text-red-400 flex items-center gap-1 text-[11px] font-medium">
-                        <XCircle className="w-3.5 h-3.5" /> স্টক শেষ
+                      <span className="text-rose-700 flex items-center gap-1 text-[11px] font-medium">
+                        <XCircle className="w-3.5 h-3.5 text-rose-600" /> স্টক শেষ
                       </span>
                     )}
                   </div>
-                  {p.sku && <span className="font-mono text-[11px] text-gray-500">SKU: {p.sku}</span>}
+                  {p.sku && <span className="font-mono text-[11px] text-slate-400">SKU: {p.sku}</span>}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-[#1a1f2e] mt-2">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 mt-2">
                 <button
                   onClick={() => handleDuplicate(p.id)}
                   title="ডুপ্লিকেট করুন"
-                  className="p-2 rounded-xl bg-[#1a1f2e] hover:bg-[#252c40] text-gray-300 hover:text-white transition-colors"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
                 >
                   <Copy className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => handleOpenEdit(p)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#1a1f2e] hover:bg-[#252c40] text-gray-200 text-xs font-semibold transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-semibold border border-slate-200/80 transition-colors"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>এডিট</span>
@@ -400,7 +400,7 @@ export default function ProductsPage() {
                 <button
                   onClick={() => handleDelete(p.id, p.name)}
                   title="মুছে ফেলুন"
-                  className="p-2 rounded-xl bg-[#1a1f2e] hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -412,31 +412,31 @@ export default function ProductsPage() {
 
       {/* Add / Edit Product Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-[#12141c] border border-[#1f2433] rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-lg font-bold text-white mb-1">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
               {isEditing ? 'প্রোডাক্ট তথ্য পরিবর্তন করুন' : 'নতুন প্রোডাক্ট যুক্ত করুন'}
             </h3>
-            <p className="text-xs text-gray-400 mb-6">AI এই তথ্যের উপর ভিত্তি করে পেজের কাস্টমারদের উত্তর ও ছবি প্রদান করবে</p>
+            <p className="text-xs text-slate-500 mb-6">AI এই তথ্যের উপর ভিত্তি করে পেজের কাস্টমারদের উত্তর ও ছবি প্রদান করবে</p>
 
             <form onSubmit={handleSave} className="space-y-4">
               {/* Facebook Page Assignment */}
               <div>
-                <label className="block text-xs font-semibold text-cyan-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
                   <span>সংযুক্ত Facebook Page নির্ধারণ করুন</span>
                 </label>
                 <select
                   value={formData.pageId}
                   onChange={(e) => setFormData({ ...formData, pageId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-[#0a0c13] border border-cyan-500/30 rounded-xl text-white text-xs focus:outline-none focus:border-cyan-400"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                 >
                   <option value="ALL">🌐 সকল সংযুক্ত Facebook Pages (গ্লোবাল পণ্য)</option>
                   {pages.map((pg) => (
@@ -449,8 +449,8 @@ export default function ProductsPage() {
 
               {/* Product Name */}
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  পণ্যের নাম (Product Name) <span className="text-red-400">*</span>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  পণ্যের নাম (Product Name) <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -458,15 +458,15 @@ export default function ProductsPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="যেমন: প্রিমিয়াম কটন পাঞ্জাবি"
-                  className="w-full px-3.5 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
               {/* Price & Discount */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                    মূল্য (Regular Price ৳) <span className="text-red-400">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    মূল্য (Regular Price ৳) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -474,12 +474,12 @@ export default function ProductsPage() {
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="যেমন: 1850"
-                    className="w-full px-3.5 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     অফার মূল্য (Discount Price ৳)
                   </label>
                   <input
@@ -487,7 +487,7 @@ export default function ProductsPage() {
                     value={formData.discountPrice}
                     onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
                     placeholder="যেমন: 1490"
-                    className="w-full px-3.5 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
               </div>
@@ -495,7 +495,7 @@ export default function ProductsPage() {
               {/* Category, SKU, Stock */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     ক্যাটাগরি
                   </label>
                   <input
@@ -503,12 +503,12 @@ export default function ProductsPage() {
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     placeholder="পাঞ্জাবি / জুতা"
-                    className="w-full px-3 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     SKU / কোড
                   </label>
                   <input
@@ -516,18 +516,18 @@ export default function ProductsPage() {
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                     placeholder="PJB-001"
-                    className="w-full px-3 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     স্টক অবস্থা
                   </label>
                   <select
                     value={formData.stockStatus}
                     onChange={(e) => setFormData({ ...formData, stockStatus: e.target.value })}
-                    className="w-full px-2 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-2 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                   >
                     <option value="IN_STOCK">ইন স্টক</option>
                     <option value="OUT_OF_STOCK">স্টক শেষ</option>
@@ -537,21 +537,21 @@ export default function ProductsPage() {
               </div>
 
               {/* Product Image Section (Upload & URL) */}
-              <div className="p-4 rounded-2xl bg-[#0a0c13] border border-[#1e2538] space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-indigo-600" />
                     <span>প্রোডাক্টের ছবি (Product Image)</span>
                   </label>
 
-                  <div className="flex items-center gap-1 bg-[#12141c] p-1 rounded-lg border border-[#1e2538]">
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
                     <button
                       type="button"
                       onClick={() => setImageUploadMode('upload')}
                       className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
                         imageUploadMode === 'upload'
-                          ? 'bg-emerald-500 text-black font-bold'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       ডিভাইস থেকে ফাইল
@@ -561,8 +561,8 @@ export default function ProductsPage() {
                       onClick={() => setImageUploadMode('url')}
                       className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
                         imageUploadMode === 'url'
-                          ? 'bg-emerald-500 text-black font-bold'
-                          : 'text-gray-400 hover:text-white'
+                          ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       Image URL
@@ -572,18 +572,18 @@ export default function ProductsPage() {
 
                 {/* Image Preview Box */}
                 {formData.imageUrl && (
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#12141c] border border-emerald-500/30">
-                    <div className="w-16 h-16 rounded-lg bg-black overflow-hidden shrink-0 border border-white/10">
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-indigo-200 shadow-2xs">
+                    <div className="w-16 h-16 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
                       <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 overflow-hidden">
-                      <p className="text-xs font-semibold text-emerald-400">ছবি সংযুক্ত আছে</p>
-                      <p className="text-[10px] text-gray-400 truncate font-mono">{formData.imageUrl.substring(0, 45)}...</p>
+                      <p className="text-xs font-semibold text-indigo-700">ছবি সংযুক্ত আছে</p>
+                      <p className="text-[10px] text-slate-500 truncate font-mono">{formData.imageUrl.substring(0, 45)}...</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, imageUrl: '' })}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                       title="ছবি বাতিল করুন"
                     >
                       <X className="w-4 h-4" />
@@ -604,9 +604,9 @@ export default function ProductsPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 px-4 rounded-xl border border-dashed border-[#2d374e] hover:border-emerald-500/50 bg-[#12141c]/50 hover:bg-[#12141c] text-gray-300 hover:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 transition-all"
+                      className="w-full py-3 px-4 rounded-xl border border-dashed border-slate-300 hover:border-indigo-500 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs"
                     >
-                      <Upload className="w-4 h-4 text-emerald-400" />
+                      <Upload className="w-4 h-4 text-indigo-600" />
                       <span>{formData.imageUrl ? 'অন্য ছবি পরিবর্তন করুন' : 'কম্পিউটার/মোবাইল থেকে ছবি সিলেক্ট করুন'}</span>
                     </button>
                   </div>
@@ -617,7 +617,7 @@ export default function ProductsPage() {
                       value={formData.imageUrl}
                       onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                       placeholder="https://example.com/product-image.jpg"
-                      className="w-full px-3.5 py-2 bg-[#12141c] border border-[#1e2538] rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                      className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 font-mono"
                     />
                   </div>
                 )}
@@ -625,7 +625,7 @@ export default function ProductsPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   প্রোডাক্টের বিবরণ (Description)
                 </label>
                 <textarea
@@ -633,13 +633,13 @@ export default function ProductsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="উপাদান, সাইজ বা অন্যান্য বৈশিষ্ট্য..."
-                  className="w-full px-3.5 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
               {/* Delivery Info */}
               <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   ডেলিভারি তথ্য
                 </label>
                 <input
@@ -647,23 +647,23 @@ export default function ProductsPage() {
                   value={formData.deliveryInfo}
                   onChange={(e) => setFormData({ ...formData, deliveryInfo: e.target.value })}
                   placeholder="যেমন: ঢাকা ৭০ টাকা, বাইরে ১৩০ টাকা। ক্যাশ অন ডেলিভারি আছে।"
-                  className="w-full px-3.5 py-2 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
 
               {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1e2538]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl bg-[#1a1f2e] text-gray-300 text-xs font-semibold hover:bg-[#252c40]"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs disabled:opacity-50 transition-colors"
                 >
                   {saving ? 'সংরক্ষণ হচ্ছে...' : isEditing ? 'আপডেট করুন' : 'যোগ করুন'}
                 </button>

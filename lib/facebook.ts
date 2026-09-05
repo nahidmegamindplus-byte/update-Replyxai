@@ -194,3 +194,30 @@ export async function sendMessengerImage(
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Fetch real user profile (first_name, last_name, profile_pic) from Facebook Graph API
+ */
+export async function getFacebookUserProfile(
+  senderPsid: string,
+  accessToken: string
+): Promise<{ name?: string; profilePic?: string } | null> {
+  try {
+    if (!accessToken || !senderPsid) return null;
+    const res = await fetch(
+      `${GRAPH_BASE_URL}/${senderPsid}?fields=first_name,last_name,profile_pic&access_token=${encodeURIComponent(accessToken)}`,
+      { method: 'GET' }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ').trim();
+    return {
+      name: fullName || undefined,
+      profilePic: data.profile_pic || undefined,
+    };
+  } catch (err) {
+    serverLogger.warn('Error fetching Facebook user profile:', err);
+    return null;
+  }
+}
+

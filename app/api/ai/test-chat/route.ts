@@ -25,19 +25,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!targetPageId) {
-      // Create a default demo page context if none exists in entire database
-      const defaultPage = await prisma.page.create({
-        data: {
-          userId: auth.user.id,
-          facebookPageId: `demo_page_${Date.now()}`,
-          pageName: 'ReplyX AI Demo Store',
-          pageAccessTokenEncrypted: 'mock_token',
-          verifyTokenEncrypted: 'mock_verify',
-          webhookStatus: 'ACTIVE',
-          connectionStatus: 'CONNECTED',
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'কোনো পেজ বা চ্যানেল সংযুক্ত করা হয়নি। অনুগ্রহ করে প্রথমে "পেজ ও চ্যানেল" সেকশন থেকে আপনার পেজ যুক্ত করুন।',
         },
-      });
-      targetPageId = defaultPage.id;
+        { status: 400 }
+      );
     }
 
     const aiResult = await generateAIReply({

@@ -49,10 +49,10 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#090a0f] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-gray-400 font-medium">ReplyX AI লোড হচ্ছে...</p>
+          <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500 font-medium">ReplyX AI লোড হচ্ছে...</p>
         </div>
       </div>
     );
@@ -60,21 +60,21 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-[#090a0f] text-gray-100 flex flex-col">
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col">
         <Sidebar
           user={user}
           isOpenMobile={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
         />
 
-        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen">
+        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden">
           <Header
             title={title}
             subtitle={subtitle}
             onOpenMobile={() => setMobileOpen(true)}
           />
 
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0">
             {children}
           </main>
         </div>

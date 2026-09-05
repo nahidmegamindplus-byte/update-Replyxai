@@ -17,9 +17,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="bn" className="dark" suppressHydrationWarning>
+    <html lang="bn" className="light" suppressHydrationWarning>
       <body
-        className="bg-[#090a0f] text-gray-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-300"
+        className="bg-[#f8fafc] text-slate-900 antialiased selection:bg-indigo-500/20 selection:text-indigo-700"
         suppressHydrationWarning
       >
         <ToastProvider>

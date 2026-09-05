@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
+    const channel = searchParams.get('channel') || '';
     const pageId = searchParams.get('pageId') || '';
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -29,6 +30,10 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
+    if (channel && channel !== 'ALL') {
+      where.channel = channel.toUpperCase();
+    }
+
     if (pageId && pageId !== 'ALL') {
       where.pageId = pageId;
     }
@@ -43,6 +48,8 @@ export async function GET(req: NextRequest) {
           page: {
             select: {
               id: true,
+              channel: true,
+              channelIdentifier: true,
               pageName: true,
               facebookPageId: true,
             },

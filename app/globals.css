@@ -5,44 +5,48 @@
 @tailwind utilities;
 
 :root {
-  --background: #090a0f;
-  --foreground: #f3f4f6;
-  --card: #12141c;
-  --card-border: #1f2433;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-border: #e2e8f0;
 }
 
+html,
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: 'Hind Siliguri', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
-/* Custom sleek dark scrollbar */
+/* Custom sleek light scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d0f17;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #252b3d;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #94a3b8;
 }
 
-/* Glassmorphism helpers */
+/* Glassmorphism helpers for light UI */
 .glass-panel {
-  background: rgba(18, 20, 28, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
 .glow-emerald {
@@ -51,6 +55,10 @@ body {
 
 .glow-cyan {
   box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.25);
+}
+
+.glow-indigo {
+  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.25);
 }
 
 @keyframes pulse-subtle {
@@ -89,11 +97,11 @@ body {
 
 .chat-scroll-container::-webkit-scrollbar-thumb,
 .chat-scroll-instant::-webkit-scrollbar-thumb {
-  background: #1f2738;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 
 .chat-scroll-container::-webkit-scrollbar-thumb:hover,
 .chat-scroll-instant::-webkit-scrollbar-thumb:hover {
-  background: #323d57;
+  background: #94a3b8;
 }

@@ -55,34 +55,34 @@ export default function AdminPagesPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/admin"
-            className="p-2 rounded-xl bg-[#161a29] border border-[#232a40] text-gray-300 hover:text-white"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div className="relative min-w-[260px]">
-            <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="পেজ নাম, Page ID বা মালিকের নাম..."
-              className="w-full pl-9 pr-3 py-2 bg-[#12141c] border border-[#1f2433] rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-cyan-500"
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
             />
           </div>
         </div>
 
-        <div className="text-xs text-gray-400">
-          মোট পেজ: <strong className="text-white">{filteredPages.length}</strong> টি
+        <div className="text-xs text-slate-500">
+          মোট পেজ: <strong className="text-slate-900">{filteredPages.length}</strong> টি
         </div>
       </div>
 
       {loading ? (
-        <div className="py-24 text-center text-sm text-gray-400">পেজ তালিকা লোড হচ্ছে...</div>
+        <div className="py-24 text-center text-sm text-slate-500">পেজ তালিকা লোড হচ্ছে...</div>
       ) : (
-        <div className="bg-[#12141c] border border-[#1f2433] rounded-2xl shadow-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-300">
-              <thead className="bg-[#0d0f17] text-gray-400 border-b border-[#1f2433] uppercase text-[10px] tracking-wider">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">
                 <tr>
                   <th className="py-3.5 px-4 font-semibold">পেজের নাম</th>
                   <th className="py-3.5 px-4 font-semibold">Page ID</th>
@@ -93,21 +93,21 @@ export default function AdminPagesPage() {
                   <th className="py-3.5 px-4 font-semibold">তারিখ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1a1f2e]">
+              <tbody className="divide-y divide-slate-100">
                 {filteredPages.map((p) => (
-                  <tr key={p.id} className="hover:bg-[#161a29]/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-white">{p.pageName}</td>
-                    <td className="py-3.5 px-4 font-mono text-gray-400">{p.facebookPageId}</td>
+                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">{p.pageName}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-500">{p.facebookPageId}</td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-200">{p.owner?.fullName}</div>
-                      <div className="text-[11px] text-gray-400">{p.owner?.businessName || p.owner?.email}</div>
+                      <div className="font-semibold text-slate-800">{p.owner?.fullName}</div>
+                      <div className="text-[11px] text-slate-500">{p.owner?.businessName || p.owner?.email}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${
                           p.connectionStatus === 'CONNECTED'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>

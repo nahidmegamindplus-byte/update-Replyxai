@@ -3,17 +3,23 @@ import crypto from 'crypto';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { encrypt, decrypt, maskToken } from '@/lib/crypto';
-import { testPageConnection } from '@/lib/facebook';
 import { logActivity } from '@/lib/logger';
-
-import { getFacebookWebhookUrl } from '@/lib/url';
+import { getChannelWebhookUrl } from '@/lib/url';
+import {
+  SocialChannel,
+  testFacebookConnection,
+  testWhatsAppConnection,
+  testInstagramConnection,
+  testXConnection,
+  testTelegramConnection,
+  setupTelegramWebhook,
+} from '@/lib/social';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
 
   try {
-    const currentWebhookUrl = getFacebookWebhookUrl(req);
     const pages = await prisma.page.findMany({
       where: { userId: auth.user.id },
       orderBy: { createdAt: 'desc' },
@@ -29,14 +35,27 @@ export async function GET(req: NextRequest) {
     });
 
     const safePages = pages.map((page) => {
+      const channel = (page.channel || 'FACEBOOK') as SocialChannel;
       const rawVerifyToken = decrypt(page.verifyTokenEncrypted);
+      const channelWebhookUrl = getChannelWebhookUrl(channel, req);
+
+      let parsedConfig = {};
+      if (page.extraConfig) {
+        try {
+          parsedConfig = JSON.parse(page.extraConfig);
+        } catch (_) {}
+      }
+
       return {
         id: page.id,
+        channel,
+        channelIdentifier: page.channelIdentifier || page.facebookPageId,
+        extraConfig: parsedConfig,
         facebookPageId: page.facebookPageId,
         pageName: page.pageName,
         pageUsername: page.pageUsername,
         pageProfileImage: page.pageProfileImage,
-        webhookUrl: currentWebhookUrl,
+        webhookUrl: channelWebhookUrl,
         verifyToken: rawVerifyToken,
         maskedAccessToken: maskToken(decrypt(page.pageAccessTokenEncrypted)),
         webhookStatus: page.webhookStatus,
@@ -47,6 +66,7 @@ export async function GET(req: NextRequest) {
         replyStyle: page.replyStyle,
         aiInstructions: page.aiInstructions,
         productImageReply: page.productImageReply,
+        maxImagesPerConversation: page.maxImagesPerConversation,
         orderDetection: page.orderDetection,
         voiceProcessing: page.voiceProcessing,
         imageUnderstanding: page.imageUnderstanding,
@@ -61,9 +81,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, pages: safePages });
   } catch (error: any) {
-    console.error('Error fetching pages:', error);
+    console.error('Error fetching channels/pages:', error);
     return NextResponse.json(
-      { success: false, error: 'Facebook পেজ তালিকা লোড করতে সমস্যা হয়েছে।' },
+      { success: false, error: 'সোশ্যাল মিডিয়া চ্যানেল তালিকা লোড করতে সমস্যা হয়েছে।' },
       { status: 500 }
     );
   }
@@ -75,52 +95,97 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { pageName, facebookPageId, pageAccessToken, aiInstructions, replyLanguage, replyStyle } = body;
+    const {
+      channel = 'FACEBOOK',
+      pageName,
+      facebookPageId,
+      channelIdentifier,
+      pageAccessToken,
+      extraConfig,
+      aiInstructions,
+      replyLanguage,
+      replyStyle,
+    } = body;
 
-    if (!pageName || !facebookPageId || !pageAccessToken) {
+    const selectedChannel = (channel || 'FACEBOOK').toUpperCase() as SocialChannel;
+
+    // External ID normalization
+    const cleanId = (channelIdentifier || facebookPageId || '').trim();
+    const cleanToken = (pageAccessToken || '').trim();
+    const cleanName = (pageName || '').trim();
+
+    if (!cleanName || !cleanId || !cleanToken) {
       return NextResponse.json(
-        { success: false, error: 'Page Name, Facebook Page ID এবং Page Access Token আবশ্যক।' },
+        {
+          success: false,
+          error: 'চ্যানেলের নাম, অ্যাকাউন্ট / পেজ আইডি এবং অ্যাক্সেস টোকেন প্রদান করা আবশ্যক।',
+        },
         { status: 400 }
       );
     }
 
-    const cleanPageId = facebookPageId.trim();
-    const cleanToken = pageAccessToken.trim();
-
-    // Check if user already connected this page
+    // Check uniqueness
     const existing = await prisma.page.findUnique({
       where: {
         userId_facebookPageId: {
           userId: auth.user.id,
-          facebookPageId: cleanPageId,
+          facebookPageId: cleanId,
         },
       },
     });
 
     if (existing) {
       return NextResponse.json(
-        { success: false, error: 'এই Facebook Page-টি ইতিমধ্যে আপনার অ্যাকাউন্টে সংযুক্ত রয়েছে।' },
+        {
+          success: false,
+          error: `এই ${selectedChannel} অ্যাকাউন্টটি ইতিমধ্যে আপনার অ্যাকাউন্টে সংযুক্ত রয়েছে।`,
+        },
         { status: 409 }
       );
     }
 
-    // Test connection with Facebook Graph API
-    const testResult = await testPageConnection(cleanPageId, cleanToken);
+    // Perform live connection test according to selected channel
+    let testResult: { success: boolean; name?: string; username?: string; error?: string } = {
+      success: false,
+    };
 
-    // Generate random verify token for Webhook
-    const rawVerifyToken = `replyx_verify_${crypto.randomBytes(16).toString('hex')}`;
-    const webhookUrl = getFacebookWebhookUrl(req);
+    if (selectedChannel === 'WHATSAPP') {
+      testResult = await testWhatsAppConnection(cleanId, cleanToken);
+    } else if (selectedChannel === 'INSTAGRAM') {
+      testResult = await testInstagramConnection(cleanId, cleanToken);
+    } else if (selectedChannel === 'X') {
+      testResult = await testXConnection(cleanToken);
+    } else if (selectedChannel === 'TELEGRAM') {
+      testResult = await testTelegramConnection(cleanToken);
+    } else {
+      testResult = await testFacebookConnection(cleanId, cleanToken);
+    }
+
+    // Webhook token generation
+    const rawVerifyToken = `rplx_verify_${crypto.randomBytes(16).toString('hex')}`;
+    let webhookUrl = getChannelWebhookUrl(selectedChannel, req);
+
+    if (selectedChannel === 'TELEGRAM') {
+      webhookUrl = `${webhookUrl}?bot=${encodeURIComponent(testResult.username || cleanName)}`;
+      // If deployed on public HTTPS, automatically register webhook with Telegram
+      if (webhookUrl.startsWith('https://')) {
+        setupTelegramWebhook(cleanToken, webhookUrl).catch(() => {});
+      }
+    }
 
     const newPage = await prisma.page.create({
       data: {
         userId: auth.user.id,
-        facebookPageId: cleanPageId,
-        pageName: pageName.trim(),
-        pageUsername: testResult.pageUsername || null,
+        channel: selectedChannel,
+        channelIdentifier: cleanId,
+        extraConfig: extraConfig ? JSON.stringify(extraConfig) : null,
+        facebookPageId: cleanId,
+        pageName: cleanName,
+        pageUsername: testResult.username || null,
         pageAccessTokenEncrypted: encrypt(cleanToken),
         verifyTokenEncrypted: encrypt(rawVerifyToken),
         webhookUrl,
-        webhookStatus: 'PENDING',
+        webhookStatus: selectedChannel === 'TELEGRAM' ? 'ACTIVE' : 'PENDING',
         connectionStatus: testResult.success ? 'CONNECTED' : 'TOKEN_EXPIRED',
         aiInstructions: aiInstructions || null,
         replyLanguage: replyLanguage || 'AUTO',
@@ -131,17 +196,18 @@ export async function POST(req: NextRequest) {
     await logActivity({
       userId: auth.user.id,
       pageId: newPage.id,
-      action: 'PAGE_CONNECTED',
-      description: `নতুন Facebook Page সংযুক্ত করা হয়েছে: ${newPage.pageName} (ID: ${newPage.facebookPageId})`,
+      action: 'CHANNEL_CONNECTED',
+      description: `নতুন ${selectedChannel} চ্যানেল সংযুক্ত করা হয়েছে: ${newPage.pageName} (ID: ${cleanId})`,
     });
 
     return NextResponse.json({
       success: true,
       message: testResult.success
-        ? 'Facebook Page সফলভাবে সংযুক্ত হয়েছে!'
-        : 'Facebook Page সংযুক্ত হয়েছে, কিন্তু Access Token ভ্যালিডেশনে সতর্কতা পাওয়া গেছে।',
+        ? `${selectedChannel} চ্যানেল সফলভাবে যুক্ত ও কানেক্ট হয়েছে!`
+        : `${selectedChannel} চ্যানেল যুক্ত হয়েছে, কিন্তু টোকেন যাচাইকরণে সতর্কতা পাওয়া গেছে।`,
       page: {
         id: newPage.id,
+        channel: newPage.channel,
         facebookPageId: newPage.facebookPageId,
         pageName: newPage.pageName,
         webhookUrl: newPage.webhookUrl,
@@ -150,9 +216,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error creating page:', error);
+    console.error('Error creating channel:', error);
     return NextResponse.json(
-      { success: false, error: 'Facebook Page সংযুক্ত করতে সমস্যা হয়েছে।' },
+      { success: false, error: 'চ্যানেল সংযুক্ত করতে সমস্যা হয়েছে।' },
       { status: 500 }
     );
   }

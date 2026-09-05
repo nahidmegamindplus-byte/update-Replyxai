@@ -116,6 +116,9 @@ export async function ensureDatabaseReady() {
       CREATE TABLE IF NOT EXISTS "Page" (
         "id" TEXT NOT NULL PRIMARY KEY,
         "userId" TEXT NOT NULL,
+        "channel" TEXT NOT NULL DEFAULT 'FACEBOOK',
+        "channelIdentifier" TEXT,
+        "extraConfig" TEXT,
         "facebookPageId" TEXT NOT NULL,
         "pageName" TEXT NOT NULL,
         "pageUsername" TEXT,
@@ -131,9 +134,18 @@ export async function ensureDatabaseReady() {
         "replyStyle" TEXT NOT NULL DEFAULT 'FRIENDLY',
         "aiInstructions" TEXT,
         "productImageReply" BOOLEAN NOT NULL DEFAULT 1,
+        "maxImagesPerConversation" INTEGER NOT NULL DEFAULT 2,
         "orderDetection" BOOLEAN NOT NULL DEFAULT 1,
         "voiceProcessing" BOOLEAN NOT NULL DEFAULT 1,
         "imageUnderstanding" BOOLEAN NOT NULL DEFAULT 1,
+        "replyDelaySeconds" INTEGER NOT NULL DEFAULT 3,
+        "followUpEnabled" BOOLEAN NOT NULL DEFAULT 0,
+        "followUpWaitMinutes" INTEGER NOT NULL DEFAULT 30,
+        "followUpMessage" TEXT,
+        "followUpOnlySeen" BOOLEAN NOT NULL DEFAULT 1,
+        "followUpMaxCount" INTEGER NOT NULL DEFAULT 1,
+        "followUpFrequency" TEXT NOT NULL DEFAULT 'ONCE',
+        "followUpIntervalHours" INTEGER NOT NULL DEFAULT 24,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE("userId", "facebookPageId")
@@ -167,6 +179,7 @@ export async function ensureDatabaseReady() {
         "id" TEXT NOT NULL PRIMARY KEY,
         "userId" TEXT NOT NULL,
         "pageId" TEXT NOT NULL,
+        "channel" TEXT NOT NULL DEFAULT 'FACEBOOK',
         "senderPsid" TEXT NOT NULL,
         "customerName" TEXT,
         "lastMessage" TEXT,
@@ -174,6 +187,7 @@ export async function ensureDatabaseReady() {
         "status" TEXT NOT NULL DEFAULT 'ACTIVE',
         "aiEnabled" BOOLEAN NOT NULL DEFAULT 1,
         "unreadCount" INTEGER NOT NULL DEFAULT 0,
+        "imagesSentCount" INTEGER NOT NULL DEFAULT 0,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE("pageId", "senderPsid")
@@ -251,6 +265,59 @@ export async function ensureDatabaseReady() {
         "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Self-healing migration for multi-channel support
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channelIdentifier" TEXT;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "extraConfig" TEXT;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "replyDelaySeconds" INTEGER NOT NULL DEFAULT 3;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpEnabled" BOOLEAN NOT NULL DEFAULT 0;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpWaitMinutes" INTEGER NOT NULL DEFAULT 30;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMessage" TEXT;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpOnlySeen" BOOLEAN NOT NULL DEFAULT 1;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMaxCount" INTEGER NOT NULL DEFAULT 1;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpFrequency" TEXT NOT NULL DEFAULT 'ONCE';`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpIntervalHours" INTEGER NOT NULL DEFAULT 24;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerConversation" INTEGER NOT NULL DEFAULT 2;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "imagesSentCount" INTEGER NOT NULL DEFAULT 0;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastSeenAt" DATETIME;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastFollowUpSentAt" DATETIME;`);
+    } catch (_) {}
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
+    } catch (_) {}
   } catch (ddlErr) {
     console.warn('Raw table creation note:', ddlErr);
   }

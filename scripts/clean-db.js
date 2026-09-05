@@ -15,10 +15,14 @@ async function clean() {
   await prisma.page.deleteMany({});
   await prisma.aiSetting.deleteMany({});
 
-  // Delete all users except admin@replyx.ai
+  // Delete only fake test users
   await prisma.user.deleteMany({
     where: {
-      email: { not: 'admin@replyx.ai' },
+      OR: [
+        { email: { startsWith: 'test_' } },
+        { email: { contains: 'dfdf' } },
+        { email: { contains: 'sd' } },
+      ],
     },
   });
 

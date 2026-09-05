@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { decrypt } from '@/lib/crypto';
-import { sendMessengerText } from '@/lib/facebook';
+import { sendChannelMessage, SocialChannel } from '@/lib/social';
 import { logActivity } from '@/lib/logger';
 
 export async function GET(
@@ -22,6 +22,8 @@ export async function GET(
         page: {
           select: {
             id: true,
+            channel: true,
+            channelIdentifier: true,
             pageName: true,
             facebookPageId: true,
             autoReplyEnabled: true,
@@ -115,16 +117,32 @@ export async function POST(
 
     const cleanText = messageText.trim();
     const pageAccessToken = decrypt(conversation.page.pageAccessTokenEncrypted);
+    const channel = (conversation.channel || conversation.page.channel || 'FACEBOOK') as SocialChannel;
 
-    // Send to Facebook Messenger Send API
-    let fbResult = { success: true };
+    let extraConfig = {};
+    if (conversation.page.extraConfig) {
+      try {
+        extraConfig = JSON.parse(conversation.page.extraConfig);
+      } catch (_) {}
+    }
+
+    // Send to corresponding channel API (WhatsApp, Instagram, X, Telegram, or Facebook)
+    let sendResult = { success: true };
     if (pageAccessToken && !conversation.senderPsid.startsWith('demo_')) {
-      fbResult = await sendMessengerText(conversation.senderPsid, cleanText, pageAccessToken);
-      if (!fbResult.success) {
+      sendResult = await sendChannelMessage({
+        channel,
+        recipientId: conversation.senderPsid,
+        text: cleanText,
+        accessToken: pageAccessToken,
+        channelIdentifier: conversation.page.channelIdentifier || conversation.page.facebookPageId,
+        extraConfig,
+      });
+
+      if (!sendResult.success) {
         return NextResponse.json(
           {
             success: false,
-            error: `Messenger-এ মেসেজ পাঠাতে ব্যর্থ হয়েছে: ${(fbResult as any).error}`,
+            error: `${channel}-এ মেসেজ পাঠাতে ব্যর্থ হয়েছে: ${(sendResult as any).error}`,
           },
           { status: 500 }
         );
@@ -201,9 +219,12 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { aiEnabled, status } = body;
+    const { aiEnabled, status, customerName } = body;
 
     const updateData: any = {};
+    if (customerName !== undefined && customerName.trim().length > 0) {
+      updateData.customerName = customerName.trim();
+    }
     if (aiEnabled !== undefined) {
       updateData.aiEnabled = Boolean(aiEnabled);
       updateData.status = aiEnabled ? 'ACTIVE' : 'HUMAN_MODE';

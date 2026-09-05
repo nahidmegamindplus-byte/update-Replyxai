@@ -80,6 +80,7 @@ export interface GenerateReplyParams {
   incomingAudioUrl?: string;
   transcription?: string;
   conversationHistory?: Array<{ direction: string; text: string }>;
+  canSendProductImage?: boolean;
 }
 
 export interface AIResponseResult {
@@ -454,6 +455,21 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
           .join('\n')
       : 'বর্তমানে এই পেজে কোনো প্রোডাক্ট তালিকাভুক্ত নেই।';
 
+  // Determine whether image sending is allowed for this turn/conversation
+  const canSendImage = params.canSendProductImage !== false && Boolean(page.productImageReply);
+  const imageInstructionSection = canSendImage
+    ? `[SENDING PRODUCT IMAGES FROM INVENTORY (পণ্য ছবি পাঠানোর নিয়মাবলী)]
+- যখন কোনো গ্রাহক কোনো পণ্যের ছবি/পিক দেখতে চান (যেমন: "ছবি দেন", "পিক দেখতে চাই", "photo pathan", "pic dekhaw", "ছবি আছে?", "কালারগুলো দেখতে চাই"), অথবা ভয়েসে ছবি চান:
+- ইনভেন্টরি থেকে সংশ্লিষ্ট পণ্যের নাম ও দাম সুন্দরভাবে জানান।
+- এবং উত্তরের একেবারে শেষে বাধ্যতামূলকভাবে এই ট্যাগটি যোগ করুন:
+<<<SEND_PRODUCT_IMAGE: "PRODUCT_ID_OR_NAME" >>>
+উদাহরণ: <<<SEND_PRODUCT_IMAGE: "1" >>> অথবা <<<SEND_PRODUCT_IMAGE: "Black Polo Shirt" >>>
+- এটি ইনভেন্টরি থেকে গ্রাহকের মেসেঞ্জারে স্বয়ংক্রিয়ভাবে পণ্যের ছবি পাঠিয়ে দেবে।`
+    : `[SENDING PRODUCT IMAGES RESTRICTION (ছবি পাঠানো সংক্রান্ত সীমাবদ্ধতা)]
+- এই গ্রাহকের সাথে কনভারসেশনে ছবি পাঠানোর সীমা সম্পন্ন হয়েছে অথবা ছবি পাঠানো বন্ধ রয়েছে।
+- তাই আপনি কোনোভাবেই <<<SEND_PRODUCT_IMAGE:...>>> ট্যাগ ব্যবহার করবেন না এবং নতুন কোনো ছবি পাঠানো হবে না।
+- গ্রাহক ছবি দেখতে চাইলে তাকে অত্যন্ত আন্তরিকতার সাথে টেক্সট মেসেজে পণ্যের বিবরণ, রং, ম্যাটেরিয়াল বা সাইজের বিবরণ বুঝিয়ে বলুন।`;
+
   // System security and business instruction prompt
   const systemPrompt = `
 You are ReplyX AI, an expert, high-converting sales and customer care AI assistant for the business "${page.user.businessName || page.pageName}".
@@ -475,13 +491,7 @@ Your primary goal is to assist customers on Facebook Messenger politely, accurat
 3. If the customer sends TEXT:
    - Answer directly, briefly, and helpfully.
 
-[SENDING PRODUCT IMAGES FROM INVENTORY (পণ্য ছবি পাঠানোর নিয়মাবলী)]
-- যখন কোনো গ্রাহক কোনো পণ্যের ছবি/পিক দেখতে চান (যেমন: "ছবি দেন", "পিক দেখতে চাই", "photo pathan", "pic dekhaw", "ছবি আছে?", "কালারগুলো দেখতে চাই"), অথবা ভয়েসে ছবি চান:
-- ইনভেন্টরি থেকে সংশ্লিষ্ট পণ্যের নাম ও দাম সুন্দরভাবে জানান।
-- এবং উত্তরের একেবারে শেষে বাধ্যতামূলকভাবে এই ট্যাগটি যোগ করুন:
-<<<SEND_PRODUCT_IMAGE: "PRODUCT_ID_OR_NAME" >>>
-উদাহরণ: <<<SEND_PRODUCT_IMAGE: "1" >>> অথবা <<<SEND_PRODUCT_IMAGE: "Black Polo Shirt" >>>
-- এটি ইনভেন্টরি থেকে গ্রাহকের মেসেঞ্জারে স্বয়ংক্রিয়ভাবে পণ্যের ছবি পাঠিয়ে দেবে।
+${imageInstructionSection}
 
 [STRICT INVENTORY & PRICING RULES]
 1. Never invent, hallucinate, or guess prices or products not present in the inventory list below.
@@ -795,9 +805,9 @@ If phone or address is missing, politely ask the customer for their mobile numbe
     replyText = replyText.replace(imageTriggerRegex, '').trim();
   }
 
-  // 6. Search for matched product to attach image
+  // 6. Search for matched product to attach image (only if image sending is allowed)
   let matchedProduct: any = null;
-  if (products.length > 0) {
+  if (canSendImage && products.length > 0) {
     // 6a. Match via explicit AI tag
     if (explicitProductTrigger) {
       const cleanTrigger = explicitProductTrigger.toLowerCase();
@@ -818,7 +828,30 @@ If phone or address is missing, politely ask the customer for their mobile numbe
       }
     }
 
-    // 6b. Match via detected order
+    // 6b. Match if customer asked for photo / pic / color / inquiry
+    if (!matchedProduct) {
+      const customerQuery = `${incomingText || ''} ${finalTranscription || ''}`.toLowerCase();
+      const isAskingForImage = /(ছবি|পিক|ফটো|পিকচার|photo|pic|picture|image|colour|color|কালার|দেখান|পাঠান|দেখব|দেখবো|দেখান তো)/i.test(customerQuery);
+      
+      if (isAskingForImage) {
+        const combinedText = `${replyText} ${customerQuery}`.toLowerCase();
+        for (const p of products) {
+          if (!p.imageUrl) continue;
+          const pName = p.name.toLowerCase();
+          if (combinedText.includes(pName) || (p.sku && combinedText.includes(p.sku.toLowerCase()))) {
+            matchedProduct = {
+              id: p.id,
+              name: p.name,
+              price: p.discountPrice || p.price,
+              imageUrl: p.imageUrl,
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    // 6c. Match via detected order (show picture of ordered product)
     if (!matchedProduct && detectedOrder) {
       const orderProductMatch = products.find(
         (p) =>
@@ -832,24 +865,6 @@ If phone or address is missing, politely ask the customer for their mobile numbe
           price: orderProductMatch.discountPrice || orderProductMatch.price,
           imageUrl: orderProductMatch.imageUrl,
         };
-      }
-    }
-
-    // 6c. Match via content keywords or query intent
-    if (!matchedProduct) {
-      const combinedText = `${replyText} ${incomingText} ${finalTranscription || ''}`.toLowerCase();
-      for (const p of products) {
-        if (!p.imageUrl) continue;
-        const pName = p.name.toLowerCase();
-        if (combinedText.includes(pName) || (p.sku && combinedText.includes(p.sku.toLowerCase()))) {
-          matchedProduct = {
-            id: p.id,
-            name: p.name,
-            price: p.discountPrice || p.price,
-            imageUrl: p.imageUrl,
-          };
-          break;
-        }
       }
     }
   }

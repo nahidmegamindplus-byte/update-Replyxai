@@ -55,58 +55,58 @@ function LoginFormContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090a0f] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Subtle background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Sparkles className="w-6 h-6 text-black" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-white">
-              ReplyX <span className="text-emerald-400">AI</span>
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
+              ReplyX <span className="text-indigo-600">AI</span>
             </span>
           </Link>
-          <h2 className="text-2xl font-bold text-white tracking-tight">অ্যাকাউন্টে লগইন করুন</h2>
-          <p className="text-sm text-gray-400 mt-1">আপনার Messenger-এর জন্য স্মার্ট AI Assistant</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">অ্যাকাউন্টে লগইন করুন</h2>
+          <p className="text-sm text-slate-500 mt-1">আপনার ব্যবসার সোশ্যাল চ্যানেলের জন্য স্মার্ট AI Assistant</p>
         </div>
 
         {/* Card */}
-        <div className="bg-[#12141c] border border-[#1f2433] rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-200/50">
           {/* Quick License Access Banner */}
-          <div className="mb-5 p-3.5 rounded-xl bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-cyan-950/40 border border-purple-500/40 flex items-center justify-between gap-3">
+          <div className="mb-5 p-3.5 rounded-xl bg-purple-50 border border-purple-200/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="text-lg">🔑</span>
               <div>
-                <p className="text-xs font-bold text-white">লাইসেন্স কি আছে?</p>
-                <p className="text-[10px] text-purple-300">রেজিস্ট্রেশন ছাড়া সরাসরি প্রবেশ করুন</p>
+                <p className="text-xs font-bold text-purple-950">লাইসেন্স কি আছে?</p>
+                <p className="text-[10px] text-purple-700">রেজিস্ট্রেশন ছাড়া সরাসরি প্রবেশ করুন</p>
               </div>
             </div>
             <Link
               href="/activate"
-              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow transition-all shrink-0"
+              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-xs transition-all shrink-0"
             >
               কি অ্যাক্টিভেট করুন
             </Link>
           </div>
 
           {errorMsg && (
-            <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2.5 text-red-300 text-sm">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+            <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-red-700 text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                 ইমেইল
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -115,25 +115,25 @@ function LoginFormContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="আপনার ইমেইল দিন (ex: user@example.com)"
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-colors"
                 />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   পাসওয়ার্ড
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
                 >
                   পাসওয়ার্ড ভুলে গেছেন?
                 </Link>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-500">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -142,12 +142,12 @@ function LoginFormContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="আপনার পাসওয়ার্ড দিন"
-                  className="w-full pl-10 pr-11 py-2.5 bg-[#0a0c13] border border-[#1e2538] rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors p-1"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
                   title={showPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -158,11 +158,11 @@ function LoginFormContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>যাচাই করা হচ্ছে...</span>
                 </>
               ) : (
@@ -174,10 +174,10 @@ function LoginFormContent() {
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-[#1e2538] text-center">
-            <p className="text-sm text-gray-400">
+          <div className="mt-6 pt-5 border-t border-slate-200 text-center">
+            <p className="text-sm text-slate-600">
               নতুন ব্যবহারকারী?{' '}
-              <Link href="/signup" className="text-emerald-400 font-semibold hover:underline">
+              <Link href="/signup" className="text-indigo-600 font-semibold hover:underline">
                 বিনামূল্যে রেজিস্ট্রেশন করুন
               </Link>
             </p>
@@ -192,8 +192,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#090a0f] flex items-center justify-center text-white">
-          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center text-slate-900">
+          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       }
     >

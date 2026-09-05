@@ -84,22 +84,65 @@ export async function PUT(
 
     if (body.pageName !== undefined) updateData.pageName = body.pageName.trim();
     if (body.facebookPageId !== undefined && body.facebookPageId.trim().length > 0) updateData.facebookPageId = body.facebookPageId.trim();
+    if (body.channel !== undefined) updateData.channel = body.channel;
+    if (body.channelIdentifier !== undefined) updateData.channelIdentifier = body.channelIdentifier ? body.channelIdentifier.trim() : null;
+    if (body.pageUsername !== undefined) updateData.pageUsername = body.pageUsername ? body.pageUsername.trim() : null;
+    if (body.pageProfileImage !== undefined) updateData.pageProfileImage = body.pageProfileImage ? body.pageProfileImage.trim() : null;
+    if (body.extraConfig !== undefined) {
+      updateData.extraConfig = typeof body.extraConfig === 'object' ? JSON.stringify(body.extraConfig) : body.extraConfig;
+    }
+    if (body.replyDelaySeconds !== undefined) {
+      const delay = parseInt(body.replyDelaySeconds, 10);
+      updateData.replyDelaySeconds = isNaN(delay) ? 3 : Math.max(0, Math.min(60, delay));
+    }
+    if (body.connectionStatus !== undefined) updateData.connectionStatus = body.connectionStatus;
     if (body.autoReplyEnabled !== undefined) updateData.autoReplyEnabled = Boolean(body.autoReplyEnabled);
     if (body.humanHandoffEnabled !== undefined) updateData.humanHandoffEnabled = Boolean(body.humanHandoffEnabled);
     if (body.replyLanguage !== undefined) updateData.replyLanguage = body.replyLanguage;
     if (body.replyStyle !== undefined) updateData.replyStyle = body.replyStyle;
     if (body.aiInstructions !== undefined) updateData.aiInstructions = body.aiInstructions;
     if (body.productImageReply !== undefined) updateData.productImageReply = Boolean(body.productImageReply);
+    if (body.maxImagesPerConversation !== undefined) {
+      const limit = parseInt(body.maxImagesPerConversation, 10);
+      updateData.maxImagesPerConversation = isNaN(limit) ? 2 : Math.max(0, Math.min(50, limit));
+    }
     if (body.orderDetection !== undefined) updateData.orderDetection = Boolean(body.orderDetection);
     if (body.voiceProcessing !== undefined) updateData.voiceProcessing = Boolean(body.voiceProcessing);
     if (body.imageUnderstanding !== undefined) updateData.imageUnderstanding = Boolean(body.imageUnderstanding);
+
+    if (body.followUpEnabled !== undefined) updateData.followUpEnabled = Boolean(body.followUpEnabled);
+    if (body.followUpWaitMinutes !== undefined) {
+      const waitMins = parseInt(body.followUpWaitMinutes, 10);
+      updateData.followUpWaitMinutes = isNaN(waitMins) ? 30 : Math.max(1, Math.min(10080, waitMins)); // 1 min up to 7 days
+    }
+    if (body.followUpMessage !== undefined) updateData.followUpMessage = body.followUpMessage;
+    if (body.followUpOnlySeen !== undefined) updateData.followUpOnlySeen = Boolean(body.followUpOnlySeen);
+    if (body.followUpMaxCount !== undefined) {
+      const maxCount = parseInt(body.followUpMaxCount, 10);
+      updateData.followUpMaxCount = isNaN(maxCount) ? 1 : Math.max(1, Math.min(99, maxCount));
+    }
+    if (body.followUpFrequency !== undefined) updateData.followUpFrequency = body.followUpFrequency;
+    if (body.followUpIntervalHours !== undefined) {
+      const hours = parseInt(body.followUpIntervalHours, 10);
+      updateData.followUpIntervalHours = isNaN(hours) ? 24 : Math.max(1, Math.min(720, hours));
+    }
+
+    if (body.verifyToken && body.verifyToken.trim().length > 0) {
+      updateData.verifyTokenEncrypted = encrypt(body.verifyToken.trim());
+    }
 
     if (body.pageAccessToken && body.pageAccessToken.trim().length > 0 && !body.pageAccessToken.includes('••••')) {
       const cleanToken = body.pageAccessToken.trim();
       updateData.pageAccessTokenEncrypted = encrypt(cleanToken);
 
-      const testRes = await testPageConnection(page.facebookPageId, cleanToken);
-      updateData.connectionStatus = testRes.success ? 'CONNECTED' : 'TOKEN_EXPIRED';
+      const targetPageId = updateData.facebookPageId || page.facebookPageId;
+      const targetChannel = updateData.channel || page.channel || 'FACEBOOK';
+      if (targetChannel === 'FACEBOOK') {
+        const testRes = await testPageConnection(targetPageId, cleanToken);
+        updateData.connectionStatus = testRes.success ? 'CONNECTED' : 'TOKEN_EXPIRED';
+      } else {
+        updateData.connectionStatus = 'CONNECTED';
+      }
     }
 
     const updatedPage = await prisma.page.update({

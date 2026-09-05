@@ -101,3 +101,40 @@ export function getFacebookWebhookUrl(req?: NextRequest): string {
   const base = getWebhookBaseUrl(req);
   return `${base}/api/webhooks/facebook`;
 }
+
+export function getWhatsAppWebhookUrl(req?: NextRequest): string {
+  const base = getWebhookBaseUrl(req);
+  return `${base}/api/webhooks/whatsapp`;
+}
+
+export function getInstagramWebhookUrl(req?: NextRequest): string {
+  const base = getWebhookBaseUrl(req);
+  return `${base}/api/webhooks/instagram`;
+}
+
+export function getXWebhookUrl(req?: NextRequest): string {
+  const base = getWebhookBaseUrl(req);
+  return `${base}/api/webhooks/x`;
+}
+
+export function getTelegramWebhookUrl(req?: NextRequest): string {
+  const base = getWebhookBaseUrl(req);
+  return `${base}/api/webhooks/telegram`;
+}
+
+export function getChannelWebhookUrl(channel: string, req?: NextRequest): string {
+  switch (channel?.toUpperCase()) {
+    case 'WHATSAPP':
+      return getWhatsAppWebhookUrl(req);
+    case 'INSTAGRAM':
+      return getInstagramWebhookUrl(req);
+    case 'X':
+      return getXWebhookUrl(req);
+    case 'TELEGRAM':
+      return getTelegramWebhookUrl(req);
+    case 'FACEBOOK':
+    default:
+      return getFacebookWebhookUrl(req);
+  }
+}
+

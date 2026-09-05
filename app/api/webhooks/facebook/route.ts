@@ -6,6 +6,7 @@ import {
   sendMessengerAction,
   sendMessengerText,
   sendMessengerImage,
+  getFacebookUserProfile,
 } from '@/lib/facebook';
 import { generateAIReply } from '@/lib/ai';
 import { serverLogger, logActivity } from '@/lib/logger';
@@ -100,6 +101,27 @@ export async function POST(req: NextRequest) {
       for (const event of messagingEvents) {
         const senderPsid = event.sender?.id;
         const recipientPageId = event.recipient?.id || fbPageId;
+
+        // Handle Read / Seen receipts from customer
+        if (event.read && senderPsid) {
+          try {
+            const readPage = await prisma.page.findFirst({
+              where: { facebookPageId: recipientPageId },
+              select: { id: true },
+            });
+            if (readPage) {
+              await prisma.conversation.updateMany({
+                where: { pageId: readPage.id, senderPsid },
+                data: { lastSeenAt: new Date() },
+              });
+              serverLogger.info(`Updated lastSeenAt watermark for customer ${senderPsid}`);
+            }
+          } catch (readErr) {
+            serverLogger.warn('Error recording read receipt:', readErr);
+          }
+          continue;
+        }
+
         const message = event.message;
 
         // Skip events with no message or echo messages sent by page itself
@@ -179,7 +201,7 @@ export async function POST(req: NextRequest) {
         const displayLastMessage =
           messageText || (messageType === 'AUDIO' ? '🎙️ ভয়েস মেসেজ' : `[${messageType}]`);
 
-        // 6. Find or create Conversation
+        // 6. Find or create Conversation with real customer name
         let conversation = await prisma.conversation.findUnique({
           where: {
             pageId_senderPsid: {
@@ -189,13 +211,27 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        // If conversation doesn't exist or customerName is still a generic placeholder, fetch real name
+        let realCustomerName = conversation?.customerName;
+        if (!realCustomerName || realCustomerName.startsWith('Customer (')) {
+          if (pageAccessToken) {
+            const profile = await getFacebookUserProfile(senderPsid, pageAccessToken);
+            if (profile?.name) {
+              realCustomerName = profile.name;
+            }
+          }
+          if (!realCustomerName) {
+            realCustomerName = `Customer (${senderPsid.slice(-4)})`;
+          }
+        }
+
         if (!conversation) {
           conversation = await prisma.conversation.create({
             data: {
               userId: page.userId,
               pageId: page.id,
               senderPsid,
-              customerName: `Customer (${senderPsid.slice(-4)})`,
+              customerName: realCustomerName,
               lastMessage: displayLastMessage,
               lastMessageAt: new Date(),
               status: 'ACTIVE',
@@ -207,9 +243,11 @@ export async function POST(req: NextRequest) {
           conversation = await prisma.conversation.update({
             where: { id: conversation.id },
             data: {
+              customerName: realCustomerName,
               lastMessage: displayLastMessage,
               lastMessageAt: new Date(),
               unreadCount: { increment: 1 },
+              followUpSentCount: 0, // Reset follow-up cycle since customer replied
             },
           });
         }
@@ -253,6 +291,19 @@ export async function POST(req: NextRequest) {
           text: m.messageText || '',
         }));
 
+        // 8b. Check how many images have already been sent in this conversation
+        const imagesAlreadySent = await prisma.message.count({
+          where: {
+            conversationId: conversation.id,
+            direction: 'OUTGOING',
+            messageType: 'IMAGE',
+          },
+        });
+        const maxImages = (page as any).maxImagesPerConversation !== undefined ? (page as any).maxImagesPerConversation : 2;
+        const canSendMoreImages = Boolean(
+          page.productImageReply && (maxImages === 0 || imagesAlreadySent < maxImages)
+        );
+
         // 9. Generate AI reply (handles Text, Image understanding, and Voice Audio natively)
         try {
           const aiResult = await generateAIReply({
@@ -263,6 +314,7 @@ export async function POST(req: NextRequest) {
             incomingImageUrl: messageType === 'IMAGE' && mediaUrl ? mediaUrl : undefined,
             incomingAudioUrl: messageType === 'AUDIO' && mediaUrl ? mediaUrl : undefined,
             conversationHistory: formattedHistory,
+            canSendProductImage: canSendMoreImages,
           });
 
           // If audio was transcribed, save transcription to database for Dashboard display
@@ -281,15 +333,24 @@ export async function POST(req: NextRequest) {
             } catch (trErr) {}
           }
 
-          // 10. Send reply via Facebook Messenger Send API
+          // 10. Send reply via Facebook Messenger Send API with configured AI human-like delay
           if (pageAccessToken && aiResult.replyText) {
+            const delaySec = page.replyDelaySeconds ?? 3;
+            if (delaySec > 0) {
+              sendMessengerAction(senderPsid, 'typing_on', pageAccessToken).catch(() => {});
+              await new Promise((resolve) => setTimeout(resolve, Math.min(delaySec, 30) * 1000));
+            }
+
             await sendMessengerText(senderPsid, aiResult.replyText, pageAccessToken);
 
-            // Send product image from inventory if available
-            if (page.productImageReply && aiResult.matchedProduct?.imageUrl) {
+            // Send product image from inventory if available and within conversation limit
+            if (canSendMoreImages && aiResult.matchedProduct?.imageUrl) {
               let fullImgUrl = aiResult.matchedProduct.imageUrl;
-              if (fullImgUrl.startsWith('/')) {
-                fullImgUrl = `${getAppUrl(req)}${fullImgUrl}`;
+              const appUrl = getAppUrl(req);
+              if (fullImgUrl.startsWith('data:')) {
+                fullImgUrl = `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`;
+              } else if (fullImgUrl.startsWith('/')) {
+                fullImgUrl = `${appUrl}${fullImgUrl}`;
               }
 
               const imageSendResult = await sendMessengerImage(
@@ -314,6 +375,13 @@ export async function POST(req: NextRequest) {
                     aiModel: aiResult.aiModel,
                   },
                 });
+
+                try {
+                  await prisma.conversation.update({
+                    where: { id: conversation.id },
+                    data: { imagesSentCount: { increment: 1 } },
+                  });
+                } catch (_) {}
               }
             }
           }
