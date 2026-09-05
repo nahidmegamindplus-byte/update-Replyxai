@@ -38,10 +38,10 @@ export default function AdminPagesPage() {
     fetchPages();
   }, []);
 
-  const filteredPages = pages.filter(
+  const filteredPages = (pages || []).filter(
     (p) =>
-      p.pageName.toLowerCase().includes(search.toLowerCase()) ||
-      p.facebookPageId.toLowerCase().includes(search.toLowerCase()) ||
+      (p.pageName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.facebookPageId || '').toLowerCase().includes(search.toLowerCase()) ||
       p.owner?.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       p.owner?.businessName?.toLowerCase().includes(search.toLowerCase())
   );

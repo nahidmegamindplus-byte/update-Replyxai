@@ -266,58 +266,69 @@ export async function ensureDatabaseReady() {
       );
     `);
 
-    // Self-healing migration for multi-channel support
+    // Self-healing migration for multi-channel support with column pre-check
     try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channelIdentifier" TEXT;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "extraConfig" TEXT;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "replyDelaySeconds" INTEGER NOT NULL DEFAULT 3;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpEnabled" BOOLEAN NOT NULL DEFAULT 0;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpWaitMinutes" INTEGER NOT NULL DEFAULT 30;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMessage" TEXT;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpOnlySeen" BOOLEAN NOT NULL DEFAULT 1;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMaxCount" INTEGER NOT NULL DEFAULT 1;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpFrequency" TEXT NOT NULL DEFAULT 'ONCE';`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpIntervalHours" INTEGER NOT NULL DEFAULT 24;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerConversation" INTEGER NOT NULL DEFAULT 2;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "imagesSentCount" INTEGER NOT NULL DEFAULT 0;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastSeenAt" DATETIME;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastFollowUpSentAt" DATETIME;`);
-    } catch (_) {}
-    try {
-      await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
-    } catch (_) {}
+      const pageColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Page");`)) as Array<{ name: string }>;
+      const existingPageCols = new Set(pageColumnsRaw.map((c) => c.name));
+
+      if (!existingPageCols.has('channel')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
+      }
+      if (!existingPageCols.has('channelIdentifier')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "channelIdentifier" TEXT;`);
+      }
+      if (!existingPageCols.has('extraConfig')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "extraConfig" TEXT;`);
+      }
+      if (!existingPageCols.has('replyDelaySeconds')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "replyDelaySeconds" INTEGER NOT NULL DEFAULT 3;`);
+      }
+      if (!existingPageCols.has('followUpEnabled')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpEnabled" BOOLEAN NOT NULL DEFAULT 0;`);
+      }
+      if (!existingPageCols.has('followUpWaitMinutes')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpWaitMinutes" INTEGER NOT NULL DEFAULT 30;`);
+      }
+      if (!existingPageCols.has('followUpMessage')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMessage" TEXT;`);
+      }
+      if (!existingPageCols.has('followUpOnlySeen')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpOnlySeen" BOOLEAN NOT NULL DEFAULT 1;`);
+      }
+      if (!existingPageCols.has('followUpMaxCount')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpMaxCount" INTEGER NOT NULL DEFAULT 1;`);
+      }
+      if (!existingPageCols.has('followUpFrequency')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpFrequency" TEXT NOT NULL DEFAULT 'ONCE';`);
+      }
+      if (!existingPageCols.has('followUpIntervalHours')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpIntervalHours" INTEGER NOT NULL DEFAULT 24;`);
+      }
+      if (!existingPageCols.has('maxImagesPerConversation')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerConversation" INTEGER NOT NULL DEFAULT 2;`);
+      }
+
+      const convColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Conversation");`)) as Array<{ name: string }>;
+      const existingConvCols = new Set(convColumnsRaw.map((c) => c.name));
+
+      if (!existingConvCols.has('imagesSentCount')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "imagesSentCount" INTEGER NOT NULL DEFAULT 0;`);
+      }
+      if (!existingConvCols.has('channel')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "channel" TEXT NOT NULL DEFAULT 'FACEBOOK';`);
+      }
+      if (!existingConvCols.has('lastSeenAt')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastSeenAt" DATETIME;`);
+      }
+      if (!existingConvCols.has('lastFollowUpSentAt')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "lastFollowUpSentAt" DATETIME;`);
+      }
+      if (!existingConvCols.has('followUpSentCount')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
+      }
+    } catch (migrationErr) {
+      console.warn('Migration pre-check warning:', migrationErr);
+    }
   } catch (ddlErr) {
     console.warn('Raw table creation note:', ddlErr);
   }

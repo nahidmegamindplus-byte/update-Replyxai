@@ -94,7 +94,7 @@ export default function ReportsPage() {
             className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="ALL">সকল Facebook Page</option>
-            {pages.map((p) => (
+            {(pages || []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.pageName}
               </option>

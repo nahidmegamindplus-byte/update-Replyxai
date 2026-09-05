@@ -283,7 +283,7 @@ export default function AdminPackageOrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter((o) => {
+  const filteredOrders = (orders || []).filter((o) => {
     const s = search.toLowerCase();
     return (
       o.orderNumber?.toLowerCase().includes(s) ||

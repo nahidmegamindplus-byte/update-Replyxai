@@ -363,10 +363,10 @@ export default function DashboardOverviewPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/70 flex items-center justify-center font-bold text-sm">
-                      {page.name.charAt(0)}
+                      {(page.name || 'P').charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">{page.name}</h4>
+                      <h4 className="text-sm font-bold text-slate-900">{page.name || 'Unnamed Page'}</h4>
                       <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
                         <span>কথোপকথন: {page.conversations}</span>
                         <span>•</span>

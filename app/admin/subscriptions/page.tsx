@@ -41,7 +41,7 @@ export default function AdminSubscriptionsPage() {
 
       if (data.success) {
         setSummary(data.summary);
-        setUsers(data.users);
+        setUsers(data.users || []);
       } else {
         toast.error(data.error || 'সাবস্ক্রিপশন ডাটা লোড করতে সমস্যা হয়েছে।');
       }
@@ -118,7 +118,7 @@ export default function AdminSubscriptionsPage() {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = (users || []).filter((u) => {
     const matchesSearch =
       u.businessName?.toLowerCase().includes(search.toLowerCase()) ||
       u.fullName?.toLowerCase().includes(search.toLowerCase()) ||

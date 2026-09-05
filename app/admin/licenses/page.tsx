@@ -285,7 +285,7 @@ export default function AdminLicensesPage() {
     toast.success('সকল জেনারেটেড কি ও লিংক কপি হয়েছে!');
   };
 
-  const filteredLicenses = licenses.filter((l) => {
+  const filteredLicenses = (licenses || []).filter((l) => {
     const s = search.toLowerCase();
     return (
       l.key?.toLowerCase().includes(s) ||

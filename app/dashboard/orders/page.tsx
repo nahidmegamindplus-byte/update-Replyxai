@@ -307,7 +307,7 @@ export default function OrdersPage() {
             className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
           >
             <option value="ALL">সকল পেজ</option>
-            {pages.map((p) => (
+            {(pages || []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.pageName}
               </option>
@@ -757,7 +757,8 @@ export default function OrdersPage() {
                   onChange={(e) => setAddForm({ ...addForm, pageId: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
                 >
-                  {pages.map((p) => (
+                  <option value="">পেজ নির্বাচন করুন</option>
+                  {(pages || []).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.pageName}
                     </option>

@@ -88,11 +88,11 @@ export default function AdminPackagesPage() {
     setName(pkg.name);
     setSlug(pkg.slug);
     setDescription(pkg.description || '');
-    setPrice(pkg.price.toString());
-    setDurationDays(pkg.durationDays.toString());
-    setMessageLimit(pkg.messageLimit.toString());
-    setPageLimit(pkg.pageLimit.toString());
-    setProductLimit(pkg.productLimit.toString());
+    setPrice((pkg.price ?? 0).toString());
+    setDurationDays((pkg.durationDays ?? 30).toString());
+    setMessageLimit((pkg.messageLimit ?? 1000).toString());
+    setPageLimit((pkg.pageLimit ?? 1).toString());
+    setProductLimit((pkg.productLimit ?? 50).toString());
     setFeatureInputs(
       Array.isArray(pkg.features) && pkg.features.length > 0 ? pkg.features : ['']
     );
