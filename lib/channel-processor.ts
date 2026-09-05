@@ -254,18 +254,18 @@ export async function processIncomingChannelMessage(
 
       // Send matched product image if enabled and within conversation limit
       if (canSendMoreImages && aiResult.matchedProduct?.imageUrl) {
-        let fullImgUrl = aiResult.matchedProduct.imageUrl;
+        const rawImgUrl = aiResult.matchedProduct.imageUrl;
         const appUrl = req ? getAppUrl(req) : (process.env.APP_URL || 'http://localhost:3000');
-        if (fullImgUrl.startsWith('data:')) {
-          fullImgUrl = `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`;
-        } else if (fullImgUrl.startsWith('/')) {
-          fullImgUrl = `${appUrl}${fullImgUrl}`;
-        }
+        const fullImgUrl = rawImgUrl.startsWith('data:')
+          ? `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`
+          : rawImgUrl.startsWith('/')
+          ? `${appUrl}${rawImgUrl}`
+          : rawImgUrl;
 
         const imgSendRes = await sendChannelImage({
           channel,
           recipientId: senderId,
-          imageUrl: fullImgUrl,
+          imageUrl: rawImgUrl,
           caption: `${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}`,
           accessToken: pageAccessToken,
           channelIdentifier: page.channelIdentifier || page.facebookPageId,

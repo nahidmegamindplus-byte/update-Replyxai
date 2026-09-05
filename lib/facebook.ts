@@ -151,7 +151,65 @@ export async function sendMessengerText(
 }
 
 /**
- * Send an image attachment to a customer via Facebook Messenger Send API
+ * Extract binary Buffer and MIME type from base64 data URLs, local endpoints, or HTTP URLs
+ */
+export async function getImageBufferAndMime(
+  imageUrl: string
+): Promise<{ buffer: Buffer; mimeType: string; filename: string } | null> {
+  try {
+    if (!imageUrl) return null;
+    const cleanUrl = imageUrl.trim();
+
+    // 1. Direct Base64 Data URL
+    if (cleanUrl.startsWith('data:image/')) {
+      const match = cleanUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+      if (match) {
+        const mimeType = match[1];
+        const buffer = Buffer.from(match[2], 'base64');
+        const ext = mimeType.split('/')[1]?.split('+')[0] || 'jpg';
+        return { buffer, mimeType, filename: `product_image.${ext}` };
+      }
+    }
+
+    // 2. Local/Internal product image route (e.g. /api/products/[id]/image or http://.../api/products/[id]/image)
+    const productRouteMatch = cleanUrl.match(/\/api\/products\/([a-zA-Z0-9_-]+)\/image/);
+    if (productRouteMatch && productRouteMatch[1]) {
+      try {
+        const prisma = (await import('@/lib/db')).default;
+        const prod = await prisma.product.findUnique({
+          where: { id: productRouteMatch[1] },
+          select: { imageUrl: true },
+        });
+        if (prod?.imageUrl && prod.imageUrl.startsWith('data:image/')) {
+          return getImageBufferAndMime(prod.imageUrl);
+        }
+      } catch (_) {}
+    }
+
+    // 3. HTTP / HTTPS URL
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      const res = await fetch(cleanUrl, {
+        headers: { 'User-Agent': 'ReplyX-AI/1.0' },
+      });
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const contentType = res.headers.get('content-type') || 'image/jpeg';
+        const mimeType = contentType.split(';')[0].trim();
+        const ext = mimeType.split('/')[1]?.split('+')[0] || 'jpg';
+        return { buffer, mimeType, filename: `product_image.${ext}` };
+      }
+    }
+  } catch (err) {
+    serverLogger.warn('Error extracting image buffer:', err);
+  }
+  return null;
+}
+
+/**
+ * Send an image attachment to a customer via Facebook Messenger Send API.
+ * Supports direct multipart/form-data upload (works 100% with Base64 & Localhost)
+ * as well as public HTTPS URL payloads.
  */
 export async function sendMessengerImage(
   senderPsid: string,
@@ -163,32 +221,88 @@ export async function sendMessengerImage(
       return { success: false, error: 'Missing token or image URL' };
     }
 
-    const res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipient: { id: senderPsid },
-        messaging_type: 'RESPONSE',
-        message: {
-          attachment: {
-            type: 'image',
-            payload: {
-              url: imageUrl,
-              is_reusable: true,
+    // 1. Try direct multipart upload (works for base64, localhost, internal product images, and pre-fetched URLs)
+    const imageInfo = await getImageBufferAndMime(imageUrl);
+
+    if (imageInfo && imageInfo.buffer.length > 0) {
+      try {
+        serverLogger.info(
+          `Uploading product image directly to Facebook via multipart/form-data (${imageInfo.mimeType}, ${imageInfo.buffer.length} bytes) to PSID ${senderPsid}`
+        );
+
+        const blob = new Blob([new Uint8Array(imageInfo.buffer)], { type: imageInfo.mimeType });
+        const formData = new FormData();
+        formData.append('recipient', JSON.stringify({ id: senderPsid }));
+        formData.append('messaging_type', 'RESPONSE');
+        formData.append(
+          'message',
+          JSON.stringify({
+            attachment: {
+              type: 'image',
+              payload: { is_reusable: true },
+            },
+          })
+        );
+        formData.append('filedata', blob, imageInfo.filename);
+
+        const uploadRes = await fetch(
+          `${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && !uploadData.error) {
+          serverLogger.info(`Direct multipart image upload succeeded! Message ID: ${uploadData.message_id}`);
+          return { success: true, messageId: uploadData.message_id };
+        }
+
+        serverLogger.warn('Direct multipart upload returned error from Facebook:', uploadData.error);
+      } catch (uploadErr) {
+        serverLogger.warn('Direct multipart image upload exception:', uploadErr);
+      }
+    }
+
+    // 2. Fallback: URL payload (for public HTTPS URLs that Facebook servers can reach)
+    if (
+      imageUrl.startsWith('https://') &&
+      !imageUrl.includes('localhost') &&
+      !imageUrl.includes('127.0.0.1') &&
+      !imageUrl.includes('0.0.0.0')
+    ) {
+      serverLogger.info(`Sending image via public HTTPS URL payload to Facebook for PSID ${senderPsid}`);
+      const res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: { id: senderPsid },
+          messaging_type: 'RESPONSE',
+          message: {
+            attachment: {
+              type: 'image',
+              payload: {
+                url: imageUrl,
+                is_reusable: true,
+              },
             },
           },
-        },
-      }),
-    });
+        }),
+      });
 
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      serverLogger.warn('Image sending failed via Messenger API, falling back', data.error);
+      const data = await res.json();
+      if (res.ok && !data.error) {
+        return { success: true, messageId: data.message_id };
+      }
+      serverLogger.warn('Facebook URL payload image send failed:', data.error);
       return { success: false, error: data.error?.message };
     }
 
-    return { success: true, messageId: data.message_id };
+    return {
+      success: false,
+      error: 'ইমেজ সেন্ড করা সম্ভব হয়নি। অনুগ্রহ করে পাবলিক ইমেজ লিংক বা সঠিক ইমেজ ফরম্যাট ব্যবহার করুন।',
+    };
   } catch (error: any) {
     serverLogger.warn('Network error sending image attachment', error);
     return { success: false, error: error.message };

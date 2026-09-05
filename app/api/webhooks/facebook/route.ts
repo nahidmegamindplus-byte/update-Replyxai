@@ -345,17 +345,17 @@ export async function POST(req: NextRequest) {
 
             // Send product image from inventory if available and within conversation limit
             if (canSendMoreImages && aiResult.matchedProduct?.imageUrl) {
-              let fullImgUrl = aiResult.matchedProduct.imageUrl;
+              const rawImgUrl = aiResult.matchedProduct.imageUrl;
               const appUrl = getAppUrl(req);
-              if (fullImgUrl.startsWith('data:')) {
-                fullImgUrl = `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`;
-              } else if (fullImgUrl.startsWith('/')) {
-                fullImgUrl = `${appUrl}${fullImgUrl}`;
-              }
+              const fullImgUrl = rawImgUrl.startsWith('data:')
+                ? `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`
+                : rawImgUrl.startsWith('/')
+                ? `${appUrl}${rawImgUrl}`
+                : rawImgUrl;
 
               const imageSendResult = await sendMessengerImage(
                 senderPsid,
-                fullImgUrl,
+                rawImgUrl,
                 pageAccessToken
               );
 

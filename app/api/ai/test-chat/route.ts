@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       incomingText: message || '',
       incomingImageUrl: imageUrl || undefined,
       conversationHistory: history,
+      canSendProductImage: true,
     });
 
     return NextResponse.json({

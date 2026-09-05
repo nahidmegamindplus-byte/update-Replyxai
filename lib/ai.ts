@@ -389,19 +389,50 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
   } = params;
 
   // 1. Fetch Page info, Admin AI Settings, and Page-specific Products
-  const [page, adminAi, products] = await Promise.all([
+  const [page, adminAi] = await Promise.all([
     prisma.page.findUnique({
       where: { id: pageId },
       include: { user: { select: { businessName: true, fullName: true } } },
     }),
     getAdminAiSettings(),
-    prisma.product.findMany({
+  ]);
+
+  if (!page) {
+    throw new Error('Page not found');
+  }
+
+  // Fetch active products: first try matching pageId or global (null), then fallback to all active products of user
+  let products = await prisma.product.findMany({
+    where: {
+      userId,
+      isActive: true,
+      OR: [{ pageId }, { pageId: null }],
+    },
+    take: 50,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      sku: true,
+      category: true,
+      price: true,
+      discountPrice: true,
+      stockStatus: true,
+      stockQuantity: true,
+      imageUrl: true,
+      deliveryInfo: true,
+      productAiInstructions: true,
+      pageId: true,
+    },
+  });
+
+  if (products.length === 0) {
+    products = await prisma.product.findMany({
       where: {
         userId,
         isActive: true,
-        OR: [{ pageId }, { pageId: null }],
       },
-      take: 35,
+      take: 50,
       select: {
         id: true,
         name: true,
@@ -417,11 +448,7 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
         productAiInstructions: true,
         pageId: true,
       },
-    }),
-  ]);
-
-  if (!page) {
-    throw new Error('Page not found');
+    });
   }
 
   const provider = adminAi.provider;
@@ -438,13 +465,13 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
 
   const modelName = adminAi.model;
 
-  // Format products list for AI context
+  // Format products list for AI context with clear numbering and image status
   const productsSummary =
     products.length > 0
       ? products
           .map(
-            (p) =>
-              `- [ID: ${p.id}] ${p.name} | ক্যাটাগরি: ${p.category || 'সাধারণ'} | দাম: ${
+            (p, idx) =>
+              `- [ID: ${p.id}] (#${idx + 1}) "${p.name}" | ক্যাটাগরি: ${p.category || 'সাধারণ'} | দাম: ${
                 p.discountPrice ? `${p.discountPrice} টাকা (নিয়মিত ${p.price} টাকা)` : `${p.price} টাকা`
               } | স্টক: ${p.stockStatus} (${p.stockQuantity} টি) | ছবি: ${p.imageUrl ? 'আছে' : 'নেই'} | বিবরণ: ${
                 p.description || 'N/A'
@@ -456,15 +483,22 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
       : 'বর্তমানে এই পেজে কোনো প্রোডাক্ট তালিকাভুক্ত নেই।';
 
   // Determine whether image sending is allowed for this turn/conversation
-  const canSendImage = params.canSendProductImage !== false && Boolean(page.productImageReply);
+  const canSendImage = params.canSendProductImage !== false && (page.productImageReply !== false);
+
+  const sampleProductsWithImg = products.filter((p) => p.imageUrl && p.imageUrl.trim().length > 0);
+  const sampleProductExamples = sampleProductsWithImg
+    .slice(0, 2)
+    .map((p) => `<<<SEND_PRODUCT_IMAGE: "${p.name}" >>>`)
+    .join(' অথবা ');
+
   const imageInstructionSection = canSendImage
     ? `[SENDING PRODUCT IMAGES FROM INVENTORY (পণ্য ছবি পাঠানোর নিয়মাবলী)]
-- যখন কোনো গ্রাহক কোনো পণ্যের ছবি/পিক দেখতে চান (যেমন: "ছবি দেন", "পিক দেখতে চাই", "photo pathan", "pic dekhaw", "ছবি আছে?", "কালারগুলো দেখতে চাই"), অথবা ভয়েসে ছবি চান:
-- ইনভেন্টরি থেকে সংশ্লিষ্ট পণ্যের নাম ও দাম সুন্দরভাবে জানান।
+- যখন কোনো গ্রাহক কোনো পণ্যের ছবি/পিক/কালার দেখতে চান (যেমন: "ছবি দেন", "পিক দেখতে চাই", "photo pathan", "pic dekhaw", "ছবি আছে?", "কালারগুলো দেখতে চাই", "পণ্যটা দেখতে কেমন?"), অথবা ভয়েসে ছবি চান:
+- ইনভেন্টরি থেকে যে পণ্যের ছবি আছে (ছবি: আছে), সেই পণ্যের নাম ও দাম সুন্দরভাবে জানান।
 - এবং উত্তরের একেবারে শেষে বাধ্যতামূলকভাবে এই ট্যাগটি যোগ করুন:
-<<<SEND_PRODUCT_IMAGE: "PRODUCT_ID_OR_NAME" >>>
-উদাহরণ: <<<SEND_PRODUCT_IMAGE: "1" >>> অথবা <<<SEND_PRODUCT_IMAGE: "Black Polo Shirt" >>>
-- এটি ইনভেন্টরি থেকে গ্রাহকের মেসেঞ্জারে স্বয়ংক্রিয়ভাবে পণ্যের ছবি পাঠিয়ে দেবে।`
+<<<SEND_PRODUCT_IMAGE: "সঠিক পণ্যের নাম বা ID" >>>
+${sampleProductExamples ? `বাস্তব উদাহরণ: ${sampleProductExamples}` : `উদাহরণ: <<<SEND_PRODUCT_IMAGE: "পণ্যের নাম" >>>`}
+- এটি ইনভেন্টরি থেকে গ্রাহকের চ্যাটে পণ্যের ছবি স্বয়ংক্রিয়ভাবে পাঠিয়ে দেবে।`
     : `[SENDING PRODUCT IMAGES RESTRICTION (ছবি পাঠানো সংক্রান্ত সীমাবদ্ধতা)]
 - এই গ্রাহকের সাথে কনভারসেশনে ছবি পাঠানোর সীমা সম্পন্ন হয়েছে অথবা ছবি পাঠানো বন্ধ রয়েছে।
 - তাই আপনি কোনোভাবেই <<<SEND_PRODUCT_IMAGE:...>>> ট্যাগ ব্যবহার করবেন না এবং নতুন কোনো ছবি পাঠানো হবে না।
@@ -798,67 +832,147 @@ If phone or address is missing, politely ask the customer for their mobile numbe
 
   // 5. Extract explicit Product Image Send Tag if present
   let explicitProductTrigger: string | null = null;
-  const imageTriggerRegex = /<<<SEND_PRODUCT_IMAGE:\s*["']?([\s\S]*?)["']?\s*>>>/;
+  const imageTriggerRegex =
+    /(?:<<<|\[)\s*(?:SEND_PRODUCT_IMAGE|SEND_IMAGE|PRODUCT_IMAGE|IMAGE)\s*:\s*["']?([\s\S]*?)["']?\s*(?:>>>|\])/i;
   const imgMatch = replyText.match(imageTriggerRegex);
   if (imgMatch && imgMatch[1]) {
-    explicitProductTrigger = imgMatch[1].trim();
+    explicitProductTrigger = imgMatch[1]
+      .trim()
+      .replace(/^["'\[#\s]+|["'\]\s]+$/g, '')
+      .replace(/^(ID|id|Id)\s*:\s*/i, '')
+      .trim();
     replyText = replyText.replace(imageTriggerRegex, '').trim();
   }
 
   // 6. Search for matched product to attach image (only if image sending is allowed)
   let matchedProduct: any = null;
-  if (canSendImage && products.length > 0) {
+  const productsWithImages = products.filter((p) => p.imageUrl && p.imageUrl.trim().length > 0);
+
+  if (canSendImage && productsWithImages.length > 0) {
     // 6a. Match via explicit AI tag
     if (explicitProductTrigger) {
       const cleanTrigger = explicitProductTrigger.toLowerCase();
-      const directMatch = products.find(
-        (p) =>
-          p.id === explicitProductTrigger ||
-          p.name.toLowerCase() === cleanTrigger ||
-          p.name.toLowerCase().includes(cleanTrigger) ||
-          (p.sku && p.sku.toLowerCase() === cleanTrigger)
-      );
-      if (directMatch && directMatch.imageUrl) {
-        matchedProduct = {
-          id: directMatch.id,
-          name: directMatch.name,
-          price: directMatch.discountPrice || directMatch.price,
-          imageUrl: directMatch.imageUrl,
-        };
+
+      // Check if it's a 1-based index (e.g. #1, 1, 2)
+      const numIndex = parseInt(cleanTrigger.replace(/^[#]/, ''), 10);
+      if (!isNaN(numIndex) && numIndex >= 1 && numIndex <= products.length) {
+        const prodByIndex = products[numIndex - 1];
+        if (prodByIndex && prodByIndex.imageUrl) {
+          matchedProduct = {
+            id: prodByIndex.id,
+            name: prodByIndex.name,
+            price: prodByIndex.discountPrice || prodByIndex.price,
+            imageUrl: prodByIndex.imageUrl,
+          };
+        }
+      }
+
+      // Check direct ID or Name or SKU match
+      if (!matchedProduct) {
+        const directMatch = productsWithImages.find(
+          (p) =>
+            p.id.toLowerCase() === cleanTrigger ||
+            p.id.toLowerCase().includes(cleanTrigger) ||
+            cleanTrigger.includes(p.id.toLowerCase()) ||
+            p.name.toLowerCase() === cleanTrigger ||
+            p.name.toLowerCase().includes(cleanTrigger) ||
+            cleanTrigger.includes(p.name.toLowerCase()) ||
+            (p.sku && (p.sku.toLowerCase() === cleanTrigger || cleanTrigger.includes(p.sku.toLowerCase())))
+        );
+        if (directMatch) {
+          matchedProduct = {
+            id: directMatch.id,
+            name: directMatch.name,
+            price: directMatch.discountPrice || directMatch.price,
+            imageUrl: directMatch.imageUrl,
+          };
+        }
       }
     }
 
-    // 6b. Match if customer asked for photo / pic / color / inquiry
+    // 6b. Match if customer asked for photo / pic / color / inquiry OR AI mentioned sending a picture
     if (!matchedProduct) {
       const customerQuery = `${incomingText || ''} ${finalTranscription || ''}`.toLowerCase();
-      const isAskingForImage = /(ছবি|পিক|ফটো|পিকচার|photo|pic|picture|image|colour|color|কালার|দেখান|পাঠান|দেখব|দেখবো|দেখান তো)/i.test(customerQuery);
-      
-      if (isAskingForImage) {
-        const combinedText = `${replyText} ${customerQuery}`.toLowerCase();
-        for (const p of products) {
-          if (!p.imageUrl) continue;
+      const isCustomerAskingForImage =
+        /(ছবি|পিক|ফটো|পিকচার|photo|pic|picture|image|colour|color|কালার|দেখান|পাঠান|দেখব|দেখবো|দেখান তো|দেখি|দেখতে|সেন্ড)/i.test(
+          customerQuery
+        );
+      const isAiSendingImage =
+        /(ছবি|পিক|ফটো|photo|pic|image|নিচে|সংযুক্ত|পাঠিয়ে|পাঠালাম|দিচ্ছি|দেখুন|দেওয়া হলো|দেয়া হলো|পাঠানো হলো)/i.test(
+          replyText.toLowerCase()
+        );
+
+      if (isCustomerAskingForImage || isAiSendingImage) {
+        const searchCorpus = `${customerQuery} ${replyText.toLowerCase()}`;
+
+        // Score each product with image based on token overlaps
+        let bestScore = -1;
+        let bestProduct: any = null;
+
+        for (const p of productsWithImages) {
           const pName = p.name.toLowerCase();
-          if (combinedText.includes(pName) || (p.sku && combinedText.includes(p.sku.toLowerCase()))) {
-            matchedProduct = {
-              id: p.id,
-              name: p.name,
-              price: p.discountPrice || p.price,
-              imageUrl: p.imageUrl,
-            };
-            break;
+          let score = 0;
+
+          // Full name in text
+          if (searchCorpus.includes(pName)) {
+            score += 100;
           }
+
+          // SKU in text
+          if (p.sku && searchCorpus.includes(p.sku.toLowerCase())) {
+            score += 60;
+          }
+
+          // Category in text
+          if (p.category && searchCorpus.includes(p.category.toLowerCase())) {
+            score += 25;
+          }
+
+          // Word tokens
+          const tokens = pName
+            .split(/[\s\-_,./()]+/)
+            .filter((t) => t.length >= 3 && !['and', 'for', 'with', 'the', 'টি', 'টা', 'এর', 'এবং'].includes(t));
+          for (const t of tokens) {
+            if (searchCorpus.includes(t)) {
+              score += 15;
+            }
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestProduct = p;
+          }
+        }
+
+        if (bestScore > 0 && bestProduct) {
+          matchedProduct = {
+            id: bestProduct.id,
+            name: bestProduct.name,
+            price: bestProduct.discountPrice || bestProduct.price,
+            imageUrl: bestProduct.imageUrl,
+          };
+        } else if (productsWithImages.length === 1 && isCustomerAskingForImage) {
+          // If customer explicitly asks for image and there's only 1 product with image, send that one
+          const singleProd = productsWithImages[0];
+          matchedProduct = {
+            id: singleProd.id,
+            name: singleProd.name,
+            price: singleProd.discountPrice || singleProd.price,
+            imageUrl: singleProd.imageUrl,
+          };
         }
       }
     }
 
     // 6c. Match via detected order (show picture of ordered product)
     if (!matchedProduct && detectedOrder) {
-      const orderProductMatch = products.find(
+      const orderProductMatch = productsWithImages.find(
         (p) =>
           (detectedOrder.productId && p.id === detectedOrder.productId) ||
-          p.name.toLowerCase() === (detectedOrder.product || '').toLowerCase()
+          p.name.toLowerCase() === (detectedOrder.product || '').toLowerCase() ||
+          p.name.toLowerCase().includes((detectedOrder.product || '').toLowerCase())
       );
-      if (orderProductMatch && orderProductMatch.imageUrl) {
+      if (orderProductMatch) {
         matchedProduct = {
           id: orderProductMatch.id,
           name: orderProductMatch.name,

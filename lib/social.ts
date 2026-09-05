@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { serverLogger } from './logger';
+import { sendMessengerImage, getImageBufferAndMime } from './facebook';
 
 export const GRAPH_API_VERSION = process.env.FACEBOOK_GRAPH_API_VERSION || 'v20.0';
 const GRAPH_BASE_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
@@ -122,32 +123,7 @@ export async function sendFacebookImage(
   imageUrl: string,
   accessToken: string
 ): Promise<SendMessageResult> {
-  try {
-    if (!accessToken || !senderPsid) return { success: false, error: 'Missing token or PSID' };
-
-    const res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipient: { id: senderPsid },
-        messaging_type: 'RESPONSE',
-        message: {
-          attachment: {
-            type: 'image',
-            payload: { url: imageUrl, is_reusable: true },
-          },
-        },
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      return { success: false, error: data.error?.message || 'Failed to send Facebook image' };
-    }
-    return { success: true, messageId: data.message_id };
-  } catch (error: any) {
-    return { success: false, error: error?.message || 'Network error' };
-  }
+  return await sendMessengerImage(senderPsid, imageUrl, accessToken);
 }
 
 // -------------------------------------------------------------
@@ -251,22 +227,61 @@ export async function sendWhatsAppImage(
       cleanPhone = '88' + cleanPhone;
     }
 
+    // 1. Try direct media upload if binary buffer is available (base64 or local)
+    const imageInfo = await getImageBufferAndMime(imageUrl);
+    let uploadedMediaId: string | null = null;
+
+    if (imageInfo && imageInfo.buffer.length > 0) {
+      try {
+        const blob = new Blob([new Uint8Array(imageInfo.buffer)], { type: imageInfo.mimeType });
+        const formData = new FormData();
+        formData.append('messaging_product', 'whatsapp');
+        formData.append('file', blob, imageInfo.filename);
+
+        const uploadRes = await fetch(`${GRAPH_BASE_URL}/${encodeURIComponent(targetPhoneId)}/media`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && uploadData.id) {
+          uploadedMediaId = uploadData.id;
+        }
+      } catch (err) {
+        serverLogger.warn('WhatsApp media upload failed, attempting link payload:', err);
+      }
+    }
+
+    const payloadBody = uploadedMediaId
+      ? {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: cleanPhone,
+          type: 'image',
+          image: {
+            id: uploadedMediaId,
+            caption: caption || '',
+          },
+        }
+      : {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: cleanPhone,
+          type: 'image',
+          image: {
+            link: imageUrl,
+            caption: caption || '',
+          },
+        };
+
     const res = await fetch(`${GRAPH_BASE_URL}/${encodeURIComponent(targetPhoneId)}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: cleanPhone,
-        type: 'image',
-        image: {
-          link: imageUrl,
-          caption: caption || '',
-        },
-      }),
+      body: JSON.stringify(payloadBody),
     });
 
     const data = await res.json();
@@ -545,7 +560,7 @@ export async function sendTelegramText(
 }
 
 export async function sendTelegramImage(
-  chatId: string | number,
+  chatId: string,
   imageUrl: string,
   caption: string | undefined,
   botToken: string
@@ -553,6 +568,31 @@ export async function sendTelegramImage(
   try {
     if (!botToken || !chatId) return { success: false, error: 'Missing bot token or chatId' };
 
+    // 1. Try binary multipart upload
+    const imageInfo = await getImageBufferAndMime(imageUrl);
+    if (imageInfo && imageInfo.buffer.length > 0) {
+      try {
+        const blob = new Blob([new Uint8Array(imageInfo.buffer)], { type: imageInfo.mimeType });
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        if (caption) formData.append('caption', caption);
+        formData.append('photo', blob, imageInfo.filename);
+
+        const res = await fetch(`https://api.telegram.org/bot${botToken.trim()}/sendPhoto`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          return { success: true, messageId: String(data.result?.message_id) };
+        }
+      } catch (err) {
+        serverLogger.warn('Telegram multipart photo upload failed, falling back:', err);
+      }
+    }
+
+    // 2. Fallback URL
     const res = await fetch(`https://api.telegram.org/bot${botToken.trim()}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
