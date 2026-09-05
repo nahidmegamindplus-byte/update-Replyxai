@@ -106,6 +106,10 @@ export async function PUT(
       const limit = parseInt(body.maxImagesPerConversation, 10);
       updateData.maxImagesPerConversation = isNaN(limit) ? 2 : Math.max(0, Math.min(50, limit));
     }
+    if (body.maxImagesPerReply !== undefined) {
+      const perReply = parseInt(body.maxImagesPerReply, 10);
+      updateData.maxImagesPerReply = isNaN(perReply) ? 1 : Math.max(1, Math.min(10, perReply));
+    }
     if (body.orderDetection !== undefined) updateData.orderDetection = Boolean(body.orderDetection);
     if (body.voiceProcessing !== undefined) updateData.voiceProcessing = Boolean(body.voiceProcessing);
     if (body.imageUnderstanding !== undefined) updateData.imageUnderstanding = Boolean(body.imageUnderstanding);

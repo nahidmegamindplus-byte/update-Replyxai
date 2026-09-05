@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
         aiInstructions: page.aiInstructions,
         productImageReply: page.productImageReply,
         maxImagesPerConversation: page.maxImagesPerConversation,
+        maxImagesPerReply: page.maxImagesPerReply ?? 1,
         orderDetection: page.orderDetection,
         voiceProcessing: page.voiceProcessing,
         imageUnderstanding: page.imageUnderstanding,

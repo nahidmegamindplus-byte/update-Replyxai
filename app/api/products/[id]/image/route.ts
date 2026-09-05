@@ -17,14 +17,34 @@ export async function GET(
   try {
     const product = await prisma.product.findUnique({
       where: { id: params.id },
-      select: { imageUrl: true, name: true },
+      select: { imageUrl: true, images: true, name: true },
     });
 
-    if (!product || !product.imageUrl) {
-      return new NextResponse('Product image not found', { status: 404 });
+    if (!product) {
+      return new NextResponse('Product not found', { status: 404 });
     }
 
-    const img = product.imageUrl.trim();
+    const { searchParams } = new URL(req.url);
+    const indexParam = searchParams.get('index');
+    let img: string | null = null;
+
+    if (indexParam !== null && product.images) {
+      try {
+        const parsed = JSON.parse(product.images);
+        const idx = parseInt(indexParam, 10);
+        if (Array.isArray(parsed) && !isNaN(idx) && idx >= 0 && idx < parsed.length) {
+          img = parsed[idx];
+        }
+      } catch (_) {}
+    }
+
+    if (!img) {
+      img = product.imageUrl ? product.imageUrl.trim() : null;
+    }
+
+    if (!img) {
+      return new NextResponse('Product image not found', { status: 404 });
+    }
 
     // 1. If stored as Base64 Data URL (e.g. data:image/png;base64,...)
     if (img.startsWith('data:image/')) {

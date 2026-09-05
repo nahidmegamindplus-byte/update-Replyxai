@@ -609,7 +609,29 @@ export default function AiRulesPage() {
                           <span className="ml-1.5 text-slate-600 font-medium">({m.matchedProduct.price} ৳)</span>
                         </div>
                       </div>
-                      {m.matchedProduct.imageUrl && (
+                      {/* Images Preview: single or multiple gallery */}
+                      {m.matchedProduct.images && m.matchedProduct.images.length > 1 ? (
+                        <div className="space-y-1.5 max-w-sm">
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {m.matchedProduct.images.map((imgUrl: string, imgIdx: number) => (
+                              <div key={imgIdx} className="relative aspect-square rounded-lg overflow-hidden border border-emerald-200/80 bg-white shadow-xs">
+                                <img
+                                  src={imgUrl}
+                                  alt={`${m.matchedProduct.name} ${imgIdx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <span className="absolute bottom-0.5 right-0.5 bg-black/60 text-white text-[9px] px-1 rounded font-bold">
+                                  #{imgIdx + 1}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="bg-white/90 px-2 py-1 rounded-lg text-[10px] text-emerald-800 font-medium flex items-center justify-between border border-emerald-100">
+                            <span>📷 {m.matchedProduct.images.length}টি ইনভেন্টরি ফটো পাঠানো হবে</span>
+                            <span className="font-semibold">ম্যাচড</span>
+                          </div>
+                        </div>
+                      ) : m.matchedProduct.imageUrl ? (
                         <div className="rounded-lg overflow-hidden border border-emerald-200/80 max-w-xs">
                           <img
                             src={m.matchedProduct.imageUrl}
@@ -621,7 +643,7 @@ export default function AiRulesPage() {
                             <span className="font-semibold">ম্যাচড</span>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
 

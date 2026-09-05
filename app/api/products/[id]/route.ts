@@ -33,7 +33,23 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, product });
+    let imagesList: string[] = [];
+    if (product.images) {
+      try {
+        imagesList = JSON.parse(product.images);
+      } catch (_) {}
+    }
+    if (imagesList.length === 0 && product.imageUrl) {
+      imagesList = [product.imageUrl];
+    }
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...product,
+        images: imagesList,
+      },
+    });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: 'প্রোডাক্ট লোড করতে সমস্যা হয়েছে।' },
@@ -76,6 +92,17 @@ export async function PUT(
     if (body.stockQuantity !== undefined) updateData.stockQuantity = parseInt(body.stockQuantity, 10);
     if (body.stockStatus !== undefined) updateData.stockStatus = body.stockStatus;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl ? body.imageUrl.trim() : null;
+    if (body.images !== undefined) {
+      if (Array.isArray(body.images)) {
+        const cleanList = body.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
+        updateData.images = cleanList.length > 0 ? JSON.stringify(cleanList) : null;
+        if (cleanList.length > 0 && (!body.imageUrl || body.imageUrl === '')) {
+          updateData.imageUrl = cleanList[0];
+        }
+      } else if (body.images === null) {
+        updateData.images = null;
+      }
+    }
     if (body.deliveryInfo !== undefined) updateData.deliveryInfo = body.deliveryInfo ? body.deliveryInfo.trim() : null;
     if (body.productAiInstructions !== undefined) updateData.productAiInstructions = body.productAiInstructions ? body.productAiInstructions.trim() : null;
     if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);

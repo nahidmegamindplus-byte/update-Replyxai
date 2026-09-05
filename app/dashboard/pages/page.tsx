@@ -31,6 +31,7 @@ import {
   Calendar,
   RotateCcw,
   Image as ImageIcon,
+  Layers,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
@@ -421,6 +422,7 @@ export default function PagesManagementPage() {
       replyStyle: page.replyStyle || 'FRIENDLY',
       productImageReply: page.productImageReply ?? true,
       maxImagesPerConversation: page.maxImagesPerConversation !== undefined ? page.maxImagesPerConversation : 2,
+      maxImagesPerReply: page.maxImagesPerReply !== undefined ? page.maxImagesPerReply : 1,
       orderDetection: page.orderDetection ?? true,
       voiceProcessing: page.voiceProcessing ?? true,
       imageUnderstanding: page.imageUnderstanding ?? true,
@@ -830,7 +832,7 @@ export default function PagesManagementPage() {
                       {page.productImageReply && (
                         <span className="px-2 py-0.5 rounded-md flex items-center gap-1 font-medium bg-blue-50 text-blue-700 border border-blue-200">
                           <ImageIcon className="w-3 h-3 text-blue-600" />
-                          ছবি লিমিট: {page.maxImagesPerConversation === 0 ? 'সীমাহীন' : `${page.maxImagesPerConversation ?? 2} বার`}
+                          ছবি: {page.maxImagesPerConversation === 0 ? 'সীমাহীন' : `${page.maxImagesPerConversation ?? 2} বার`} • একবারে {page.maxImagesPerReply === 0 ? 'সব' : `${page.maxImagesPerReply ?? 1}টি`}
                         </span>
                       )}
                     </div>
@@ -1473,6 +1475,69 @@ export default function PagesManagementPage() {
                                 className="w-16 px-2 py-1 bg-white border border-indigo-200 rounded-lg text-xs text-center font-bold text-indigo-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                               />
                               <span className="text-[10px] text-slate-400">বার (০ = আনলিমিটেড)</span>
+                            </div>
+                          </div>
+
+                          {/* Images Per Reply configuration */}
+                          <div className="pt-2.5 border-t border-indigo-200/60 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                  <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                                  একবারে সর্বোচ্চ কতটি ছবি পাঠাবে (Images per Reply)
+                                </div>
+                                <div className="text-[10px] text-indigo-700/80 mt-0.5">
+                                  গ্রাহক ছবি চাইলে একসাথে সর্বোচ্চ কয়টি ছবি পাঠাবে
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold px-2.5 py-0.5 bg-indigo-600 text-white rounded-full shadow-xs">
+                                {editForm.maxImagesPerReply === 0 ? 'সবগুলো' : `${editForm.maxImagesPerReply ?? 1}টি`}
+                              </span>
+                            </div>
+
+                            {/* Quick Presets for Images Per Reply */}
+                            <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                              {[
+                                { label: '১টি (ডিফল্ট)', value: 1 },
+                                { label: '২টি', value: 2 },
+                                { label: '৩টি', value: 3 },
+                                { label: 'সবগুলো', value: 0 },
+                              ].map((preset) => (
+                                <button
+                                  key={preset.value}
+                                  type="button"
+                                  onClick={() => setEditForm({ ...editForm, maxImagesPerReply: preset.value })}
+                                  className={`py-1.5 px-2 rounded-lg text-xs font-semibold text-center transition-all ${
+                                    (editForm.maxImagesPerReply ?? 1) === preset.value
+                                      ? 'bg-indigo-600 text-white shadow-sm'
+                                      : 'bg-white text-slate-700 hover:bg-indigo-100/60 border border-indigo-200/60'
+                                  }`}
+                                >
+                                  {preset.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Custom number input for maxImagesPerReply */}
+                            <div className="flex items-center justify-between pt-1 border-t border-indigo-100/80 text-[11px] text-slate-600">
+                              <span>কাস্টম সংখ্যা:</span>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  value={editForm.maxImagesPerReply ?? 1}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    setEditForm({
+                                      ...editForm,
+                                      maxImagesPerReply: isNaN(val) ? 1 : Math.max(0, Math.min(10, val)),
+                                    });
+                                  }}
+                                  className="w-16 px-2 py-1 bg-white border border-indigo-200 rounded-lg text-xs text-center font-bold text-indigo-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                />
+                                <span className="text-[10px] text-slate-400">টি (০ = সবগুলো)</span>
+                              </div>
                             </div>
                           </div>
                         </div>

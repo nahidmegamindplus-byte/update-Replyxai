@@ -91,6 +91,7 @@ export interface AIResponseResult {
     name: string;
     price: number;
     imageUrl?: string | null;
+    images?: string[];
   } | null;
   detectedOrder?: {
     customerName: string;
@@ -374,6 +375,21 @@ export async function getAdminAiSettings() {
   };
 }
 
+export function parseProductImages(p: { imageUrl?: string | null; images?: string | null }): string[] {
+  if (p.images) {
+    try {
+      const parsed = JSON.parse(p.images);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const filtered = parsed.filter((u: any) => typeof u === 'string' && u.trim().length > 0);
+        if (filtered.length > 0) return filtered;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return p.imageUrl && p.imageUrl.trim().length > 0 ? [p.imageUrl.trim()] : [];
+}
+
 /**
  * Main AI Engine to process incoming messages (Text, Image, Voice Audio) and produce intelligent replies
  */
@@ -420,6 +436,7 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
       stockStatus: true,
       stockQuantity: true,
       imageUrl: true,
+      images: true,
       deliveryInfo: true,
       productAiInstructions: true,
       pageId: true,
@@ -444,6 +461,7 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
         stockStatus: true,
         stockQuantity: true,
         imageUrl: true,
+        images: true,
         deliveryInfo: true,
         productAiInstructions: true,
         pageId: true,
@@ -469,23 +487,23 @@ export async function generateAIReply(params: GenerateReplyParams): Promise<AIRe
   const productsSummary =
     products.length > 0
       ? products
-          .map(
-            (p, idx) =>
-              `- [ID: ${p.id}] (#${idx + 1}) "${p.name}" | ক্যাটাগরি: ${p.category || 'সাধারণ'} | দাম: ${
-                p.discountPrice ? `${p.discountPrice} টাকা (নিয়মিত ${p.price} টাকা)` : `${p.price} টাকা`
-              } | স্টক: ${p.stockStatus} (${p.stockQuantity} টি) | ছবি: ${p.imageUrl ? 'আছে' : 'নেই'} | বিবরণ: ${
-                p.description || 'N/A'
-              } | ডেলিভারি: ${p.deliveryInfo || 'স্ট্যান্ডার্ড'}${
-                p.productAiInstructions ? ` | বিশেষ তথ্য: ${p.productAiInstructions}` : ''
-              }`
-          )
+          .map((p, idx) => {
+            const imgCount = parseProductImages(p).length;
+            return `- [ID: ${p.id}] (#${idx + 1}) "${p.name}" | ক্যাটাগরি: ${p.category || 'সাধারণ'} | দাম: ${
+              p.discountPrice ? `${p.discountPrice} টাকা (নিয়মিত ${p.price} টাকা)` : `${p.price} টাকা`
+            } | স্টক: ${p.stockStatus} (${p.stockQuantity} টি) | ছবি: ${imgCount > 0 ? `আছে (${imgCount}টি ছবি)` : 'নেই'} | বিবরণ: ${
+              p.description || 'N/A'
+            } | ডেলিভারি: ${p.deliveryInfo || 'স্ট্যান্ডার্ড'}${
+              p.productAiInstructions ? ` | বিশেষ তথ্য: ${p.productAiInstructions}` : ''
+            }`;
+          })
           .join('\n')
       : 'বর্তমানে এই পেজে কোনো প্রোডাক্ট তালিকাভুক্ত নেই।';
 
   // Determine whether image sending is allowed for this turn/conversation
   const canSendImage = params.canSendProductImage !== false && (page.productImageReply !== false);
 
-  const sampleProductsWithImg = products.filter((p) => p.imageUrl && p.imageUrl.trim().length > 0);
+  const sampleProductsWithImg = products.filter((p) => parseProductImages(p).length > 0);
   const sampleProductExamples = sampleProductsWithImg
     .slice(0, 2)
     .map((p) => `<<<SEND_PRODUCT_IMAGE: "${p.name}" >>>`)
@@ -846,7 +864,19 @@ If phone or address is missing, politely ask the customer for their mobile numbe
 
   // 6. Search for matched product to attach image (only if image sending is allowed)
   let matchedProduct: any = null;
-  const productsWithImages = products.filter((p) => p.imageUrl && p.imageUrl.trim().length > 0);
+
+  const buildMatchedProduct = (p: any) => {
+    const imgs = parseProductImages(p);
+    return {
+      id: p.id,
+      name: p.name,
+      price: p.discountPrice || p.price,
+      imageUrl: imgs[0] || p.imageUrl || null,
+      images: imgs,
+    };
+  };
+
+  const productsWithImages = products.filter((p) => parseProductImages(p).length > 0);
 
   if (canSendImage && productsWithImages.length > 0) {
     // 6a. Match via explicit AI tag
@@ -857,13 +887,8 @@ If phone or address is missing, politely ask the customer for their mobile numbe
       const numIndex = parseInt(cleanTrigger.replace(/^[#]/, ''), 10);
       if (!isNaN(numIndex) && numIndex >= 1 && numIndex <= products.length) {
         const prodByIndex = products[numIndex - 1];
-        if (prodByIndex && prodByIndex.imageUrl) {
-          matchedProduct = {
-            id: prodByIndex.id,
-            name: prodByIndex.name,
-            price: prodByIndex.discountPrice || prodByIndex.price,
-            imageUrl: prodByIndex.imageUrl,
-          };
+        if (prodByIndex && parseProductImages(prodByIndex).length > 0) {
+          matchedProduct = buildMatchedProduct(prodByIndex);
         }
       }
 
@@ -880,12 +905,7 @@ If phone or address is missing, politely ask the customer for their mobile numbe
             (p.sku && (p.sku.toLowerCase() === cleanTrigger || cleanTrigger.includes(p.sku.toLowerCase())))
         );
         if (directMatch) {
-          matchedProduct = {
-            id: directMatch.id,
-            name: directMatch.name,
-            price: directMatch.discountPrice || directMatch.price,
-            imageUrl: directMatch.imageUrl,
-          };
+          matchedProduct = buildMatchedProduct(directMatch);
         }
       }
     }
@@ -945,21 +965,10 @@ If phone or address is missing, politely ask the customer for their mobile numbe
         }
 
         if (bestScore > 0 && bestProduct) {
-          matchedProduct = {
-            id: bestProduct.id,
-            name: bestProduct.name,
-            price: bestProduct.discountPrice || bestProduct.price,
-            imageUrl: bestProduct.imageUrl,
-          };
+          matchedProduct = buildMatchedProduct(bestProduct);
         } else if (productsWithImages.length === 1 && isCustomerAskingForImage) {
           // If customer explicitly asks for image and there's only 1 product with image, send that one
-          const singleProd = productsWithImages[0];
-          matchedProduct = {
-            id: singleProd.id,
-            name: singleProd.name,
-            price: singleProd.discountPrice || singleProd.price,
-            imageUrl: singleProd.imageUrl,
-          };
+          matchedProduct = buildMatchedProduct(productsWithImages[0]);
         }
       }
     }
@@ -973,12 +982,7 @@ If phone or address is missing, politely ask the customer for their mobile numbe
           p.name.toLowerCase().includes((detectedOrder.product || '').toLowerCase())
       );
       if (orderProductMatch) {
-        matchedProduct = {
-          id: orderProductMatch.id,
-          name: orderProductMatch.name,
-          price: orderProductMatch.discountPrice || orderProductMatch.price,
-          imageUrl: orderProductMatch.imageUrl,
-        };
+        matchedProduct = buildMatchedProduct(orderProductMatch);
       }
     }
   }

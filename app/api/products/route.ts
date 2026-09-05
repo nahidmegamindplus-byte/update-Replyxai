@@ -67,9 +67,25 @@ export async function GET(req: NextRequest) {
 
     const categories = distinctCategories.map((c) => c.category).filter(Boolean) as string[];
 
+    const parsedProducts = products.map((p) => {
+      let imagesList: string[] = [];
+      if (p.images) {
+        try {
+          imagesList = JSON.parse(p.images);
+        } catch (_) {}
+      }
+      if (imagesList.length === 0 && p.imageUrl) {
+        imagesList = [p.imageUrl];
+      }
+      return {
+        ...p,
+        images: imagesList,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      products,
+      products: parsedProducts,
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -100,6 +116,7 @@ export async function POST(req: NextRequest) {
       stockQuantity,
       stockStatus,
       imageUrl,
+      images,
       deliveryInfo,
       productAiInstructions,
       pageId,
@@ -116,6 +133,15 @@ export async function POST(req: NextRequest) {
     const numericDiscount = discountPrice ? parseFloat(discountPrice) : null;
     const numericQty = stockQuantity ? parseInt(stockQuantity, 10) : 0;
 
+    let cleanImagesArray: string[] = [];
+    if (Array.isArray(images)) {
+      cleanImagesArray = images.filter((img) => typeof img === 'string' && img.trim().length > 0);
+    } else if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim().length > 0) {
+      cleanImagesArray = [imageUrl.trim()];
+    }
+
+    const primaryImageUrl = cleanImagesArray.length > 0 ? cleanImagesArray[0] : (imageUrl ? imageUrl.trim() : null);
+
     const product = await prisma.product.create({
       data: {
         userId: auth.user.id,
@@ -128,7 +154,8 @@ export async function POST(req: NextRequest) {
         discountPrice: numericDiscount,
         stockQuantity: numericQty,
         stockStatus: stockStatus || (numericQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK'),
-        imageUrl: imageUrl ? imageUrl.trim() : null,
+        imageUrl: primaryImageUrl,
+        images: cleanImagesArray.length > 0 ? JSON.stringify(cleanImagesArray) : null,
         deliveryInfo: deliveryInfo ? deliveryInfo.trim() : null,
         productAiInstructions: productAiInstructions ? productAiInstructions.trim() : null,
         isActive: true,

@@ -67,6 +67,7 @@ model Page {
   aiInstructions            String?
   productImageReply         Boolean       @default(true)
   maxImagesPerConversation  Int           @default(2) // 0 for unlimited, or 1, 2, 3, etc.
+  maxImagesPerReply         Int           @default(1) // 1, 2, 3, 5, etc. How many images to send in a single reply
   orderDetection            Boolean       @default(true)
   voiceProcessing           Boolean       @default(true)
   imageUnderstanding        Boolean       @default(true)
@@ -106,6 +107,7 @@ model Product {
   stockQuantity         Int           @default(0)
   stockStatus           String        @default("IN_STOCK") // IN_STOCK, OUT_OF_STOCK, PRE_ORDER
   imageUrl              String?
+  images                String?       // JSON array of multiple image URLs / base64 strings
   deliveryInfo          String?
   productAiInstructions String?
   isActive              Boolean       @default(true)

@@ -307,6 +307,18 @@ export async function ensureDatabaseReady() {
       if (!existingPageCols.has('maxImagesPerConversation')) {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerConversation" INTEGER NOT NULL DEFAULT 2;`);
       }
+      if (!existingPageCols.has('maxImagesPerReply')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerReply" INTEGER NOT NULL DEFAULT 1;`);
+      }
+
+      // Check Product table for multi-image column
+      try {
+        const prodColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Product");`)) as Array<{ name: string }>;
+        const existingProdCols = new Set(prodColumnsRaw.map((c) => c.name));
+        if (!existingProdCols.has('images')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "images" TEXT;`);
+        }
+      } catch (_) {}
 
       const convColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Conversation");`)) as Array<{ name: string }>;
       const existingConvCols = new Set(convColumnsRaw.map((c) => c.name));

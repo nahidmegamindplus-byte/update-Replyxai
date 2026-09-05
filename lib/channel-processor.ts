@@ -252,48 +252,68 @@ export async function processIncomingChannelMessage(
         serverLogger.warn(`Failed to dispatch ${channel} outbound text reply:`, sendRes.error);
       }
 
-      // Send matched product image if enabled and within conversation limit
-      if (canSendMoreImages && aiResult.matchedProduct?.imageUrl) {
-        const rawImgUrl = aiResult.matchedProduct.imageUrl;
+      // Send matched product image(s) if enabled and within conversation limit
+      if (canSendMoreImages && (aiResult.matchedProduct?.images?.length || aiResult.matchedProduct?.imageUrl)) {
+        const allImages: string[] = (
+          aiResult.matchedProduct.images && aiResult.matchedProduct.images.length > 0
+            ? aiResult.matchedProduct.images
+            : aiResult.matchedProduct.imageUrl
+            ? [aiResult.matchedProduct.imageUrl]
+            : []
+        ).filter(Boolean);
+
+        const perReplyLimit = (page as any).maxImagesPerReply === 0 ? allImages.length : Math.max(1, (page as any).maxImagesPerReply ?? 1);
+        const remainingQuota = maxImages === 0 ? allImages.length : Math.max(0, maxImages - imagesAlreadySent);
+        const countToSend = Math.min(perReplyLimit, remainingQuota, allImages.length);
+        const imagesToSend = allImages.slice(0, countToSend);
+
         const appUrl = req ? getAppUrl(req) : (process.env.APP_URL || 'http://localhost:3000');
-        const fullImgUrl = rawImgUrl.startsWith('data:')
-          ? `${appUrl}/api/products/${aiResult.matchedProduct.id}/image`
-          : rawImgUrl.startsWith('/')
-          ? `${appUrl}${rawImgUrl}`
-          : rawImgUrl;
 
-        const imgSendRes = await sendChannelImage({
-          channel,
-          recipientId: senderId,
-          imageUrl: rawImgUrl,
-          caption: `${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}`,
-          accessToken: pageAccessToken,
-          channelIdentifier: page.channelIdentifier || page.facebookPageId,
-          extraConfig: parsedConfig,
-        });
+        for (let i = 0; i < imagesToSend.length; i++) {
+          const rawImgUrl = imagesToSend[i];
+          const fullImgUrl = rawImgUrl.startsWith('data:')
+            ? `${appUrl}/api/products/${aiResult.matchedProduct.id}/image?index=${i}`
+            : rawImgUrl.startsWith('/')
+            ? `${appUrl}${rawImgUrl}`
+            : rawImgUrl;
 
-        if (imgSendRes.success) {
-          await prisma.message.create({
-            data: {
-              conversationId: conversation.id,
-              userId: page.userId,
-              pageId: page.id,
-              senderPsid: senderId,
-              direction: 'OUTGOING',
-              messageType: 'IMAGE',
-              mediaUrl: fullImgUrl,
-              messageText: `[পণ্য ছবি: ${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}]`,
-              aiGenerated: true,
-              aiModel: aiResult.aiModel,
-            },
+          const imgSendRes = await sendChannelImage({
+            channel,
+            recipientId: senderId,
+            imageUrl: rawImgUrl,
+            caption: imagesToSend.length > 1
+              ? `${aiResult.matchedProduct.name} (${i + 1}/${imagesToSend.length}) - ৳${aiResult.matchedProduct.price}`
+              : `${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}`,
+            accessToken: pageAccessToken,
+            channelIdentifier: page.channelIdentifier || page.facebookPageId,
+            extraConfig: parsedConfig,
           });
 
-          try {
-            await prisma.conversation.update({
-              where: { id: conversation.id },
-              data: { imagesSentCount: { increment: 1 } },
+          if (imgSendRes.success) {
+            await prisma.message.create({
+              data: {
+                conversationId: conversation.id,
+                userId: page.userId,
+                pageId: page.id,
+                senderPsid: senderId,
+                direction: 'OUTGOING',
+                messageType: 'IMAGE',
+                mediaUrl: fullImgUrl,
+                messageText: imagesToSend.length > 1
+                  ? `[পণ্য ছবি (${i + 1}/${imagesToSend.length}): ${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}]`
+                  : `[পণ্য ছবি: ${aiResult.matchedProduct.name} - ৳${aiResult.matchedProduct.price}]`,
+                aiGenerated: true,
+                aiModel: aiResult.aiModel,
+              },
             });
-          } catch (_) {}
+
+            try {
+              await prisma.conversation.update({
+                where: { id: conversation.id },
+                data: { imagesSentCount: { increment: 1 } },
+              });
+            } catch (_) {}
+          }
         }
       }
     }
