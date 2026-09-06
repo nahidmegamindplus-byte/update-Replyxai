@@ -43,7 +43,9 @@ if (fs.existsSync(cssDir)) {
     }
     const targetGlobalCss = path.join(publicDir, 'global.css');
     fs.writeFileSync(targetGlobalCss, combinedCss, 'utf8');
-    console.log(`[Assets] Created public/global.css (${Math.round(combinedCss.length / 1024)} KB) - 100% bulletproof stylesheet.`);
+    const targetRootGlobalCss = path.join(rootDir, 'global.css');
+    fs.writeFileSync(targetRootGlobalCss, combinedCss, 'utf8');
+    console.log(`[Assets] Created public/global.css & root global.css (${Math.round(combinedCss.length / 1024)} KB) - 100% bulletproof stylesheet.`);
   }
 }
 

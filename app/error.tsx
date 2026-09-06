@@ -30,19 +30,7 @@ export default function ErrorBoundary({
   useEffect(() => {
     console.error('Client-side exception caught by error boundary:', error);
 
-    const msg = error?.message || '';
-    if (msg.includes('insertBefore') || msg.includes('removeChild') || msg.includes('not a child of this node')) {
-      try {
-        const recovered = sessionStorage.getItem('dom_recovery_attempt');
-        if (!recovered) {
-          sessionStorage.setItem('dom_recovery_attempt', 'true');
-          setTimeout(() => {
-            reset();
-          }, 50);
-          return;
-        }
-      } catch (_) {}
-    }
+
 
     const updateOnlineStatus = () => {
       setIsOffline(!navigator.onLine);
