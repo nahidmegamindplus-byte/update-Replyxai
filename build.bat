@@ -11,6 +11,8 @@ echo         ReplyX AI - Building Project for Production
 echo ================================================================
 echo.
 echo [*] Working Directory: %CD%
+echo [*] Generating Prisma Client...
+call node node_modules\prisma\build\index.js generate
 echo [*] Running Next.js Build...
 call node node_modules\next\dist\bin\next build
 

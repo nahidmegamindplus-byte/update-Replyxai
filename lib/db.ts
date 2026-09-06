@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
+import os from 'os';
+
 function getDatabaseUrl(): string {
   const envUrl = process.env.DATABASE_URL;
 
@@ -10,17 +12,17 @@ function getDatabaseUrl(): string {
     return envUrl;
   }
 
-  // Detect serverless environment (Vercel, Netlify, AWS Lambda)
+  // Detect genuine serverless environment (Vercel, Netlify, AWS Lambda)
+  // NEVER treat standard servers (Windows/Linux/Docker/PM2) as serverless simply due to NODE_ENV === 'production'
   const isServerless =
     Boolean(process.env.VERCEL) ||
     Boolean(process.env.NETLIFY) ||
     Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-    Boolean(process.env.LAMBDA_TASK_ROOT) ||
-    process.env.NODE_ENV === 'production';
+    Boolean(process.env.LAMBDA_TASK_ROOT);
 
   if (isServerless) {
     try {
-      const tmpDir = '/tmp';
+      const tmpDir = os.tmpdir() || '/tmp';
       const tmpDbPath = path.join(tmpDir, 'replyx_dev.db');
 
       if (!fs.existsSync(tmpDbPath)) {
@@ -41,13 +43,13 @@ function getDatabaseUrl(): string {
               copied = true;
               break;
             } catch (err) {
-              console.warn('Failed to copy seed db to /tmp:', err);
+              console.warn('Failed to copy seed db to serverless temp directory:', err);
             }
           }
         }
 
         if (!copied) {
-          // Create empty file in /tmp so SQLite can open and write schema
+          // Create empty file in temp so SQLite can open and write schema
           fs.writeFileSync(tmpDbPath, '');
           fs.chmodSync(tmpDbPath, 0o666);
         }
@@ -55,11 +57,11 @@ function getDatabaseUrl(): string {
 
       return `file:${tmpDbPath}`;
     } catch (e) {
-      console.warn('Serverless /tmp db setup fallback:', e);
+      console.warn('Serverless temp db setup fallback:', e);
     }
   }
 
-  // Local environment fallback
+  // Local / standard server environment (Windows, Linux VPS, Docker)
   const localPrismaDir = path.resolve(process.cwd(), 'prisma');
   if (!fs.existsSync(localPrismaDir)) {
     try {

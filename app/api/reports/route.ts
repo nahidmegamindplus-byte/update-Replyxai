@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { ensureDatabaseReady } from '@/lib/db-init';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
 
   try {
+    await ensureDatabaseReady();
     const { searchParams } = new URL(req.url);
     const range = searchParams.get('range') || '7d';
     const startDateParam = searchParams.get('startDate');

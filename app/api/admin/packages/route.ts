@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
+import { ensureDatabaseReady } from '@/lib/db-init';
+import { safeJsonParse } from '@/lib/json-safe';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if ('response' in auth) return auth.response;
 
   try {
+    await ensureDatabaseReady();
     const packages = await prisma.package.findMany({
       orderBy: { price: 'asc' },
       include: {
@@ -24,7 +29,7 @@ export async function GET(req: NextRequest) {
       success: true,
       packages: packages.map((p) => ({
         ...p,
-        features: typeof p.features === 'string' ? JSON.parse(p.features || '[]') : p.features,
+        features: safeJsonParse(p.features, []),
       })),
     });
   } catch (error: any) {

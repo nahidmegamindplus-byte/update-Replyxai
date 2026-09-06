@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { ensureDatabaseReady } from '@/lib/db-init';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const settingsList = await prisma.systemSetting.findMany({
       where: {
         key: {

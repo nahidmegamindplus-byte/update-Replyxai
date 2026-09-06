@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { ensureDatabaseReady } from '@/lib/db-init';
+import { safeJsonParse } from '@/lib/json-safe';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await ensureDatabaseReady();
     let packages = await prisma.package.findMany({
       where: { isActive: true },
       orderBy: { price: 'asc' },
@@ -67,7 +72,7 @@ export async function GET() {
       success: true,
       packages: packages.map((p) => ({
         ...p,
-        features: typeof p.features === 'string' ? JSON.parse(p.features || '[]') : p.features,
+        features: safeJsonParse(p.features, []),
       })),
     });
   } catch (error: any) {

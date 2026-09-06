@@ -14,6 +14,8 @@ echo.
 :: Free Port 3000 if occupied
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 
+echo [*] Generating Prisma Client...
+call node node_modules\prisma\build\index.js generate
 echo [*] Building project for production...
 call node node_modules\next\dist\bin\next build
 

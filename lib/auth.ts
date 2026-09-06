@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import prisma from './db';
+import { ensureDatabaseReady } from './db-init';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replyx_ai_super_secret_jwt_key_2026_bd_secure';
 export const AUTH_COOKIE_NAME = 'replyx_session';
@@ -93,6 +94,7 @@ export async function getCurrentUser(req: NextRequest): Promise<AuthUser | null>
   if (!payload?.userId) return null;
 
   try {
+    await ensureDatabaseReady();
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: {

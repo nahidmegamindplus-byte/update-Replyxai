@@ -2,11 +2,14 @@ import prisma from './db';
 import bcrypt from 'bcryptjs';
 
 let isDbInitialized = false;
+let initPromise: Promise<void> | null = null;
 
 export async function ensureDatabaseReady() {
   if (isDbInitialized) return;
+  if (initPromise) return initPromise;
 
-  try {
+  initPromise = (async () => {
+    try {
     // 1. Unconditionally ensure ALL tables exist using IF NOT EXISTS DDL
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "User" (
@@ -465,5 +468,10 @@ export async function ensureDatabaseReady() {
     isDbInitialized = true;
   } catch (err) {
     console.error('Error during database self-healing initialization:', err);
+  } finally {
+    initPromise = null;
   }
+  })();
+
+  return initPromise;
 }
