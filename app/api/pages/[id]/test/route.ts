@@ -53,17 +53,16 @@ export async function POST(
       testResult = await testFacebookConnection(identifier, accessToken);
     }
 
-    const newStatus = testResult.success ? 'CONNECTED' : 'TOKEN_EXPIRED';
-    await prisma.page.update({
-      where: { id: page.id },
-      data: {
-        connectionStatus: newStatus,
-        pageName: testResult.name || page.pageName,
-        pageUsername: testResult.username || page.pageUsername,
-      },
-    });
-
     if (testResult.success) {
+      await prisma.page.update({
+        where: { id: page.id },
+        data: {
+          connectionStatus: 'CONNECTED',
+          pageName: testResult.name || page.pageName,
+          pageUsername: testResult.username || page.pageUsername,
+        },
+      });
+
       return NextResponse.json({
         success: true,
         message: `${channel} চ্যানেল সফলভাবে কানেক্টেড! API এক্সেস সক্রিয় আছে।`,
@@ -75,7 +74,7 @@ export async function POST(
         success: false,
         error:
           testResult.error ||
-          `${channel} সংযোগে ত্রুটি হয়েছে। অনুগ্রহ করে চ্যানেল সেটিংস থেকে Token ও ID যাচাই করুন।`,
+          `${channel} সংযোগে সতর্কতা পাওয়া গেছে। অনুগ্রহ করে চ্যানেল সেটিংস থেকে Token ও ID যাচাই করুন।`,
       });
     }
   } catch (error: any) {

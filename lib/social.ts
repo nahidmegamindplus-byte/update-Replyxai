@@ -67,7 +67,7 @@ export async function testFacebookConnection(
     if (!accessToken) return { success: false, error: 'Facebook Page Access Token প্রয়োজন।' };
 
     const res = await fetch(
-      `${GRAPH_BASE_URL}/${facebookPageId}?fields=id,name,username,picture&access_token=${encodeURIComponent(accessToken)}`,
+      `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
       { method: 'GET' }
     );
     const data = await res.json();
@@ -82,8 +82,7 @@ export async function testFacebookConnection(
     return {
       success: true,
       name: data.name,
-      username: data.username,
-      avatarUrl: data.picture?.data?.url,
+      username: data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined,
     };
   } catch (error: any) {
     return { success: false, error: error?.message || 'Facebook API connection failed' };
@@ -139,7 +138,7 @@ export async function testWhatsAppConnection(
     if (!phoneNumberId) return { success: false, error: 'WhatsApp Phone Number ID প্রয়োজন।' };
 
     const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(phoneNumberId)}?fields=id,verified_name,display_phone_number,quality_rating,code_verification_status&access_token=${encodeURIComponent(accessToken)}`,
+      `${GRAPH_BASE_URL}/${encodeURIComponent(phoneNumberId)}?fields=id,verified_name,display_phone_number&access_token=${encodeURIComponent(accessToken)}`,
       { method: 'GET' }
     );
     const data = await res.json();
@@ -308,7 +307,7 @@ export async function testInstagramConnection(
     if (!accessToken) return { success: false, error: 'Instagram Access Token প্রয়োজন।' };
 
     const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(instagramAccountId)}?fields=id,username,name,profile_picture_url&access_token=${encodeURIComponent(accessToken)}`,
+      `${GRAPH_BASE_URL}/${encodeURIComponent(instagramAccountId)}?fields=id,username,name&access_token=${encodeURIComponent(accessToken)}`,
       { method: 'GET' }
     );
     const data = await res.json();
@@ -324,7 +323,6 @@ export async function testInstagramConnection(
       success: true,
       name: data.name || `@${data.username}`,
       username: data.username,
-      avatarUrl: data.profile_picture_url,
     };
   } catch (error: any) {
     return { success: false, error: error?.message || 'Instagram API connection failed' };

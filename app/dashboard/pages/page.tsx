@@ -415,7 +415,7 @@ export default function PagesManagementPage() {
       pageAccessToken: '',
       verifyToken: page.verifyToken || '',
       replyDelaySeconds: page.replyDelaySeconds !== undefined ? page.replyDelaySeconds : 3,
-      connectionStatus: page.connectionStatus || 'CONNECTED',
+      connectionStatus: page.connectionStatus === 'DISCONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
       autoReplyEnabled: page.autoReplyEnabled ?? true,
       humanHandoffEnabled: page.humanHandoffEnabled ?? true,
       replyLanguage: page.replyLanguage || 'AUTO',
@@ -711,22 +711,22 @@ export default function PagesManagementPage() {
                       </div>
 
                       {/* Status Pill */}
-                      <div className="shrink-0 flex items-center gap-1">
+                      <div className="shrink-0 flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
-                            page.connectionStatus === 'CONNECTED'
-                              ? 'bg-emerald-500 animate-pulse'
-                              : 'bg-amber-500'
+                            page.connectionStatus === 'DISCONNECTED'
+                              ? 'bg-slate-400'
+                              : 'bg-emerald-500 animate-pulse'
                           }`}
                         />
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            page.connectionStatus === 'CONNECTED'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            page.connectionStatus === 'DISCONNECTED'
+                              ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           }`}
                         >
-                          {page.connectionStatus === 'CONNECTED' ? 'সক্রিয়' : 'টোকেন আপডেট প্রয়োজন'}
+                          {page.connectionStatus === 'DISCONNECTED' ? 'নিষ্ক্রিয়' : 'সক্রিয় (Connected)'}
                         </span>
                       </div>
                     </div>

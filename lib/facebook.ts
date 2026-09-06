@@ -55,31 +55,31 @@ export async function testPageConnection(
       return { success: false, error: 'Page Access Token প্রয়োজন।' };
     }
 
+    // Modern Graph API supports id,name universally across all Page token types
     const res = await fetch(
-      `${GRAPH_BASE_URL}/${facebookPageId}?fields=id,name,username,picture&access_token=${encodeURIComponent(accessToken)}`,
+      `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
       { method: 'GET' }
     );
-
     const data = await res.json();
 
     if (!res.ok || data.error) {
       const fbError = data.error?.message || 'Facebook API এর সাথে সংযোগ করা যায়নি।';
       return {
         success: false,
-        error: `Page Access Token সঠিক নয় অথবা মেয়াদ শেষ হয়েছে: ${fbError}`,
+        error: `Page Access Token সতর্কীকরণ: ${fbError}`,
       };
     }
 
     return {
       success: true,
       pageName: data.name,
-      pageUsername: data.username,
+      pageUsername: data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined,
     };
   } catch (error: any) {
     serverLogger.error('Facebook connection test failed', error);
     return {
       success: false,
-      error: 'Facebook সার্ভারের সাথে যোগাযোগ করা সম্ভব হয়নি। অনুগ্রহ করে পরে চেষ্টা করুন।',
+      error: 'Facebook সার্ভারের সাথে যোগাযোগ করা সম্ভব হয়নি।',
     };
   }
 }

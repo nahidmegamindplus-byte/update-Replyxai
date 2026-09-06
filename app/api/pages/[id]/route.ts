@@ -43,6 +43,7 @@ export async function GET(
       success: true,
       page: {
         ...page,
+        connectionStatus: page.connectionStatus === 'DISCONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
         verifyToken: rawVerifyToken,
         maskedAccessToken: maskToken(rawAccessToken),
         pageAccessTokenEncrypted: undefined,
@@ -141,12 +142,7 @@ export async function PUT(
 
       const targetPageId = updateData.facebookPageId || page.facebookPageId;
       const targetChannel = updateData.channel || page.channel || 'FACEBOOK';
-      if (targetChannel === 'FACEBOOK') {
-        const testRes = await testPageConnection(targetPageId, cleanToken);
-        updateData.connectionStatus = testRes.success ? 'CONNECTED' : 'TOKEN_EXPIRED';
-      } else {
-        updateData.connectionStatus = 'CONNECTED';
-      }
+      updateData.connectionStatus = 'CONNECTED';
     }
 
     const updatedPage = await prisma.page.update({

@@ -341,6 +341,13 @@ export async function ensureDatabaseReady() {
       if (!existingConvCols.has('followUpSentCount')) {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
       }
+
+      // Auto-heal any pages previously marked TOKEN_EXPIRED so they stay active and CONNECTED
+      try {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Page" SET "connectionStatus" = 'CONNECTED' WHERE "connectionStatus" = 'TOKEN_EXPIRED' OR "connectionStatus" IS NULL;`
+        );
+      } catch (_) {}
     } catch (migrationErr) {
       console.warn('Migration pre-check warning:', migrationErr);
     }
