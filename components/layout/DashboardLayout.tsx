@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { ToastProvider } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -21,13 +22,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          router.push('/login');
-          return;
-        }
-        const data = await res.json();
-        if (data.success && data.user) {
+        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 600 });
+        if (data && data.success && data.user) {
           // Gating: If normal user does not have an active package, redirect to /subscribe
           if (data.user.role !== 'ADMIN' && data.user.planStatus !== 'ACTIVE') {
             router.push('/subscribe');

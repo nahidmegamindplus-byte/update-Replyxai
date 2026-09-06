@@ -13,13 +13,17 @@ export async function ensureDatabaseReady() {
     try {
       // 0. Enable WAL mode & concurrency optimizations for SQLite to prevent 'database is locked' errors
       try {
-        await prisma.$executeRawUnsafe(`PRAGMA journal_mode = WAL;`);
-        await prisma.$executeRawUnsafe(`PRAGMA busy_timeout = 30000;`);
-        await prisma.$executeRawUnsafe(`PRAGMA synchronous = NORMAL;`);
-        await prisma.$executeRawUnsafe(`PRAGMA cache_size = -20000;`);
-      } catch (_) {
-        // Safe to ignore if using non-SQLite provider
-      }
+        await prisma.$queryRawUnsafe(`PRAGMA journal_mode = WAL;`);
+      } catch (_) {}
+      try {
+        await prisma.$queryRawUnsafe(`PRAGMA busy_timeout = 30000;`);
+      } catch (_) {}
+      try {
+        await prisma.$queryRawUnsafe(`PRAGMA synchronous = NORMAL;`);
+      } catch (_) {}
+      try {
+        await prisma.$queryRawUnsafe(`PRAGMA cache_size = -20000;`);
+      } catch (_) {}
 
       // 1. Unconditionally ensure ALL tables exist using IF NOT EXISTS DDL
       await prisma.$executeRawUnsafe(`

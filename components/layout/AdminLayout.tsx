@@ -7,6 +7,7 @@ import AdminSidebar from './AdminSidebar';
 import Header from './Header';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -24,13 +25,8 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
   useEffect(() => {
     async function checkAdminAuth() {
       try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          router.push('/login');
-          return;
-        }
-        const data = await res.json();
-        if (data.success && data.user) {
+        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 600 });
+        if (data && data.success && data.user) {
           if (data.user.role !== 'ADMIN') {
             setIsUnauthorized(true);
           } else {

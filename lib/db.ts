@@ -61,14 +61,38 @@ function getDatabaseUrl(): string {
     }
   }
 
-  // Local / standard server environment (Windows, Linux VPS, Docker)
-  const localPrismaDir = path.resolve(process.cwd(), 'prisma');
+  // Local / standard server environment (Windows, Linux VPS, Hostinger, Docker)
+  function findProjectRoot(): string {
+    // 1. Check process.cwd()
+    if (fs.existsSync(path.join(process.cwd(), 'prisma'))) {
+      return process.cwd();
+    }
+    // 2. Check __dirname and parent hierarchy
+    let currentDir = __dirname;
+    for (let i = 0; i < 5; i++) {
+      if (fs.existsSync(path.join(currentDir, 'prisma'))) {
+        return currentDir;
+      }
+      const parent = path.dirname(currentDir);
+      if (parent === currentDir) break;
+      currentDir = parent;
+    }
+    return process.cwd();
+  }
+
+  const rootDir = findProjectRoot();
+  const localPrismaDir = path.resolve(rootDir, 'prisma');
   if (!fs.existsSync(localPrismaDir)) {
     try {
-      fs.mkdirSync(localPrismaDir, { recursive: true });
+      fs.mkdirSync(localPrismaDir, { recursive: true, mode: 0o777 });
     } catch (e) {}
   }
   const localDb = path.resolve(localPrismaDir, 'dev.db');
+  if (fs.existsSync(localDb)) {
+    try {
+      fs.chmodSync(localDb, 0o666);
+    } catch (_) {}
+  }
   return `file:${localDb}`;
 }
 
