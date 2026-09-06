@@ -14,6 +14,17 @@ export const metadata: Metadata = {
   },
 };
 
+import fs from 'fs';
+import path from 'path';
+
+let inlinedTailwindCss = '';
+try {
+  const cssPath = path.join(process.cwd(), 'global.css');
+  if (fs.existsSync(cssPath)) {
+    inlinedTailwindCss = fs.readFileSync(cssPath, 'utf8');
+  }
+} catch (_) {}
+
 export default function RootLayout({
   children,
 }: {
@@ -23,6 +34,13 @@ export default function RootLayout({
     <html lang="bn" className="light notranslate" translate="no" suppressHydrationWarning>
       <head>
         <meta name="google" content="notranslate" />
+        {inlinedTailwindCss ? (
+          <style
+            id="inlined-tailwind-css"
+            dangerouslySetInnerHTML={{ __html: inlinedTailwindCss }}
+          />
+        ) : null}
+        <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="/global.css" />
       </head>
       <body

@@ -49,4 +49,11 @@ if (fs.existsSync(cssDir)) {
   }
 }
 
+// 4. Generate 100% self-contained Tailwind HTML landing page
+try {
+  require('./generate-html-home.js');
+} catch (err) {
+  console.warn('[Assets] Error generating HTML home:', err);
+}
+
 console.log('[Assets] Asset synchronization complete.');
