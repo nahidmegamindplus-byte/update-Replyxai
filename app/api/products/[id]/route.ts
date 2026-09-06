@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
+import { parseFlexibleNumber, parseFlexibleInt } from '@/lib/format';
 
 export async function GET(
   req: NextRequest,
@@ -87,9 +88,17 @@ export async function PUT(
     if (body.description !== undefined) updateData.description = body.description ? body.description.trim() : null;
     if (body.sku !== undefined) updateData.sku = body.sku ? body.sku.trim() : null;
     if (body.category !== undefined) updateData.category = body.category ? body.category.trim() : null;
-    if (body.price !== undefined) updateData.price = parseFloat(body.price);
-    if (body.discountPrice !== undefined) updateData.discountPrice = body.discountPrice ? parseFloat(body.discountPrice) : null;
-    if (body.stockQuantity !== undefined) updateData.stockQuantity = parseInt(body.stockQuantity, 10);
+    if (body.price !== undefined) {
+      const p = parseFlexibleNumber(body.price, -1);
+      if (p >= 0) updateData.price = p;
+    }
+    if (body.discountPrice !== undefined) {
+      const d = parseFlexibleNumber(body.discountPrice, 0);
+      updateData.discountPrice = d > 0 ? d : null;
+    }
+    if (body.stockQuantity !== undefined) {
+      updateData.stockQuantity = Math.max(0, parseFlexibleInt(body.stockQuantity, 0));
+    }
     if (body.stockStatus !== undefined) updateData.stockStatus = body.stockStatus;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl ? body.imageUrl.trim() : null;
     if (body.images !== undefined) {
@@ -106,7 +115,17 @@ export async function PUT(
     if (body.deliveryInfo !== undefined) updateData.deliveryInfo = body.deliveryInfo ? body.deliveryInfo.trim() : null;
     if (body.productAiInstructions !== undefined) updateData.productAiInstructions = body.productAiInstructions ? body.productAiInstructions.trim() : null;
     if (body.isActive !== undefined) updateData.isActive = Boolean(body.isActive);
-    if (body.pageId !== undefined) updateData.pageId = body.pageId && body.pageId !== 'ALL' ? body.pageId : null;
+    if (body.pageId !== undefined) {
+      if (body.pageId && body.pageId !== 'ALL') {
+        const pExists = await prisma.page.findFirst({
+          where: { id: body.pageId, userId: auth.user.id },
+          select: { id: true },
+        });
+        updateData.pageId = pExists ? pExists.id : null;
+      } else {
+        updateData.pageId = null;
+      }
+    }
 
     const updated = await prisma.product.update({
       where: { id: params.id },

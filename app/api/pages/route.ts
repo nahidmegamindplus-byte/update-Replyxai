@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
         webhookStatus: page.webhookStatus,
         connectionStatus: page.connectionStatus,
         autoReplyEnabled: page.autoReplyEnabled,
+        replyDelaySeconds: page.replyDelaySeconds,
         humanHandoffEnabled: page.humanHandoffEnabled,
         replyLanguage: page.replyLanguage,
         replyStyle: page.replyStyle,
@@ -71,6 +72,13 @@ export async function GET(req: NextRequest) {
         orderDetection: page.orderDetection,
         voiceProcessing: page.voiceProcessing,
         imageUnderstanding: page.imageUnderstanding,
+        followUpEnabled: page.followUpEnabled,
+        followUpWaitMinutes: page.followUpWaitMinutes,
+        followUpMessage: page.followUpMessage,
+        followUpOnlySeen: page.followUpOnlySeen,
+        followUpMaxCount: page.followUpMaxCount,
+        followUpFrequency: page.followUpFrequency,
+        followUpIntervalHours: page.followUpIntervalHours,
         createdAt: page.createdAt,
         counts: {
           conversations: page._count.conversations,
@@ -106,6 +114,22 @@ export async function POST(req: NextRequest) {
       aiInstructions,
       replyLanguage,
       replyStyle,
+      replyDelaySeconds,
+      autoReplyEnabled,
+      humanHandoffEnabled,
+      productImageReply,
+      maxImagesPerConversation,
+      maxImagesPerReply,
+      orderDetection,
+      voiceProcessing,
+      imageUnderstanding,
+      followUpEnabled,
+      followUpWaitMinutes,
+      followUpMessage,
+      followUpOnlySeen,
+      followUpMaxCount,
+      followUpFrequency,
+      followUpIntervalHours,
     } = body;
 
     const selectedChannel = (channel || 'FACEBOOK').toUpperCase() as SocialChannel;
@@ -150,16 +174,21 @@ export async function POST(req: NextRequest) {
       success: false,
     };
 
-    if (selectedChannel === 'WHATSAPP') {
-      testResult = await testWhatsAppConnection(cleanId, cleanToken);
-    } else if (selectedChannel === 'INSTAGRAM') {
-      testResult = await testInstagramConnection(cleanId, cleanToken);
-    } else if (selectedChannel === 'X') {
-      testResult = await testXConnection(cleanToken);
-    } else if (selectedChannel === 'TELEGRAM') {
-      testResult = await testTelegramConnection(cleanToken);
-    } else {
-      testResult = await testFacebookConnection(cleanId, cleanToken);
+    try {
+      if (selectedChannel === 'WHATSAPP') {
+        testResult = await testWhatsAppConnection(cleanId, cleanToken);
+      } else if (selectedChannel === 'INSTAGRAM') {
+        testResult = await testInstagramConnection(cleanId, cleanToken);
+      } else if (selectedChannel === 'X') {
+        testResult = await testXConnection(cleanToken);
+      } else if (selectedChannel === 'TELEGRAM') {
+        testResult = await testTelegramConnection(cleanToken);
+      } else {
+        testResult = await testFacebookConnection(cleanId, cleanToken);
+      }
+    } catch (connErr) {
+      console.warn('Channel connection test warning:', connErr);
+      testResult = { success: false, error: 'সংযোগ যাচাইকরণের সময় প্রতিক্রিয়া মেলেনি।' };
     }
 
     // Webhook token generation
@@ -179,7 +208,7 @@ export async function POST(req: NextRequest) {
         userId: auth.user.id,
         channel: selectedChannel,
         channelIdentifier: cleanId,
-        extraConfig: extraConfig ? JSON.stringify(extraConfig) : null,
+        extraConfig: extraConfig ? (typeof extraConfig === 'object' ? JSON.stringify(extraConfig) : extraConfig) : null,
         facebookPageId: cleanId,
         pageName: cleanName,
         pageUsername: testResult.username || null,
@@ -191,6 +220,22 @@ export async function POST(req: NextRequest) {
         aiInstructions: aiInstructions || null,
         replyLanguage: replyLanguage || 'AUTO',
         replyStyle: replyStyle || 'FRIENDLY',
+        replyDelaySeconds: replyDelaySeconds !== undefined ? Number(replyDelaySeconds) : 3,
+        autoReplyEnabled: autoReplyEnabled !== undefined ? Boolean(autoReplyEnabled) : true,
+        humanHandoffEnabled: humanHandoffEnabled !== undefined ? Boolean(humanHandoffEnabled) : true,
+        productImageReply: productImageReply !== undefined ? Boolean(productImageReply) : true,
+        maxImagesPerConversation: maxImagesPerConversation !== undefined ? Number(maxImagesPerConversation) : 2,
+        maxImagesPerReply: maxImagesPerReply !== undefined ? Number(maxImagesPerReply) : 1,
+        orderDetection: orderDetection !== undefined ? Boolean(orderDetection) : true,
+        voiceProcessing: voiceProcessing !== undefined ? Boolean(voiceProcessing) : true,
+        imageUnderstanding: imageUnderstanding !== undefined ? Boolean(imageUnderstanding) : true,
+        followUpEnabled: followUpEnabled !== undefined ? Boolean(followUpEnabled) : false,
+        followUpWaitMinutes: followUpWaitMinutes !== undefined ? Number(followUpWaitMinutes) : 30,
+        followUpMessage: followUpMessage || null,
+        followUpOnlySeen: followUpOnlySeen !== undefined ? Boolean(followUpOnlySeen) : true,
+        followUpMaxCount: followUpMaxCount !== undefined ? Number(followUpMaxCount) : 1,
+        followUpFrequency: followUpFrequency || 'ONCE',
+        followUpIntervalHours: followUpIntervalHours !== undefined ? Number(followUpIntervalHours) : 24,
       },
     });
 

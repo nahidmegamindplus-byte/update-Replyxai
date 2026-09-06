@@ -15,6 +15,10 @@ export async function GET(req: NextRequest) {
             'whatsapp_number',
             'whatsapp_message',
             'whatsapp_position',
+            'instagram_username',
+            'telegram_username',
+            'x_handle',
+            'facebook_page',
           ],
         },
       },
@@ -37,6 +41,10 @@ export async function GET(req: NextRequest) {
           settingsMap['whatsapp_message'] ||
           'আসসালামু আলাইকুম, আমি ReplyX AI সম্পর্কে তথ্য জানতে চাই।',
         position: settingsMap['whatsapp_position'] || 'RIGHT',
+        instagramUsername: settingsMap['instagram_username'] || 'replyx.ai',
+        telegramUsername: settingsMap['telegram_username'] || 'replyx_support_bot',
+        xHandle: settingsMap['x_handle'] || 'ReplyX_AI',
+        facebookPage: settingsMap['facebook_page'] || 'replyx.ai',
       },
     });
   } catch (error: any) {
@@ -48,6 +56,10 @@ export async function GET(req: NextRequest) {
           number: '+8801521716613',
           message: 'আসসালামু আলাইকুম, আমি ReplyX AI সম্পর্কে তথ্য জানতে চাই।',
           position: 'RIGHT',
+          instagramUsername: 'replyx.ai',
+          telegramUsername: 'replyx_support_bot',
+          xHandle: 'ReplyX_AI',
+          facebookPage: 'replyx.ai',
         },
       },
       { status: 200 }

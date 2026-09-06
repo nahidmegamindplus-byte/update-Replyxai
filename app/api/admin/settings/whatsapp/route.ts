@@ -16,6 +16,10 @@ export async function GET(req: NextRequest) {
             'whatsapp_number',
             'whatsapp_message',
             'whatsapp_position',
+            'instagram_username',
+            'telegram_username',
+            'x_handle',
+            'facebook_page',
           ],
         },
       },
@@ -38,6 +42,10 @@ export async function GET(req: NextRequest) {
           settingsMap['whatsapp_message'] ||
           'আসসালামু আলাইকুম, আমি ReplyX AI সম্পর্কে তথ্য জানতে চাই।',
         position: settingsMap['whatsapp_position'] || 'RIGHT',
+        instagramUsername: settingsMap['instagram_username'] || 'replyx.ai',
+        telegramUsername: settingsMap['telegram_username'] || 'replyx_support_bot',
+        xHandle: settingsMap['x_handle'] || 'ReplyX_AI',
+        facebookPage: settingsMap['facebook_page'] || 'replyx.ai',
       },
     });
   } catch (error: any) {
@@ -54,18 +62,35 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { enabled, number, message, position } = body;
+    const {
+      enabled,
+      number,
+      message,
+      position,
+      instagramUsername,
+      telegramUsername,
+      xHandle,
+      facebookPage,
+    } = body;
 
     const cleanEnabled = Boolean(enabled).toString();
     const cleanNumber = (number || '').trim();
     const cleanMessage = (message || '').trim();
     const cleanPosition = position === 'LEFT' ? 'LEFT' : 'RIGHT';
+    const cleanInstagram = (instagramUsername || '').trim();
+    const cleanTelegram = (telegramUsername || '').trim();
+    const cleanX = (xHandle || '').trim();
+    const cleanFacebook = (facebookPage || '').trim();
 
     const updates = [
       { key: 'whatsapp_enabled', value: cleanEnabled },
       { key: 'whatsapp_number', value: cleanNumber },
       { key: 'whatsapp_message', value: cleanMessage },
       { key: 'whatsapp_position', value: cleanPosition },
+      { key: 'instagram_username', value: cleanInstagram },
+      { key: 'telegram_username', value: cleanTelegram },
+      { key: 'x_handle', value: cleanX },
+      { key: 'facebook_page', value: cleanFacebook },
     ];
 
     for (const item of updates) {
@@ -79,12 +104,12 @@ export async function POST(req: NextRequest) {
     await logActivity({
       userId: adminAuth.user.id,
       action: 'WHATSAPP_SETTINGS_UPDATED',
-      description: `WhatsApp সাপোর্ট সেটিংস আপডেট করা হয়েছে (সক্রিয়: ${cleanEnabled}, নম্বর: ${cleanNumber}, পজিশন: ${cleanPosition})`,
+      description: `সোশ্যাল ও WhatsApp সাপোর্ট সেটিংস আপডেট করা হয়েছে (সক্রিয়: ${cleanEnabled}, নম্বর: ${cleanNumber})`,
     });
 
     return NextResponse.json({
       success: true,
-      message: 'WhatsApp সাপোর্ট সেটিংস সফলভাবে সংরক্ষণ করা হয়েছে!',
+      message: 'সোশ্যাল ও WhatsApp সাপোর্ট সেটিংস সফলভাবে সংরক্ষণ করা হয়েছে!',
     });
   } catch (error: any) {
     console.error('Error saving WhatsApp settings:', error);

@@ -154,39 +154,75 @@ export default function ProductsPage() {
     setShowModal(true);
   };
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.82): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(reader.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const fileList = Array.from(files);
-    let loadedCount = 0;
     const newImages: string[] = [];
 
-    fileList.forEach((file) => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} এর সাইজ ৫ মেগাবাইটের বেশি। এটি বাদ দেওয়া হয়েছে।`);
-        return;
+    for (const file of fileList) {
+      if (file.size > 15 * 1024 * 1024) {
+        toast.error(`${file.name} এর সাইজ ১৫ মেগাবাইটের বেশি। এটি বাদ দেওয়া হয়েছে।`);
+        continue;
       }
+      try {
+        const compressed = await compressImage(file);
+        newImages.push(compressed);
+      } catch (err) {
+        console.error('Image compression failed:', err);
+        toast.error(`${file.name} প্রসেস করতে ব্যর্থ হয়েছে।`);
+      }
+    }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        newImages.push(result);
-        loadedCount++;
-        if (loadedCount === fileList.length) {
-          setFormData((prev) => {
-            const combined = [...(prev.images || []), ...newImages];
-            return {
-              ...prev,
-              images: combined,
-              imageUrl: combined[0] || '',
-            };
-          });
-          toast.success(`${newImages.length}টি ছবি সফলভাবে যুক্ত হয়েছে!`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    if (newImages.length > 0) {
+      setFormData((prev) => {
+        const combined = [...(prev.images || []), ...newImages];
+        return {
+          ...prev,
+          images: combined,
+          imageUrl: combined[0] || '',
+        };
+      });
+      toast.success(`${newImages.length}টি ছবি যুক্ত করা হয়েছে!`);
+    }
 
     e.target.value = '';
   };

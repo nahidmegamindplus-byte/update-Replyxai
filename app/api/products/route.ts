@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
+import { ensureDatabaseReady } from '@/lib/db-init';
+import { parseFlexibleNumber, parseFlexibleInt } from '@/lib/format';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
 
   try {
+    await ensureDatabaseReady();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
@@ -105,6 +110,7 @@ export async function POST(req: NextRequest) {
   if ('response' in auth) return auth.response;
 
   try {
+    await ensureDatabaseReady();
     const body = await req.json();
     const {
       name,
@@ -122,16 +128,35 @@ export async function POST(req: NextRequest) {
       pageId,
     } = body;
 
-    if (!name || price === undefined || price === null) {
+    if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json(
-        { success: false, error: 'পণ্যের নাম এবং মূল্য আবশ্যক।' },
+        { success: false, error: 'পণ্যের নাম আবশ্যক।' },
         { status: 400 }
       );
     }
 
-    const numericPrice = parseFloat(price);
-    const numericDiscount = discountPrice ? parseFloat(discountPrice) : null;
-    const numericQty = stockQuantity ? parseInt(stockQuantity, 10) : 0;
+    const numericPrice = parseFlexibleNumber(price, -1);
+    if (numericPrice < 0) {
+      return NextResponse.json(
+        { success: false, error: 'সঠিক মূল্য (দাম) প্রদান করুন।' },
+        { status: 400 }
+      );
+    }
+
+    const numericDiscount = discountPrice ? parseFlexibleNumber(discountPrice, 0) : null;
+    const numericQty = parseFlexibleInt(stockQuantity, 10);
+
+    // Validate pageId to avoid foreign key errors
+    let validPageId: string | null = null;
+    if (pageId && pageId !== 'ALL') {
+      const pageExists = await prisma.page.findFirst({
+        where: { id: pageId, userId: auth.user.id },
+        select: { id: true },
+      });
+      if (pageExists) {
+        validPageId = pageExists.id;
+      }
+    }
 
     let cleanImagesArray: string[] = [];
     if (Array.isArray(images)) {
@@ -145,14 +170,14 @@ export async function POST(req: NextRequest) {
     const product = await prisma.product.create({
       data: {
         userId: auth.user.id,
-        pageId: pageId && pageId !== 'ALL' ? pageId : null,
+        pageId: validPageId,
         name: name.trim(),
         description: description ? description.trim() : null,
         sku: sku ? sku.trim() : null,
         category: category ? category.trim() : null,
         price: numericPrice,
-        discountPrice: numericDiscount,
-        stockQuantity: numericQty,
+        discountPrice: numericDiscount && numericDiscount > 0 ? numericDiscount : null,
+        stockQuantity: numericQty >= 0 ? numericQty : 0,
         stockStatus: stockStatus || (numericQty > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK'),
         imageUrl: primaryImageUrl,
         images: cleanImagesArray.length > 0 ? JSON.stringify(cleanImagesArray) : null,

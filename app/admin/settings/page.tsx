@@ -26,12 +26,16 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // WhatsApp Settings Form State
+  // WhatsApp & Social Support Settings Form State
   const [whatsappForm, setWhatsappForm] = useState({
     enabled: true,
     number: '+8801521716613',
     message: 'আসসালামু আলাইকুম, আমি ReplyX AI সম্পর্কে তথ্য জানতে চাই।',
     position: 'RIGHT',
+    instagramUsername: 'replyx.ai',
+    telegramUsername: 'replyx_support_bot',
+    xHandle: 'ReplyX_AI',
+    facebookPage: 'replyx.ai',
   });
 
   const fetchWhatsAppSettings = async () => {
@@ -45,10 +49,14 @@ export default function AdminSettingsPage() {
           number: data.settings.number || '+8801521716613',
           message: data.settings.message || 'আসসালামু আলাইকুম, আমি ReplyX AI সম্পর্কে তথ্য জানতে চাই।',
           position: data.settings.position || 'RIGHT',
+          instagramUsername: data.settings.instagramUsername || 'replyx.ai',
+          telegramUsername: data.settings.telegramUsername || 'replyx_support_bot',
+          xHandle: data.settings.xHandle || 'ReplyX_AI',
+          facebookPage: data.settings.facebookPage || 'replyx.ai',
         });
       }
     } catch (e) {
-      toast.error('WhatsApp সেটিংস লোড করতে সমস্যা হয়েছে।');
+      toast.error('WhatsApp ও সোশ্যাল সেটিংস লোড করতে সমস্যা হয়েছে।');
     } finally {
       setLoading(false);
     }
@@ -237,6 +245,68 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
+              {/* Omnichannel Social Media Links */}
+              <div className="pt-4 border-t border-purple-900/30">
+                <h4 className="text-xs font-bold text-white mb-1">সোশ্যাল মিডিয়া সাপোর্ট লিংকসমূহ (Omnichannel Widget)</h4>
+                <p className="text-[11px] text-gray-400 mb-4">
+                  ফ্লোটিং উইজেটে ব্যবহারকারী এই চ্যানেলগুলোতে ক্লিক করে সরাসরি আপনার সাথে যুক্ত হতে পারবেন
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1.5">
+                      Facebook Page / Username
+                    </label>
+                    <input
+                      type="text"
+                      value={whatsappForm.facebookPage}
+                      onChange={(e) => setWhatsappForm({ ...whatsappForm, facebookPage: e.target.value })}
+                      placeholder="যেমন: replyx.ai"
+                      className="w-full px-3.5 py-2.5 bg-[#090710] border border-purple-900/30 rounded-xl text-white text-xs focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1.5">
+                      Instagram Username
+                    </label>
+                    <input
+                      type="text"
+                      value={whatsappForm.instagramUsername}
+                      onChange={(e) => setWhatsappForm({ ...whatsappForm, instagramUsername: e.target.value })}
+                      placeholder="যেমন: replyx.ai"
+                      className="w-full px-3.5 py-2.5 bg-[#090710] border border-purple-900/30 rounded-xl text-white text-xs focus:outline-none focus:border-pink-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1.5">
+                      Telegram Bot Username
+                    </label>
+                    <input
+                      type="text"
+                      value={whatsappForm.telegramUsername}
+                      onChange={(e) => setWhatsappForm({ ...whatsappForm, telegramUsername: e.target.value })}
+                      placeholder="যেমন: replyx_support_bot"
+                      className="w-full px-3.5 py-2.5 bg-[#090710] border border-purple-900/30 rounded-xl text-white text-xs focus:outline-none focus:border-sky-500 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1.5">
+                      X (Twitter) Handle
+                    </label>
+                    <input
+                      type="text"
+                      value={whatsappForm.xHandle}
+                      onChange={(e) => setWhatsappForm({ ...whatsappForm, xHandle: e.target.value })}
+                      placeholder="যেমন: ReplyX_AI"
+                      className="w-full px-3.5 py-2.5 bg-[#090710] border border-purple-900/30 rounded-xl text-white text-xs focus:outline-none focus:border-slate-400 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Submit Button */}
               <div className="flex items-center justify-end pt-4 border-t border-purple-900/30">
                 <button
@@ -245,7 +315,7 @@ export default function AdminSettingsPage() {
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{saving ? 'সংরক্ষণ হচ্ছে...' : 'WhatsApp সেটিংস সেভ করুন'}</span>
+                  <span>{saving ? 'সংরক্ষণ হচ্ছে...' : 'সেটিংস সেভ করুন'}</span>
                 </button>
               </div>
             </form>
