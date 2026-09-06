@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '@/lib/dom-guard';
 import { ToastProvider } from '@/components/ui/Toast';
 import WhatsAppWidget from '@/components/ui/WhatsAppWidget';
 
@@ -9,6 +10,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.ico',
   },
+  other: {
+    google: 'notranslate',
+  },
 };
 
 export default function RootLayout({
@@ -17,9 +21,44 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="bn" className="light" suppressHydrationWarning>
+    <html lang="bn" className="light notranslate" translate="no" suppressHydrationWarning>
+      <head>
+        <meta name="google" content="notranslate" />
+        <script
+          id="dom-safe-guard"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined' && typeof Node !== 'undefined') {
+                  var origInsertBefore = Node.prototype.insertBefore;
+                  Node.prototype.insertBefore = function(newNode, refNode) {
+                    if (refNode && refNode.parentNode !== this) {
+                      if (refNode.parentNode) {
+                        return refNode.parentNode.insertBefore(newNode, refNode);
+                      }
+                      return this.appendChild(newNode);
+                    }
+                    return origInsertBefore.apply(this, arguments);
+                  };
+
+                  var origRemoveChild = Node.prototype.removeChild;
+                  Node.prototype.removeChild = function(child) {
+                    if (child.parentNode !== this) {
+                      if (child.parentNode) {
+                        return child.parentNode.removeChild(child);
+                      }
+                      return child;
+                    }
+                    return origRemoveChild.apply(this, arguments);
+                  };
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
-        className="bg-[#f8fafc] text-slate-900 antialiased selection:bg-indigo-500/20 selection:text-indigo-700"
+        className="notranslate bg-[#f8fafc] text-slate-900 antialiased selection:bg-indigo-500/20 selection:text-indigo-700"
         suppressHydrationWarning
       >
         <ToastProvider>

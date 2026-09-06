@@ -48,7 +48,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast, success, error, info, warning }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none px-4 sm:px-0">
+      <div
+        translate="no"
+        suppressHydrationWarning
+        className="notranslate fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none px-4 sm:px-0"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}

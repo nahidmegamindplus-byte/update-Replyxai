@@ -102,7 +102,11 @@ export default function WhatsAppWidget() {
     settings.position === 'LEFT' ? 'left-5 sm:left-6' : 'right-5 sm:right-6';
 
   return (
-    <div className={`fixed bottom-5 sm:bottom-6 z-50 flex flex-col items-end gap-3 ${positionClasses}`}>
+    <div
+      translate="no"
+      suppressHydrationWarning
+      className={`notranslate fixed bottom-5 sm:bottom-6 z-50 flex flex-col items-end gap-3 ${positionClasses}`}
+    >
       {/* Expanded Multi-Channel Tray */}
       {isOpen && (
         <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 p-4 rounded-2xl shadow-2xl w-64 space-y-3 animate-in fade-in slide-in-from-bottom-5 duration-200">

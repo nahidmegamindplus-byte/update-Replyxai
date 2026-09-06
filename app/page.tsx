@@ -184,58 +184,89 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Live Interactive Messenger Simulation Preview */}
+      {/* Live Automation Architecture & Capabilities Showcase */}
       <section id="preview" className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-xl shadow-slate-200/50 relative overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-sm">
-                SF
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-5 mb-8 gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-2 border border-emerald-200/60">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>রিয়েল-টাইম এআই অটোমেশন পাইপলাইন</span>
               </div>
-              <div>
-                <h4 className="text-base font-bold text-slate-900">স্টাইলিশ ফ্যাশন বিডি</h4>
-                <p className="text-xs text-emerald-600 flex items-center gap-1.5 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ReplyX AI সক্রিয়
-                </p>
-              </div>
+              <h3 className="text-xl font-bold text-slate-900">ReplyX AI কীভাবে আপনার সোশ্যাল পেজ পরিচালনা করে</h3>
             </div>
-            <div className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
-              লাইভ মেসেঞ্জার প্রিভিউ
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <span className="px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-200">লাইভ ইন্টিগ্রেশন</span>
+              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 font-semibold">&lt; ১.৫ সেকেন্ড রেসপন্স</span>
             </div>
           </div>
 
-          <div className="space-y-4 max-w-2xl mx-auto">
-            {/* Customer Message 1 */}
-            <div className="flex justify-start">
-              <div className="bg-slate-100 text-slate-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-md text-sm border border-slate-200/80">
-                ভাইয়া কটন পাঞ্জাবির দাম কত? ঢাকার মধ্যে ডেলিভারি চার্জ কত?
-              </div>
-            </div>
-
-            {/* AI Reply 1 */}
-            <div className="flex justify-end">
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md">
-                নমস্কার! আমাদের প্রিমিয়াম কটন পাঞ্জাবির বর্তমান অফার মূল্য ১,৪৯০ টাকা (নিয়মিত ১,৮৫০ টাকা)। ঢাকার মধ্যে ডেলিভারি চার্জ ৭০ টাকা এবং ক্যাশ অন ডেলিভারি সুবিধা আছে। আপনি কি অর্ডার করতে চান? 😊
-              </div>
-            </div>
-
-            {/* Customer Message 2 */}
-            <div className="flex justify-start">
-              <div className="bg-slate-100 text-slate-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-md text-sm border border-slate-200/80">
-                ha order korbo. Name: Rakib, Phone: 01819887766, Address: Dhanmondi, Dhaka.
-              </div>
-            </div>
-
-            {/* AI Reply 2 */}
-            <div className="flex justify-end">
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md space-y-2">
-                <p>ধন্যবাদ রাকিব সাহেব! 🎉 আপনার অর্ডারটি গ্রহণ করা হয়েছে।</p>
-                <div className="bg-black/20 p-2.5 rounded-xl text-xs space-y-1 border border-white/20">
-                  <p>📦 <strong>পণ্য:</strong> প্রিমিয়াম কটন পাঞ্জাবি (১টি)</p>
-                  <p>💰 <strong>মোট:</strong> ১,৪৯০ + ৭০ = ১,৫৬০ টাকা (COD)</p>
-                  <p>📍 <strong>ঠিকানা:</strong> ধানমন্ডি, ঢাকা</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Step 1 */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+              <div>
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm mb-3">
+                  ০১
                 </div>
-                <p className="text-xs">আমাদের প্রতিনিধি দ্রুতই ডেলিভারির জন্য যোগাযোগ করবেন।</p>
+                <h4 className="font-bold text-slate-900 text-sm mb-1.5">গ্রাহকের বার্তা গ্রহণ</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Facebook, WhatsApp, Instagram, Telegram বা X থেকে আসা বার্তা সরাসরি নিরাপদ ওয়েবহুকে পৌঁছায়।
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>ওমনিচ্যানেল কানেক্টেড</span>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+              <div>
+                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm mb-3">
+                  ০২
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1.5">ইনটেন্ট ও ভাষা বিশ্লেষণ</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  বাংলা, ইংরেজি কিংবা ব্যাংলিশ মেসেজ এআই তাৎক্ষণিকভাবে পড়ে কাস্টমারের সঠিক চাহিদা নির্ণয় করে।
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] text-purple-600 font-semibold flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5" />
+                <span>মডেল: Gemini / GPT-4o</span>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+              <div>
+                <div className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center font-bold text-sm mb-3">
+                  ০৩
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1.5">ইনভেন্টরি যাচাই ও রিপ্লাই</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  ডাটাবেজ থেকে আসল পণ্যের ছবি ও দাম মিলিয়ে কাস্টমারকে সঠিক ও প্রফেশনাল উত্তর প্রদান করে।
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] text-cyan-600 font-semibold flex items-center gap-1">
+                <Package className="w-3.5 h-3.5" />
+                <span>ক্যাটালগ ভেরিফাইড</span>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between hover:border-indigo-300 transition-colors">
+              <div>
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm mb-3">
+                  ০৪
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm mb-1.5">অর্ডার তৈরি ও ড্যাশবোর্ড সিঙ্ক</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  নাম, ঠিকানা ও ফোন নম্বর সংগ্রহ করে স্বয়ংক্রিয়ভাবে অর্ডার বুকিং করে ড্যাশবোর্ডে সংরক্ষণ করে।
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-200/60 text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>অটোম্যাটিক বুকিং</span>
               </div>
             </div>
           </div>
