@@ -1,13 +1,13 @@
 /**
  * ReplyX AI — Ultra-Resilient Production Server for Hostinger & VPS
  * ------------------------------------------------------------------
- * 100% Fix for Site Layout / CSS / Assets Breaking on Hostinger:
- *  1. Direct High-Speed Static Delivery for /_next/static/ with exact MIME types (text/css, js)
- *  2. Direct Delivery for /public/ assets
- *  3. Automatic _next/static disk mirroring for LiteSpeed Web Server
- *  4. Instant server.listen() so Passenger / LiteSpeed never times out
- *  5. Native Phusion Passenger socket ('passenger') + Dynamic PORT support
- *  6. Background database warmup & process crash shields
+ * 100% Fix for Site Load & Layout on Hostinger (Phusion Passenger / LiteSpeed / Node):
+ *  1. Native Phusion Passenger socket ('passenger') + Dynamic Unix Socket + TCP PORT support
+ *  2. Direct High-Speed Static Delivery for /_next/static/ with exact MIME types
+ *  3. Direct Delivery for /global.css and /public/ assets
+ *  4. Automatic _next/static disk mirroring for LiteSpeed Web Server
+ *  5. Absolute SQLite database path and fallback env vars
+ *  6. Process crash shields and non-blocking background initialization
  */
 
 const { createServer } = require('http');
@@ -16,14 +16,21 @@ const next = require('next');
 const path = require('path');
 const fs = require('fs');
 
-// 1. Force directory to application root
+// 1. Phusion Passenger Hook (CloudLinux / Hostinger cPanel / hPanel)
+if (typeof PhusionPassenger !== 'undefined') {
+  try {
+    PhusionPassenger.configure({ autoInstall: false });
+  } catch (_) {}
+}
+
+// 2. Force current working directory to application root
 try {
   process.chdir(__dirname);
 } catch (e) {
   console.warn('[Server] Could not change directory to __dirname:', e);
 }
 
-// 2. Pre-parse .env file immediately
+// 3. Pre-parse .env file immediately
 const envPath = path.resolve(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   try {
@@ -47,23 +54,39 @@ if (fs.existsSync(envPath)) {
   } catch (_) {}
 }
 
-// 3. Force production mode on server
+// 4. Force production mode and safe fallback environment variables
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = 'production';
 }
 
-// 4. Ensure prisma directory exists with write permissions for SQLite
+const prismaDbPath = path.resolve(__dirname, 'prisma', 'dev.db');
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = `file:${prismaDbPath}`;
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'replyx_ai_super_secret_jwt_key_2026_bd_secure';
+}
+if (!process.env.ENCRYPTION_KEY) {
+  process.env.ENCRYPTION_KEY = 'replyx_32_bytes_secret_key_2026!';
+}
+
+// 5. Ensure prisma directory exists with write permissions for SQLite
 const prismaDir = path.resolve(__dirname, 'prisma');
 if (!fs.existsSync(prismaDir)) {
   try {
     fs.mkdirSync(prismaDir, { recursive: true, mode: 0o777 });
   } catch (_) {}
 }
+if (fs.existsSync(prismaDbPath)) {
+  try {
+    fs.chmodSync(prismaDbPath, 0o666);
+  } catch (_) {}
+}
 
-// 5. Ensure _next directory mirror exists on disk for LiteSpeed Web Server
+// 6. Ensure _next directory mirror exists on disk for LiteSpeed Web Server
 ensureStaticMirror();
 
-// 6. Global Process Crash Guards
+// 7. Global Process Crash Guards
 process.on('uncaughtException', (err) => {
   console.error('[ReplyX Server Guard] Uncaught Exception caught safely:', err);
 });
@@ -98,10 +121,16 @@ function serveStaticFile(filePath, res) {
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   const stream = fs.createReadStream(filePath);
+  stream.on('error', () => {
+    if (!res.headersSent) {
+      res.statusCode = 404;
+      res.end('Not found');
+    }
+  });
   stream.pipe(res);
 }
 
-// 7. Initialize Next.js in Production Mode
+// 8. Initialize Next.js in Production Mode
 const app = next({
   dev: false,
   dir: __dirname,
@@ -124,13 +153,25 @@ const preparePromise = app
     console.error('[Server Error] Next.js preparation error:', err);
   });
 
-// 8. Create HTTP Server that serves static CSS/JS instantly and forwards pages to Next.js
+// 9. Create HTTP Server that serves static CSS/JS instantly and forwards pages to Next.js
 const server = createServer(async (req, res) => {
   try {
     const parsedUrl = parse(req.url, true);
     const pathname = parsedUrl.pathname || '';
 
-    // A. INSTANT STATIC DELIVERY FOR /_next/static/ (Fixes broken styles & 404s completely)
+    // A. INSTANT STATIC DELIVERY FOR /global.css
+    if (pathname === '/global.css') {
+      const globalCssPath = path.join(__dirname, 'public', 'global.css');
+      if (fs.existsSync(globalCssPath)) {
+        return serveStaticFile(globalCssPath, res);
+      }
+      const rootCssPath = path.join(__dirname, 'global.css');
+      if (fs.existsSync(rootCssPath)) {
+        return serveStaticFile(rootCssPath, res);
+      }
+    }
+
+    // B. INSTANT STATIC DELIVERY FOR /_next/static/ (Fixes broken styles & 404s completely)
     if (pathname.startsWith('/_next/static/')) {
       const relPath = pathname.slice('/_next/static/'.length);
       const fullPath = path.normalize(path.join(__dirname, '.next', 'static', relPath));
@@ -143,7 +184,7 @@ const server = createServer(async (req, res) => {
       }
     }
 
-    // B. INSTANT STATIC DELIVERY FOR /public/ assets (favicon, images, robots)
+    // C. INSTANT STATIC DELIVERY FOR /public/ assets (favicon, images, robots)
     if (pathname.length > 1 && !pathname.startsWith('/api/')) {
       const publicFilePath = path.normalize(path.join(__dirname, 'public', pathname));
       if (
@@ -155,7 +196,7 @@ const server = createServer(async (req, res) => {
       }
     }
 
-    // C. DYNAMIC PAGES & API ROUTES: Await engine if still preparing
+    // D. DYNAMIC PAGES & API ROUTES: Await engine if still preparing
     if (!isReady) {
       await preparePromise;
     }
@@ -172,9 +213,10 @@ const server = createServer(async (req, res) => {
           <body style="font-family: system-ui, sans-serif; padding: 2rem; text-align: center; background: #f8fafc; color: #1e293b;">
             <div style="max-width: 500px; margin: 3rem auto; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
               <h2 style="font-size: 1.3rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.5rem;">ReplyX AI প্রস্তুত হচ্ছে...</h2>
-              <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem;">সার্ভারটি প্রথমবার রান হচ্ছে। কয়েক সেকেন্ড পর স্বয়ংক্রিয়ভাবে পেজ লোড হবে।</p>
+              <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem;">সার্ভারটি চালু হচ্ছে। কয়েক সেকেন্ড পর পেজটি স্বয়ংক্রিয়ভাবে রিফ্রেশ হবে।</p>
               <button onclick="window.location.reload()" style="background: #4f46e5; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">পেজ রিফ্রেশ করুন</button>
             </div>
+            <script>setTimeout(function(){ window.location.reload(); }, 3000);</script>
           </body>
         </html>
       `);
@@ -182,27 +224,35 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// 9. Determine Port / Socket and Listen Immediately
+// 10. Determine Port / Socket and Listen Immediately
 const rawPort = process.env.PORT;
-const isPassenger = typeof global.PhusionPassenger !== 'undefined' || rawPort === 'passenger';
+let listenTarget;
 
-if (isPassenger) {
-  server.listen('passenger', () => {
-    console.log('> [ReplyX AI] Running inside Phusion Passenger on Hostinger.');
-    triggerWarmup('passenger');
+if (typeof PhusionPassenger !== 'undefined' || rawPort === 'passenger') {
+  listenTarget = 'passenger';
+} else if (rawPort && !isNaN(Number(rawPort))) {
+  listenTarget = Number(rawPort);
+} else if (rawPort && typeof rawPort === 'string' && rawPort.trim().length > 0) {
+  listenTarget = rawPort.trim();
+} else {
+  listenTarget = 3000;
+}
+
+if (typeof listenTarget === 'number') {
+  server.listen(listenTarget, '0.0.0.0', () => {
+    console.log(`> [ReplyX AI] Production server listening on http://0.0.0.0:${listenTarget}`);
+    console.log(`> Environment: ${process.env.NODE_ENV}`);
+    triggerWarmup(listenTarget);
   });
 } else {
-  const port = parseInt(rawPort || '3000', 10);
-  const hostname = '0.0.0.0';
-
-  server.listen(port, hostname, () => {
-    console.log(`> [ReplyX AI] Ready and listening on http://${hostname}:${port}`);
+  server.listen(listenTarget, () => {
+    console.log(`> [ReplyX AI] Production server listening on target: ${listenTarget}`);
     console.log(`> Environment: ${process.env.NODE_ENV}`);
-    triggerWarmup(port);
+    triggerWarmup(listenTarget);
   });
 }
 
-// 10. Graceful Shutdown Handlers
+// 11. Graceful Shutdown Handlers
 const shutdown = (signal) => {
   console.log(`[Server] Received ${signal}. Closing HTTP server...`);
   server.close(() => {
@@ -264,15 +314,16 @@ function copyDirSync(src, dest) {
  * Background warmup: triggers /api/health to self-heal database tables
  */
 function triggerWarmup(target) {
-  if (typeof target !== 'number') return;
   setTimeout(() => {
     try {
-      const http = require('http');
-      const req = http.get(`http://127.0.0.1:${target}/api/health`, (res) => {
-        console.log(`> [Warmup] Pre-flight database check status: ${res.statusCode}`);
-      });
-      req.on('error', () => {});
-      req.setTimeout(5000, () => req.destroy());
+      if (typeof target === 'number') {
+        const http = require('http');
+        const req = http.get(`http://127.0.0.1:${target}/api/health`, (res) => {
+          console.log(`> [Warmup] Pre-flight database check status: ${res.statusCode}`);
+        });
+        req.on('error', () => {});
+        req.setTimeout(5000, () => req.destroy());
+      }
     } catch (_) {}
   }, 1200);
 }
