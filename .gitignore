@@ -6,10 +6,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/_next/
-/out/
+# next.js cache only (preserve runtime production build in .next for zero-terminal deployment)
+/.next/cache/
 
 # production
 /build
