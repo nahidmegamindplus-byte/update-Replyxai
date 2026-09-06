@@ -16,6 +16,20 @@
   RewriteRule ^prisma/.*\.db-journal - [F,L,NC]
   RewriteRule ^prisma/.*\.db-wal - [F,L,NC]
   RewriteRule ^prisma/.*\.db-shm - [F,L,NC]
+
+  # 3. Direct mapping for Next.js static CSS & JS assets (Prevents Broken Layout / MIME 404)
+  RewriteRule ^_next/static/(.*)$ .next/static/$1 [L,QSA]
+</IfModule>
+
+# Ensure exact MIME types so browsers never reject CSS or JavaScript
+<IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js
+  AddType application/javascript .mjs
+  AddType application/json .json
+  AddType image/svg+xml .svg
+  AddType font/woff .woff
+  AddType font/woff2 .woff2
 </IfModule>
 
 # Browser Gzip / Deflate compression for ultra-fast page loading

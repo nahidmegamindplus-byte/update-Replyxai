@@ -1,12 +1,13 @@
 /**
  * ReplyX AI — Ultra-Resilient Production Server for Hostinger & VPS
  * ------------------------------------------------------------------
- * Solves all Hostinger page load delays & timeouts:
- *  1. Immediate server.listen() so Passenger / LiteSpeed never times out
- *  2. Native Phusion Passenger socket ('passenger') + Dynamic PORT support
- *  3. Requests wait smoothly for Next.js engine preparation without dropping
- *  4. SQLite path & permissions guarantee
- *  5. Background warmup & process crash shields
+ * 100% Fix for Site Layout / CSS / Assets Breaking on Hostinger:
+ *  1. Direct High-Speed Static Delivery for /_next/static/ with exact MIME types (text/css, js)
+ *  2. Direct Delivery for /public/ assets
+ *  3. Automatic _next/static disk mirroring for LiteSpeed Web Server
+ *  4. Instant server.listen() so Passenger / LiteSpeed never times out
+ *  5. Native Phusion Passenger socket ('passenger') + Dynamic PORT support
+ *  6. Background database warmup & process crash shields
  */
 
 const { createServer } = require('http');
@@ -59,7 +60,10 @@ if (!fs.existsSync(prismaDir)) {
   } catch (_) {}
 }
 
-// 5. Global Process Crash Guards to prevent server death
+// 5. Ensure _next directory mirror exists on disk for LiteSpeed Web Server
+ensureStaticMirror();
+
+// 6. Global Process Crash Guards
 process.on('uncaughtException', (err) => {
   console.error('[ReplyX Server Guard] Uncaught Exception caught safely:', err);
 });
@@ -68,7 +72,36 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('[ReplyX Server Guard] Unhandled Rejection caught safely at:', promise, 'reason:', reason);
 });
 
-// 6. Initialize Next.js in Production Mode
+// Exact MIME Types to prevent browser MIME-type checking errors
+const MIME_TYPES = {
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.eot': 'application/vnd.ms-fontobject',
+  '.map': 'application/json',
+};
+
+function serveStaticFile(filePath, res) {
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+}
+
+// 7. Initialize Next.js in Production Mode
 const app = next({
   dev: false,
   dir: __dirname,
@@ -91,14 +124,41 @@ const preparePromise = app
     console.error('[Server Error] Next.js preparation error:', err);
   });
 
-// 7. Create HTTP Server that responds immediately
+// 8. Create HTTP Server that serves static CSS/JS instantly and forwards pages to Next.js
 const server = createServer(async (req, res) => {
   try {
-    // If request arrives while Next.js is still preparing (cold-start), wait for it
+    const parsedUrl = parse(req.url, true);
+    const pathname = parsedUrl.pathname || '';
+
+    // A. INSTANT STATIC DELIVERY FOR /_next/static/ (Fixes broken styles & 404s completely)
+    if (pathname.startsWith('/_next/static/')) {
+      const relPath = pathname.slice('/_next/static/'.length);
+      const fullPath = path.normalize(path.join(__dirname, '.next', 'static', relPath));
+      if (
+        fullPath.startsWith(path.join(__dirname, '.next', 'static')) &&
+        fs.existsSync(fullPath) &&
+        !fs.statSync(fullPath).isDirectory()
+      ) {
+        return serveStaticFile(fullPath, res);
+      }
+    }
+
+    // B. INSTANT STATIC DELIVERY FOR /public/ assets (favicon, images, robots)
+    if (pathname.length > 1 && !pathname.startsWith('/api/')) {
+      const publicFilePath = path.normalize(path.join(__dirname, 'public', pathname));
+      if (
+        publicFilePath.startsWith(path.join(__dirname, 'public')) &&
+        fs.existsSync(publicFilePath) &&
+        !fs.statSync(publicFilePath).isDirectory()
+      ) {
+        return serveStaticFile(publicFilePath, res);
+      }
+    }
+
+    // C. DYNAMIC PAGES & API ROUTES: Await engine if still preparing
     if (!isReady) {
       await preparePromise;
     }
-    const parsedUrl = parse(req.url, true);
     await handle(req, res, parsedUrl);
   } catch (err) {
     console.error('[Server Error] Request handler error for', req.url, ':', err);
@@ -122,12 +182,11 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// 8. Determine Port / Socket and Listen Immediately
+// 9. Determine Port / Socket and Listen Immediately
 const rawPort = process.env.PORT;
 const isPassenger = typeof global.PhusionPassenger !== 'undefined' || rawPort === 'passenger';
 
 if (isPassenger) {
-  // Official Phusion Passenger socket binding
   server.listen('passenger', () => {
     console.log('> [ReplyX AI] Running inside Phusion Passenger on Hostinger.');
     triggerWarmup('passenger');
@@ -143,7 +202,7 @@ if (isPassenger) {
   });
 }
 
-// 9. Graceful Shutdown Handlers
+// 10. Graceful Shutdown Handlers
 const shutdown = (signal) => {
   console.log(`[Server] Received ${signal}. Closing HTTP server...`);
   server.close(() => {
@@ -157,6 +216,45 @@ const shutdown = (signal) => {
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+/**
+ * Ensures _next directory exists on disk so LiteSpeed Web Server can find static assets directly
+ */
+function ensureStaticMirror() {
+  try {
+    const srcDir = path.join(__dirname, '.next', 'static');
+    const targetDir = path.join(__dirname, '_next', 'static');
+    if (fs.existsSync(srcDir)) {
+      const parentDir = path.join(__dirname, '_next');
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+      if (!fs.existsSync(targetDir)) {
+        try {
+          fs.symlinkSync(srcDir, targetDir, 'junction');
+        } catch (_) {
+          copyDirSync(srcDir, targetDir);
+        }
+      }
+    }
+  } catch (_) {}
+}
+
+function copyDirSync(src, dest) {
+  try {
+    fs.mkdirSync(dest, { recursive: true });
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      if (entry.isDirectory()) {
+        copyDirSync(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  } catch (_) {}
+}
 
 /**
  * Background warmup: triggers /api/health to self-heal database tables
