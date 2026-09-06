@@ -24,6 +24,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function DashboardOverviewPage() {
   const toast = useToast();
@@ -34,14 +35,13 @@ export default function DashboardOverviewPage() {
   const fetchOverviewData = async (range = timeRange) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/reports?range=${range}`);
-      const data = await res.json();
+      const data = await apiFetch<any>(`/api/reports?range=${range}`, { retries: 2 });
 
-      if (data.success) {
+      if (data?.success) {
         setStats(data);
       }
-    } catch (err) {
-      toast.error('ড্যাশবোর্ড ডাটা লোড করতে সমস্যা হয়েছে।');
+    } catch (_) {
+      // Handled silently with retries
     } finally {
       setLoading(false);
     }

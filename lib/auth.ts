@@ -50,7 +50,24 @@ export async function comparePassword(password: string, hash: string): Promise<b
  * Sign JWT token for user session.
  */
 export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
+}
+
+/**
+ * Get standard cookie configuration options resilient to HTTP vs HTTPS environments
+ */
+export function getAuthCookieOptions(req?: NextRequest) {
+  const isHttps = req
+    ? req.headers.get('x-forwarded-proto') === 'https' || req.nextUrl?.protocol === 'https:'
+    : false;
+  return {
+    name: AUTH_COOKIE_NAME,
+    httpOnly: true,
+    secure: isHttps,
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  };
 }
 
 /**

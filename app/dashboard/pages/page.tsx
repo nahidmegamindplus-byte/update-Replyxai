@@ -34,6 +34,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 // Channel Definitions & Branding
 const CHANNELS = [
@@ -305,13 +306,12 @@ export default function PagesManagementPage() {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/pages');
-      const data = await res.json();
-      if (data.success) {
+      const data = await apiFetch<{ success: boolean; pages?: any[]; error?: string }>('/api/pages', { retries: 2 });
+      if (data?.success && Array.isArray(data.pages)) {
         setPages(data.pages);
       }
-    } catch (e) {
-      toast.error('চ্যানেল তালিকা লোড করতে সমস্যা হয়েছে।');
+    } catch (_) {
+      // Safe fallback handled silently by apiFetch
     } finally {
       setLoading(false);
     }
@@ -353,15 +353,14 @@ export default function PagesManagementPage() {
         channelIdentifier: addForm.channelIdentifier || addForm.facebookPageId,
       };
 
-      const res = await fetch('/api/pages', {
+      const data = await apiFetch<any>('/api/pages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        retries: 1,
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        toast.error(data.error || 'চ্যানেল যুক্ত করতে ব্যর্থ হয়েছে।');
+      if (!data?.success) {
+        toast.error(data?.error || 'চ্যানেল যুক্ত করতে ব্যর্থ হয়েছে।');
         setSaving(false);
         return;
       }
@@ -379,8 +378,8 @@ export default function PagesManagementPage() {
         aiInstructions: '',
       });
       fetchPages();
-    } catch (e) {
-      toast.error('সার্ভারে যোগাযোগ করা যায়নি।');
+    } catch (_) {
+      toast.error('চ্যানেল যুক্ত করার প্রক্রিয়ায় সাময়িক বিঘ্ন ঘটেছে। আবার চেষ্টা করুন।');
     } finally {
       setSaving(false);
     }
@@ -389,17 +388,19 @@ export default function PagesManagementPage() {
   const handleTestConnection = async (pageId: string) => {
     setTestingId(pageId);
     try {
-      const res = await fetch(`/api/pages/${pageId}/test`, { method: 'POST' });
-      const data = await res.json();
+      const data = await apiFetch<any>(`/api/pages/${pageId}/test`, {
+        method: 'POST',
+        retries: 1,
+      });
 
-      if (data.success) {
+      if (data?.success) {
         toast.success(data.message || 'চ্যানেল সফলভাবে connected!');
       } else {
-        toast.error(data.error || 'সংযোগ পরীক্ষা ব্যর্থ হয়েছে।');
+        toast.error(data?.error || 'সংযোগ পরীক্ষা ব্যর্থ হয়েছে।');
       }
       fetchPages();
-    } catch (e) {
-      toast.error('কানেকশন টেস্টে ত্রুটি হয়েছে।');
+    } catch (_) {
+      toast.error('কানেকশন টেস্ট সম্পন্ন হতে পারেনি।');
     } finally {
       setTestingId(null);
     }
@@ -410,20 +411,22 @@ export default function PagesManagementPage() {
   const handleTriggerFollowUp = async (pageId: string) => {
     setRunningFollowUpId(pageId);
     try {
-      const res = await fetch(`/api/cron/follow-up?pageId=${pageId}`, { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
+      const data = await apiFetch<any>(`/api/cron/follow-up?pageId=${pageId}`, {
+        method: 'POST',
+        retries: 1,
+      });
+      if (data?.success) {
         if (data.sentCount > 0) {
           toast.success(data.message || `সফল! ${data.sentCount} টি গ্রাহককে ফলো-আপ মেসেজ পাঠানো হয়েছে।`);
         } else {
           toast.info(data.message || 'এখনো কোনো গ্রাহকের অপেক্ষা সময় পার হয়নি।');
         }
       } else {
-        toast.error(data.error || 'ফলো-আপ চালাতে সমস্যা হয়েছে।');
+        toast.error(data?.error || 'ফলো-আপ চালাতে সমস্যা হয়েছে।');
       }
       fetchPages();
-    } catch (e) {
-      toast.error('ফলো-আপ প্রক্রিয়ায় সার্ভারে যোগাযোগ করা যায়নি।');
+    } catch (_) {
+      toast.error('ফলো-আপ প্রক্রিয়ায় সংযোগ পাওয়া যায়নি।');
     } finally {
       setRunningFollowUpId(null);
     }
@@ -469,15 +472,14 @@ export default function PagesManagementPage() {
     setSaving(true);
 
     try {
-      const res = await fetch(`/api/pages/${selectedPage.id}`, {
+      const data = await apiFetch<any>(`/api/pages/${selectedPage.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
+        retries: 1,
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        toast.error(data.error || 'চ্যানেল আপডেট করতে ব্যর্থ হয়েছে।');
+      if (!data?.success) {
+        toast.error(data?.error || 'চ্যানেল আপডেট করতে ব্যর্থ হয়েছে।');
         setSaving(false);
         return;
       }
@@ -485,8 +487,8 @@ export default function PagesManagementPage() {
       toast.success(data.message || 'চ্যানেল সেটিংস সফলভাবে আপডেট হয়েছে!');
       setShowEditModal(false);
       fetchPages();
-    } catch (e) {
-      toast.error('সার্ভারে যোগাযোগ করা যায়নি।');
+    } catch (_) {
+      toast.error('চ্যানেল আপডেট প্রক্রিয়ায় সাময়িক বিঘ্ন ঘটেছে।');
     } finally {
       setSaving(false);
     }
@@ -498,16 +500,18 @@ export default function PagesManagementPage() {
     }
 
     try {
-      const res = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
-      const data = await res.json();
+      const data = await apiFetch<any>(`/api/pages/${pageId}`, {
+        method: 'DELETE',
+        retries: 1,
+      });
 
-      if (data.success) {
+      if (data?.success) {
         toast.success('চ্যানেল সফলভাবে মুছে ফেলা হয়েছে!');
         fetchPages();
       } else {
-        toast.error(data.error || 'মুছে ফেলতে ব্যর্থ হয়েছে।');
+        toast.error(data?.error || 'মুছে ফেলতে ব্যর্থ হয়েছে।');
       }
-    } catch (e) {
+    } catch (_) {
       toast.error('মুছে ফেলার প্রক্রিয়ায় ত্রুটি হয়েছে।');
     }
   };

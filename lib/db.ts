@@ -88,8 +88,24 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
-if (process.env.NODE_ENV !== 'production') {
+// Always retain PrismaClient singleton on globalThis across all environments (including production)
+// to prevent multiple PrismaClient instances opening competing SQLite file descriptors/locks
+if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma;
+}
+
+// Global server process crash protection
+// Prevents unhandled background async errors or webhook socket drops from terminating the server process
+if (typeof process !== 'undefined') {
+  if (!(globalThis as any).__replyx_guards_installed) {
+    (globalThis as any).__replyx_guards_installed = true;
+    process.on('unhandledRejection', (reason) => {
+      console.warn('[Server Guard] Handled unhandledRejection safely:', reason);
+    });
+    process.on('uncaughtException', (err) => {
+      console.error('[Server Guard] Handled uncaughtException safely:', err);
+    });
+  }
 }
 
 export default prisma;

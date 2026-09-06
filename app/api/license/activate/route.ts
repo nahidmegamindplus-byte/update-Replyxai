@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { ensureDatabaseReady } from '@/lib/db-init';
-import { hashPassword, signToken, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { hashPassword, signToken, AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
@@ -171,13 +171,8 @@ export async function POST(req: NextRequest) {
 
     // 6. Set HTTP-Only Cookie
     response.cookies.set({
-      name: AUTH_COOKIE_NAME,
+      ...getAuthCookieOptions(req),
       value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
     return response;

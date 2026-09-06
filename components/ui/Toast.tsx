@@ -28,10 +28,32 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const recentMessagesRef = React.useRef<Map<string, number>>(new Map());
+
   const showToast = useCallback(
     (message: string, type: ToastType = 'info') => {
+      if (!message || typeof message !== 'string') return;
+      
+      const trimmed = message.trim();
+      if (!trimmed) return;
+
+      const now = Date.now();
+      const lastShown = recentMessagesRef.current.get(trimmed) || 0;
+      // Deduplicate identical toast messages shown within 2.5 seconds
+      if (now - lastShown < 2500) {
+        return;
+      }
+      recentMessagesRef.current.set(trimmed, now);
+
       const id = Math.random().toString(36).substring(2, 9);
-      setToasts((prev) => [...prev, { id, type, message }]);
+      setToasts((prev) => {
+        // Keep at most 3 active toasts at a time
+        const next = [...prev, { id, type, message: trimmed }];
+        if (next.length > 3) {
+          return next.slice(next.length - 3);
+        }
+        return next;
+      });
 
       setTimeout(() => {
         removeToast(id);

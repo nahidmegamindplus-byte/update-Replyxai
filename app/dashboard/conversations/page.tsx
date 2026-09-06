@@ -35,6 +35,7 @@ import {
   MessageSquareReply,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function ConversationsPage() {
   const toast = useToast();
@@ -101,17 +102,16 @@ export default function ConversationsPage() {
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (channelFilter !== 'ALL') params.append('channel', channelFilter);
 
-      const res = await fetch(`/api/conversations?${params.toString()}`);
-      const data = await res.json();
+      const data = await apiFetch<any>(`/api/conversations?${params.toString()}`, { retries: 2 });
 
-      if (data.success) {
+      if (data?.success && Array.isArray(data.conversations)) {
         setConversations(data.conversations);
         if (data.conversations.length > 0 && !selectedConv) {
           loadConversation(data.conversations[0].id, false);
         }
       }
-    } catch (e) {
-      toast.error('কথোপকথন তালিকা লোড করতে সমস্যা হয়েছে।');
+    } catch (_) {
+      // Safe fallback handled silently by apiFetch
     } finally {
       setLoadingList(false);
       setIsRefreshing(false);
@@ -125,12 +125,11 @@ export default function ConversationsPage() {
         setMobileShowChat(true);
       }
 
-      const res = await fetch(`/api/conversations/${id}`);
-      const data = await res.json();
+      const data = await apiFetch<any>(`/api/conversations/${id}`, { retries: 2 });
 
-      if (data.success) {
+      if (data?.success && data.conversation) {
         setSelectedConv(data.conversation);
-        setMessages(data.messages);
+        setMessages(data.messages || []);
         // Setup order form defaults
         setOrderForm({
           customerName: data.conversation.customerName || '',
