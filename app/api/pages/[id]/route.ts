@@ -43,7 +43,7 @@ export async function GET(
       success: true,
       page: {
         ...page,
-        connectionStatus: page.connectionStatus === 'DISCONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
+        connectionStatus: page.connectionStatus || 'PENDING',
         verifyToken: rawVerifyToken,
         maskedAccessToken: maskToken(rawAccessToken),
         pageAccessTokenEncrypted: undefined,
@@ -140,9 +140,9 @@ export async function PUT(
       const cleanToken = body.pageAccessToken.trim();
       updateData.pageAccessTokenEncrypted = encrypt(cleanToken);
 
-      const targetPageId = updateData.facebookPageId || page.facebookPageId;
-      const targetChannel = updateData.channel || page.channel || 'FACEBOOK';
-      updateData.connectionStatus = 'CONNECTED';
+      if (body.connectionStatus === undefined) {
+        updateData.connectionStatus = 'PENDING';
+      }
     }
 
     const updatedPage = await prisma.page.update({

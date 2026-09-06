@@ -65,16 +65,25 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
+        connectionStatus: 'CONNECTED',
         message: `${channel} চ্যানেল সফলভাবে কানেক্টেড! API এক্সেস সক্রিয় আছে।`,
         pageName: testResult.name,
         pageUsername: testResult.username,
       });
     } else {
+      await prisma.page.update({
+        where: { id: page.id },
+        data: {
+          connectionStatus: 'DISCONNECTED',
+        },
+      });
+
       return NextResponse.json({
         success: false,
+        connectionStatus: 'DISCONNECTED',
         error:
           testResult.error ||
-          `${channel} সংযোগে সতর্কতা পাওয়া গেছে। অনুগ্রহ করে চ্যানেল সেটিংস থেকে Token ও ID যাচাই করুন।`,
+          `${channel} সংযোগে ব্যর্থ হয়েছে। অনুগ্রহ করে চ্যানেল সেটিংস থেকে Token ও ID যাচাই করুন।`,
       });
     }
   } catch (error: any) {

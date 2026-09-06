@@ -342,10 +342,10 @@ export async function ensureDatabaseReady() {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
       }
 
-      // Auto-heal any pages previously marked TOKEN_EXPIRED so they stay active and CONNECTED
+      // Ensure null connectionStatus defaults to PENDING
       try {
         await prisma.$executeRawUnsafe(
-          `UPDATE "Page" SET "connectionStatus" = 'CONNECTED' WHERE "connectionStatus" = 'TOKEN_EXPIRED' OR "connectionStatus" IS NULL;`
+          `UPDATE "Page" SET "connectionStatus" = 'PENDING' WHERE "connectionStatus" IS NULL;`
         );
       } catch (_) {}
     } catch (migrationErr) {

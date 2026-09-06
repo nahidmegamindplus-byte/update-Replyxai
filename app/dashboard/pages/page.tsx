@@ -415,7 +415,7 @@ export default function PagesManagementPage() {
       pageAccessToken: '',
       verifyToken: page.verifyToken || '',
       replyDelaySeconds: page.replyDelaySeconds !== undefined ? page.replyDelaySeconds : 3,
-      connectionStatus: page.connectionStatus === 'DISCONNECTED' ? 'DISCONNECTED' : 'CONNECTED',
+      connectionStatus: page.connectionStatus || 'PENDING',
       autoReplyEnabled: page.autoReplyEnabled ?? true,
       humanHandoffEnabled: page.humanHandoffEnabled ?? true,
       replyLanguage: page.replyLanguage || 'AUTO',
@@ -714,19 +714,29 @@ export default function PagesManagementPage() {
                       <div className="shrink-0 flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
-                            page.connectionStatus === 'DISCONNECTED'
-                              ? 'bg-slate-400'
-                              : 'bg-emerald-500 animate-pulse'
+                            page.connectionStatus === 'CONNECTED'
+                              ? 'bg-emerald-500 animate-pulse'
+                              : page.connectionStatus === 'PENDING'
+                              ? 'bg-amber-500'
+                              : 'bg-rose-500'
                           }`}
                         />
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            page.connectionStatus === 'DISCONNECTED'
-                              ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            page.connectionStatus === 'CONNECTED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : page.connectionStatus === 'PENDING'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}
                         >
-                          {page.connectionStatus === 'DISCONNECTED' ? 'নিষ্ক্রিয়' : 'সক্রিয় (Connected)'}
+                          {page.connectionStatus === 'CONNECTED'
+                            ? 'সক্রিয় (Connected)'
+                            : page.connectionStatus === 'PENDING'
+                            ? 'অযাচাইকৃত (টেস্ট করুন)'
+                            : page.connectionStatus === 'TOKEN_EXPIRED'
+                            ? 'টোকেন ত্রুটি (Disconnected)'
+                            : 'নিষ্ক্রিয় (Disconnected)'}
                         </span>
                       </div>
                     </div>
@@ -1218,8 +1228,9 @@ export default function PagesManagementPage() {
                           className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                         >
                           <option value="CONNECTED">সক্রিয় (Connected)</option>
+                          <option value="PENDING">অযাচাইকৃত (Pending Test)</option>
                           <option value="DISCONNECTED">নিষ্ক্রিয় (Disconnected)</option>
-                          <option value="TOKEN_EXPIRED">টোকেন মেয়াদোত্তীর্ণ (Expired)</option>
+                          <option value="TOKEN_EXPIRED">টোকেন ত্রুটি (Expired)</option>
                         </select>
                       </div>
                     </div>

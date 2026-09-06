@@ -105,13 +105,19 @@ export default function AdminPagesPage() {
                     <td className="py-3.5 px-4">
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${
-                          p.connectionStatus === 'DISCONNECTED'
-                            ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          p.connectionStatus === 'CONNECTED'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : p.connectionStatus === 'PENDING'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {p.connectionStatus === 'DISCONNECTED' ? 'নিষ্ক্রিয়' : 'সক্রিয় (Connected)'}
+                        {p.connectionStatus === 'CONNECTED'
+                          ? 'সক্রিয় (Connected)'
+                          : p.connectionStatus === 'PENDING'
+                          ? 'অযাচাইকৃত (Pending)'
+                          : 'নিষ্ক্রিয় (Disconnected)'}
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
