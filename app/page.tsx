@@ -107,7 +107,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
             <a href="#features" className="hover:text-indigo-600 transition-colors">ফিচারসমূহ</a>
             <a href="#how-it-works" className="hover:text-indigo-600 transition-colors">কীভাবে কাজ করে</a>
-            <a href="#preview" className="hover:text-indigo-600 transition-colors">লাইভ ডেমো</a>
+            <a href="#preview" className="hover:text-indigo-600 transition-colors">লাইভ প্রিভিউ</a>
             <a href="#faq" className="hover:text-indigo-600 transition-colors">প্রশ্নোত্তর</a>
           </div>
 
@@ -163,7 +163,7 @@ export default function LandingPage() {
               href="/login"
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-semibold text-base transition-colors flex items-center justify-center gap-2 shadow-xs"
             >
-              <span>ডেমো অ্যাকাউন্টে প্রবেশ করুন</span>
+              <span>অ্যাকাউন্টে প্রবেশ করুন</span>
             </Link>
           </div>
 
@@ -200,7 +200,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-medium">
-              লাইভ মেসেঞ্জার ডেমো
+              লাইভ মেসেঞ্জার প্রিভিউ
             </div>
           </div>
 

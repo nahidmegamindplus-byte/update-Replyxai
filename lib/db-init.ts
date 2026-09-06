@@ -436,42 +436,6 @@ export async function ensureDatabaseReady() {
       });
     }
 
-    // 4. Seed default payment methods if empty
-    const pmCount = await prisma.paymentMethod.count();
-    if (pmCount === 0) {
-      await prisma.paymentMethod.createMany({
-        data: [
-          {
-            id: 'pm_bkash',
-            name: 'BKASH',
-            displayName: 'বিকাশ (Personal)',
-            accountType: 'Personal',
-            accountNumber: '01700000000',
-            instructions: 'বিকাশ অ্যাপ বা *247# ডায়াল করে Send Money করুন।',
-            isActive: true,
-          },
-          {
-            id: 'pm_nagad',
-            name: 'NAGAD',
-            displayName: 'নগদ (Personal)',
-            accountType: 'Personal',
-            accountNumber: '01700000000',
-            instructions: 'নগদ অ্যাপ বা *167# ডায়াল করে Send Money করুন।',
-            isActive: true,
-          },
-          {
-            id: 'pm_rocket',
-            name: 'ROCKET',
-            displayName: 'রকেট (Personal)',
-            accountType: 'Personal',
-            accountNumber: '01700000000',
-            instructions: 'রকেট অ্যাপ বা *322# ডায়াল করে Send Money করুন।',
-            isActive: true,
-          },
-        ],
-      });
-    }
-
     isDbInitialized = true;
   } catch (err) {
     console.error('Error during database self-healing initialization:', err);

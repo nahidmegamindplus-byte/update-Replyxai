@@ -128,7 +128,7 @@ export async function POST(
 
     // Send to corresponding channel API (WhatsApp, Instagram, X, Telegram, or Facebook)
     let sendResult = { success: true };
-    if (pageAccessToken && !conversation.senderPsid.startsWith('demo_')) {
+    if (pageAccessToken) {
       sendResult = await sendChannelMessage({
         channel,
         recipientId: conversation.senderPsid,

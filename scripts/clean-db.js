@@ -26,6 +26,15 @@ async function clean() {
     },
   });
 
+  // Delete any dummy payment methods with placeholder numbers
+  await prisma.paymentMethod.deleteMany({
+    where: {
+      accountNumber: {
+        in: ['01700000000', '01800000000', '01900000000', '01600000000', '01712345678'],
+      },
+    },
+  });
+
   // Ensure clean Super Admin exists
   const adminEmail = 'admin@replyx.ai';
   const existingAdmin = await prisma.user.findUnique({
@@ -40,7 +49,7 @@ async function clean() {
         businessName: 'ReplyX AI Platform',
         email: adminEmail,
         passwordHash,
-        phone: '01700000000',
+        phone: null,
         role: 'ADMIN',
         status: 'ACTIVE',
         plan: 'PRO',
@@ -57,6 +66,7 @@ async function clean() {
         role: 'ADMIN',
         status: 'ACTIVE',
         plan: 'PRO',
+        phone: null,
         monthlyMessageLimit: 999999,
         messagesSentThisMonth: 0,
       },

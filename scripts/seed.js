@@ -20,7 +20,7 @@ async function main() {
         businessName: 'ReplyX AI Platform',
         email: adminEmail,
         passwordHash,
-        phone: '01700000000',
+        phone: null,
         role: 'ADMIN',
         status: 'ACTIVE',
         plan: 'PRO',
@@ -37,6 +37,7 @@ async function main() {
         role: 'ADMIN',
         status: 'ACTIVE',
         planStatus: 'ACTIVE',
+        phone: null,
       },
     });
     console.log('Super Admin user already verified.');
@@ -98,10 +99,9 @@ async function main() {
         '১০টি ফেসবুক পেজ কানেকশন',
         '২০,০০০ AI মেসেজ রিপ্লাই / মাস',
         '১,০০০টি প্রোডাক্ট ইনভেন্টরি ম্যানেজমেন্ট',
-        'মাল্টি-প্রোভাইডার AI ইঞ্জিন (DeepSeek, Gemini, OpenAI)',
-        'কাস্টম বিজনেস প্রম্পট ও সেলস ফানেল',
-        'আনলিমিটেড অর্ডার ক্যাপচার ও এক্সেল এক্সপোর্ট',
-        'ডেডিকেটেড একাউন্ট ম্যানেজার সাপোর্ট',
+        'ফুল কাস্টমাইজড AI প্রম্পট টিউনিং',
+        'মাল্টি-ইউজার রোলস ও টিম অ্যাক্সেস',
+        'ডেডিকেটেড একাউন্ট ম্যানেজার',
       ]),
       isPopular: false,
       isActive: true,
@@ -115,51 +115,6 @@ async function main() {
       console.log('Created default package:', pkg.name);
     }
   }
-
-  // 3. Default Payment Methods (bKash, Nagad, Rocket, Upay)
-  const defaultPaymentMethods = [
-    {
-      name: 'BKASH',
-      displayName: 'বিকাশ (bKash)',
-      accountType: 'Personal',
-      accountNumber: '01700000000',
-      instructions: 'আপনার বিকাশ অ্যাপ বা *247# ডায়াল করে উপরের নম্বরে Send Money করুন। এরপর প্রেরকের নম্বর এবং Transaction ID (TrxID) নিচে দিন।',
-      isActive: true,
-    },
-    {
-      name: 'NAGAD',
-      displayName: 'নগদ (Nagad)',
-      accountType: 'Personal',
-      accountNumber: '01800000000',
-      instructions: 'আপনার নগদ অ্যাপ বা *167# ডায়াল করে উপরের নম্বরে Send Money করুন। এরপর প্রেরকের নম্বর এবং Transaction ID (TrxID) নিচে দিন।',
-      isActive: true,
-    },
-    {
-      name: 'ROCKET',
-      displayName: 'রকেট (Rocket)',
-      accountType: 'Personal',
-      accountNumber: '01900000000',
-      instructions: 'আপনার রকেট অ্যাপ বা *322# ডায়াল করে Send Money করুন এবং Transaction ID দিন।',
-      isActive: true,
-    },
-    {
-      name: 'UPAY',
-      displayName: 'উপায় (Upay)',
-      accountType: 'Personal',
-      accountNumber: '01600000000',
-      instructions: 'আপনার উপায় অ্যাপ বা *268# ডায়াল করে Send Money করুন এবং Transaction ID দিন।',
-      isActive: true,
-    },
-  ];
-
-  for (const pm of defaultPaymentMethods) {
-    const exists = await prisma.paymentMethod.findUnique({ where: { name: pm.name } });
-    if (!exists) {
-      await prisma.paymentMethod.create({ data: pm });
-      console.log('Created default payment method:', pm.displayName);
-    }
-  }
-
   console.log('Seeding completed successfully!');
 }
 
