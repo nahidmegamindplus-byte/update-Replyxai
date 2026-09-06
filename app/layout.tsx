@@ -40,7 +40,6 @@ export default function RootLayout({
             dangerouslySetInnerHTML={{ __html: inlinedTailwindCss }}
           />
         ) : null}
-        <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="/global.css" />
       </head>
       <body

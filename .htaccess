@@ -2,8 +2,6 @@
 # ReplyX AI — Safe Hostinger LiteSpeed / Apache Configuration
 # ==============================================================================
 
-DirectoryIndex index.html index.php
-
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
@@ -19,8 +17,12 @@ DirectoryIndex index.html index.php
   RewriteRule ^prisma/.*\.db-wal - [F,L,NC]
   RewriteRule ^prisma/.*\.db-shm - [F,L,NC]
 
-  # 3. Direct mapping for Next.js static CSS & JS assets (Prevents Broken Layout / MIME 404)
-  RewriteRule ^_next/static/(.*)$ .next/static/$1 [L,QSA]
+  # 3. Allow direct access to physical static assets in _next/static and public
+  RewriteCond %{DOCUMENT_ROOT}/_next/static/$1 -f
+  RewriteRule ^_next/static/(.*)$ _next/static/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+  RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
 # Ensure exact MIME types so browsers never reject CSS or JavaScript
