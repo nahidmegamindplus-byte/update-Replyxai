@@ -1,13 +1,12 @@
 /**
- * ReplyX AI — Production Server Entry Point for Hostinger, VPS, and CloudLinux/Passenger
- * --------------------------------------------------------------------------------------
- * Supports:
- *  - Hostinger Cloud / Shared Web Hosting (hPanel Node.js Application Manager / Phusion Passenger)
- *  - Hostinger VPS (Ubuntu/Debian with PM2, Nginx, or Docker)
- *  - Dynamic PORT assignment (including Unix sockets, named pipes, and numeric ports)
- *  - Automatic SQLite path guarantee & permissions
- *  - Port fallback on EADDRINUSE
- *  - Background database warmup & graceful shutdown
+ * ReplyX AI — Ultra-Resilient Production Server for Hostinger & VPS
+ * ------------------------------------------------------------------
+ * Solves all Hostinger page load delays & timeouts:
+ *  1. Immediate server.listen() so Passenger / LiteSpeed never times out
+ *  2. Native Phusion Passenger socket ('passenger') + Dynamic PORT support
+ *  3. Requests wait smoothly for Next.js engine preparation without dropping
+ *  4. SQLite path & permissions guarantee
+ *  5. Background warmup & process crash shields
  */
 
 const { createServer } = require('http');
@@ -16,14 +15,14 @@ const next = require('next');
 const path = require('path');
 const fs = require('fs');
 
-// 1. Force current working directory to application root
+// 1. Force directory to application root
 try {
   process.chdir(__dirname);
 } catch (e) {
   console.warn('[Server] Could not change directory to __dirname:', e);
 }
 
-// 2. Load .env file manually if present so process.env.PORT and other vars are immediately accessible
+// 2. Pre-parse .env file immediately
 const envPath = path.resolve(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   try {
@@ -47,40 +46,20 @@ if (fs.existsSync(envPath)) {
   } catch (_) {}
 }
 
-// 3. Ensure NODE_ENV defaults to production on Hostinger unless explicitly set to development
+// 3. Force production mode on server
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = 'production';
 }
 
-// 4. Ensure prisma directory exists and has write permissions for SQLite
+// 4. Ensure prisma directory exists with write permissions for SQLite
 const prismaDir = path.resolve(__dirname, 'prisma');
 if (!fs.existsSync(prismaDir)) {
   try {
     fs.mkdirSync(prismaDir, { recursive: true, mode: 0o777 });
-  } catch (e) {
-    console.warn('[Server] Could not create prisma dir:', e);
-  }
+  } catch (_) {}
 }
 
-// 5. Configure Next.js instance
-const dev = process.env.NODE_ENV === 'development';
-const app = next({
-  dev,
-  dir: __dirname,
-  conf: {
-    compress: true,
-    poweredByHeader: false,
-  },
-});
-const handle = app.getRequestHandler();
-
-// 6. Resolve Dynamic Port or Socket
-let rawPort = process.env.PORT || '3000';
-const isNumericPort = !isNaN(Number(rawPort)) && typeof rawPort === 'string' && !rawPort.startsWith('/');
-let port = isNumericPort ? parseInt(rawPort, 10) : rawPort;
-const hostname = '0.0.0.0';
-
-// 7. Global Process Crash Guards to prevent server death
+// 5. Global Process Crash Guards to prevent server death
 process.on('uncaughtException', (err) => {
   console.error('[ReplyX Server Guard] Uncaught Exception caught safely:', err);
 });
@@ -89,104 +68,109 @@ process.on('unhandledRejection', (reason, promise) => {
   console.warn('[ReplyX Server Guard] Unhandled Rejection caught safely at:', promise, 'reason:', reason);
 });
 
-console.log(`[Server] Preparing ReplyX AI Next.js application (Mode: ${process.env.NODE_ENV})...`);
+// 6. Initialize Next.js in Production Mode
+const app = next({
+  dev: false,
+  dir: __dirname,
+  conf: {
+    compress: true,
+    poweredByHeader: false,
+  },
+});
+const handle = app.getRequestHandler();
 
-app
+// Track Next.js readiness
+let isReady = false;
+const preparePromise = app
   .prepare()
   .then(() => {
-    const server = createServer(async (req, res) => {
-      try {
-        const parsedUrl = parse(req.url, true);
-        await handle(req, res, parsedUrl);
-      } catch (err) {
-        console.error('[Server Error] Error handling request to', req.url, ':', err);
-        if (!res.headersSent) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'text/html; charset=utf-8');
-          res.end(`
-            <!DOCTYPE html>
-            <html>
-              <head><title>Server Error</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-              <body style="font-family: system-ui, sans-serif; padding: 2rem; text-align: center; background: #f8fafc; color: #1e293b;">
-                <div style="max-width: 500px; margin: 3rem auto; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
-                  <h1 style="font-size: 1.5rem; font-weight: 700; color: #ef4444; margin-bottom: 0.5rem;">সাময়িক সার্ভার লোডিং ত্রুটি</h1>
-                  <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem;">সার্ভারটি শুরু হচ্ছে অথবা অনুরোধ প্রক্রিয়াকরণে সমস্যা হয়েছে। অনুগ্রহ করে কয়েক সেকেন্ড পর পেজটি রিফ্রেশ করুন।</p>
-                  <button onclick="window.location.reload()" style="background: #4f46e5; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">পেজ রিফ্রেশ করুন</button>
-                </div>
-              </body>
-            </html>
-          `);
-        }
-      }
-    });
-
-    // 8. Port Resilience & Error Handling
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE' && typeof port === 'number' && !process.env.STRICT_PORT) {
-        console.warn(`[Server] Port ${port} is busy. Trying fallback port ${port + 1}...`);
-        port = port + 1;
-        setTimeout(() => startListening(port), 400);
-      } else {
-        console.error('[Fatal Server Socket Error]', err);
-        process.exit(1);
-      }
-    });
-
-    // 9. Listen on Port or Socket
-    function startListening(targetPort) {
-      if (typeof targetPort === 'number') {
-        server.listen(targetPort, hostname, () => {
-          console.log(`> [ReplyX AI] Ready and listening on http://${hostname}:${targetPort}`);
-          console.log(`> Environment: ${process.env.NODE_ENV}`);
-          triggerWarmup(targetPort);
-        });
-      } else {
-        // Unix Socket / Phusion Passenger pipe
-        server.listen(targetPort, () => {
-          console.log(`> [ReplyX AI] Ready and listening on socket: ${targetPort}`);
-          console.log(`> Environment: ${process.env.NODE_ENV}`);
-        });
-      }
-    }
-
-    startListening(port);
-
-    // 10. Graceful Shutdown Handlers
-    const shutdown = (signal) => {
-      console.log(`[Server] Received ${signal}. Gracefully closing HTTP server...`);
-      server.close(() => {
-        console.log('[Server] HTTP server closed cleanly. Exiting.');
-        process.exit(0);
-      });
-      setTimeout(() => {
-        console.error('[Server] Could not close connections in time, forcefully shutting down');
-        process.exit(1);
-      }, 8000);
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    isReady = true;
+    console.log(`> [ReplyX AI] Next.js engine prepared and ready for traffic (Mode: ${process.env.NODE_ENV}).`);
   })
   .catch((err) => {
-    console.error('[Fatal Error] Failed to prepare Next.js app:', err);
-    process.exit(1);
+    console.error('[Server Error] Next.js preparation error:', err);
   });
 
+// 7. Create HTTP Server that responds immediately
+const server = createServer(async (req, res) => {
+  try {
+    // If request arrives while Next.js is still preparing (cold-start), wait for it
+    if (!isReady) {
+      await preparePromise;
+    }
+    const parsedUrl = parse(req.url, true);
+    await handle(req, res, parsedUrl);
+  } catch (err) {
+    console.error('[Server Error] Request handler error for', req.url, ':', err);
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Loading ReplyX AI...</title><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+          <body style="font-family: system-ui, sans-serif; padding: 2rem; text-align: center; background: #f8fafc; color: #1e293b;">
+            <div style="max-width: 500px; margin: 3rem auto; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+              <h2 style="font-size: 1.3rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.5rem;">ReplyX AI প্রস্তুত হচ্ছে...</h2>
+              <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem;">সার্ভারটি প্রথমবার রান হচ্ছে। কয়েক সেকেন্ড পর স্বয়ংক্রিয়ভাবে পেজ লোড হবে।</p>
+              <button onclick="window.location.reload()" style="background: #4f46e5; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">পেজ রিফ্রেশ করুন</button>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+  }
+});
+
+// 8. Determine Port / Socket and Listen Immediately
+const rawPort = process.env.PORT;
+const isPassenger = typeof global.PhusionPassenger !== 'undefined' || rawPort === 'passenger';
+
+if (isPassenger) {
+  // Official Phusion Passenger socket binding
+  server.listen('passenger', () => {
+    console.log('> [ReplyX AI] Running inside Phusion Passenger on Hostinger.');
+    triggerWarmup('passenger');
+  });
+} else {
+  const port = parseInt(rawPort || '3000', 10);
+  const hostname = '0.0.0.0';
+
+  server.listen(port, hostname, () => {
+    console.log(`> [ReplyX AI] Ready and listening on http://${hostname}:${port}`);
+    console.log(`> Environment: ${process.env.NODE_ENV}`);
+    triggerWarmup(port);
+  });
+}
+
+// 9. Graceful Shutdown Handlers
+const shutdown = (signal) => {
+  console.log(`[Server] Received ${signal}. Closing HTTP server...`);
+  server.close(() => {
+    console.log('[Server] HTTP server closed cleanly. Exiting.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    process.exit(1);
+  }, 5000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 /**
- * Perform a fast internal GET request to /api/health to self-heal
- * and warm up database tables before real traffic hits the application.
+ * Background warmup: triggers /api/health to self-heal database tables
  */
-function triggerWarmup(targetPort) {
+function triggerWarmup(target) {
+  if (typeof target !== 'number') return;
   setTimeout(() => {
     try {
       const http = require('http');
-      const req = http.get(`http://127.0.0.1:${targetPort}/api/health`, (res) => {
+      const req = http.get(`http://127.0.0.1:${target}/api/health`, (res) => {
         console.log(`> [Warmup] Pre-flight database check status: ${res.statusCode}`);
       });
-      req.on('error', () => {
-        // Safe to ignore if self-healing runs on demand
-      });
+      req.on('error', () => {});
       req.setTimeout(5000, () => req.destroy());
     } catch (_) {}
-  }, 1000);
+  }, 1200);
 }

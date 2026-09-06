@@ -1,5 +1,5 @@
 # ==============================================================================
-# ReplyX AI — Hostinger LiteSpeed / Apache & Passenger Configuration
+# ReplyX AI — Safe Hostinger LiteSpeed / Apache Configuration
 # ==============================================================================
 
 <IfModule mod_rewrite.c>
@@ -10,27 +10,15 @@
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
   RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # 2. Prevent direct web access to sensitive environment, sqlite & prisma files
-  RewriteRule ^\.env.*$ - [F,L]
-  RewriteRule ^prisma/.*\.db$ - [F,L]
-  RewriteRule ^prisma/.*\.db-journal$ - [F,L]
-  RewriteRule ^prisma/.*\.db-wal$ - [F,L]
-  RewriteRule ^prisma/.*\.db-shm$ - [F,L]
-
-  # 3. WebSocket and Proxy headers forwarding
-  RewriteCond %{HTTP:Upgrade} =websocket [NC]
-  RewriteRule /(.*) ws://127.0.0.1:3000/$1 [P,L]
+  # 2. Block direct web access to sensitive environment & SQLite database files
+  RewriteRule ^\.env - [F,L,NC]
+  RewriteRule ^prisma/.*\.db - [F,L,NC]
+  RewriteRule ^prisma/.*\.db-journal - [F,L,NC]
+  RewriteRule ^prisma/.*\.db-wal - [F,L,NC]
+  RewriteRule ^prisma/.*\.db-shm - [F,L,NC]
 </IfModule>
 
-# Phusion Passenger configuration (when managed via Hostinger Node.js Application Manager)
-<IfModule mod_passenger.c>
-  PassengerNodejs /usr/bin/node
-  PassengerAppType node
-  PassengerStartupFile server.js
-  PassengerRestartDir tmp
-</IfModule>
-
-# Gzip compression for static performance
+# Browser Gzip / Deflate compression for ultra-fast page loading
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json image/svg+xml
 </IfModule>
