@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runFollowUpAutomation } from '@/lib/follow-up';
+import { runFollowUpAutomation, startFollowUpWorker } from '@/lib/follow-up';
 import { requireAuth } from '@/lib/auth';
 
 /**
@@ -8,28 +8,35 @@ import { requireAuth } from '@/lib/auth';
  */
 export async function POST(req: NextRequest) {
   try {
-    // Optional secret key check for external cron runners
+    startFollowUpWorker();
+
+    const { searchParams } = new URL(req.url);
+    const pageId = searchParams.get('pageId') || undefined;
+    const queryKey = searchParams.get('key');
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET || 'replax_internal_cron';
 
-    if (authHeader && authHeader === `Bearer ${cronSecret}`) {
-      const summary = await runFollowUpAutomation();
-      return NextResponse.json({ success: true, ...summary });
+    const isSecretAuthorized =
+      (authHeader && authHeader === `Bearer ${cronSecret}`) ||
+      (queryKey && queryKey.trim() === cronSecret);
+
+    if (!isSecretAuthorized) {
+      const auth = await requireAuth(req);
+      if ('response' in auth) return auth.response;
     }
 
-    // Otherwise require logged-in user
-    const auth = await requireAuth(req);
-    if ('response' in auth) return auth.response;
-
-    const summary = await runFollowUpAutomation();
+    const summary = await runFollowUpAutomation(pageId);
     return NextResponse.json({
       success: true,
-      message: `ফলো-আপ সম্পন্ন: ${summary.sentCount} টি মেসেজ সফলভাবে পাঠানো হয়েছে।`,
+      message:
+        summary.sentCount > 0
+          ? `ফলো-আপ সম্পন্ন: ${summary.sentCount} টি মেসেজ সফলভাবে পাঠানো হয়েছে।`
+          : `ফলো-আপ চেক সম্পন্ন: কোনো গ্রাহকের অপেক্ষা সময় এখনো পার হয়নি। নির্ধারিত সময় পর স্বয়ংক্রিয়ভাবে মেসেজ যাবে।`,
       ...summary,
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: 'ফলো-আপ প্রক্রিয়া চালাতে সমস্যা হয়েছে।' },
+      { success: false, error: error?.message || 'ফলো-আপ প্রক্রিয়া চালাতে সমস্যা হয়েছে।' },
       { status: 500 }
     );
   }
@@ -38,3 +45,4 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   return POST(req);
 }
+

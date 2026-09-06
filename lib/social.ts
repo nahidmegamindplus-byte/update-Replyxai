@@ -110,7 +110,9 @@ export async function sendFacebookText(
   try {
     if (!accessToken || !senderPsid) return { success: false, error: 'Missing token or PSID' };
 
-    const res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+    const cleanToken = accessToken.trim();
+    // 1. First attempt: Standard RESPONSE
+    let res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(cleanToken)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -120,7 +122,29 @@ export async function sendFacebookText(
       }),
     });
 
-    const data = await res.json();
+    let data = await res.json();
+
+    // 2. Second attempt: If rejected due to 24h window policy, retry with MESSAGE_TAG
+    if (
+      (!res.ok || data.error) &&
+      (data.error?.code === 10 ||
+        data.error?.error_subcode === 2018278 ||
+        data.error?.message?.includes('window') ||
+        data.error?.message?.includes('tag'))
+    ) {
+      res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(cleanToken)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: { id: senderPsid },
+          messaging_type: 'MESSAGE_TAG',
+          tag: 'CONFIRMED_EVENT_UPDATE',
+          message: { text },
+        }),
+      });
+      data = await res.json();
+    }
+
     if (!res.ok || data.error) {
       return { success: false, error: data.error?.message || 'Failed to send Facebook message' };
     }

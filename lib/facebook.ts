@@ -136,7 +136,8 @@ export async function sendMessengerText(
       return { success: false, error: 'Missing access token' };
     }
 
-    const res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(accessToken)}`, {
+    const cleanToken = accessToken.trim();
+    let res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(cleanToken)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -146,7 +147,27 @@ export async function sendMessengerText(
       }),
     });
 
-    const data = await res.json();
+    let data = await res.json();
+
+    if (
+      (!res.ok || data.error) &&
+      (data.error?.code === 10 ||
+        data.error?.error_subcode === 2018278 ||
+        data.error?.message?.includes('window') ||
+        data.error?.message?.includes('tag'))
+    ) {
+      res = await fetch(`${GRAPH_BASE_URL}/me/messages?access_token=${encodeURIComponent(cleanToken)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: { id: senderPsid },
+          messaging_type: 'MESSAGE_TAG',
+          tag: 'CONFIRMED_EVENT_UPDATE',
+          message: { text },
+        }),
+      });
+      data = await res.json();
+    }
 
     if (!res.ok || data.error) {
       const errMsg = data.error?.message || 'Failed to send Messenger message';

@@ -405,6 +405,30 @@ export default function PagesManagementPage() {
     }
   };
 
+  const [runningFollowUpId, setRunningFollowUpId] = useState<string | null>(null);
+
+  const handleTriggerFollowUp = async (pageId: string) => {
+    setRunningFollowUpId(pageId);
+    try {
+      const res = await fetch(`/api/cron/follow-up?pageId=${pageId}`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        if (data.sentCount > 0) {
+          toast.success(data.message || `সফল! ${data.sentCount} টি গ্রাহককে ফলো-আপ মেসেজ পাঠানো হয়েছে।`);
+        } else {
+          toast.info(data.message || 'এখনো কোনো গ্রাহকের অপেক্ষা সময় পার হয়নি।');
+        }
+      } else {
+        toast.error(data.error || 'ফলো-আপ চালাতে সমস্যা হয়েছে।');
+      }
+      fetchPages();
+    } catch (e) {
+      toast.error('ফলো-আপ প্রক্রিয়ায় সার্ভারে যোগাযোগ করা যায়নি।');
+    } finally {
+      setRunningFollowUpId(null);
+    }
+  };
+
   const openEditModal = (page: any) => {
     setSelectedPage(page);
     setEditForm({
@@ -429,7 +453,7 @@ export default function PagesManagementPage() {
       followUpEnabled: page.followUpEnabled ?? false,
       followUpWaitMinutes: page.followUpWaitMinutes !== undefined ? page.followUpWaitMinutes : 30,
       followUpMessage: page.followUpMessage || '',
-      followUpOnlySeen: page.followUpOnlySeen ?? true,
+      followUpOnlySeen: page.followUpOnlySeen ?? false,
       followUpMaxCount: page.followUpMaxCount !== undefined ? page.followUpMaxCount : 1,
       followUpFrequency: page.followUpFrequency || 'ONCE',
       followUpIntervalHours: page.followUpIntervalHours !== undefined ? page.followUpIntervalHours : 24,
@@ -850,14 +874,28 @@ export default function PagesManagementPage() {
 
                   {/* Actions Footer */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => handleTestConnection(page.id)}
-                      disabled={isTesting}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-                      <span>{isTesting ? 'টেস্ট হচ্ছে...' : 'কানেকশন টেস্ট'}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => handleTestConnection(page.id)}
+                        disabled={isTesting}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
+                        <span>{isTesting ? 'টেস্ট হচ্ছে...' : 'কানেকশন টেস্ট'}</span>
+                      </button>
+
+                      {page.followUpEnabled && (
+                        <button
+                          onClick={() => handleTriggerFollowUp(page.id)}
+                          disabled={runningFollowUpId === page.id}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-colors disabled:opacity-50"
+                          title="নির্ধারিত গ্রাহকদের এখনই ফলো-আপ পাঠান"
+                        >
+                          <Clock className={`w-3.5 h-3.5 text-amber-600 ${runningFollowUpId === page.id ? 'animate-spin' : ''}`} />
+                          <span>{runningFollowUpId === page.id ? 'চেক হচ্ছে...' : 'ফলো-আপ রান'}</span>
+                        </button>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <button
@@ -1975,6 +2013,28 @@ export default function PagesManagementPage() {
                           <p className="text-[10px] text-slate-500 mt-1">
                             💡 খালি রাখলে সিস্টেম স্বয়ংক্রিয়ভাবে প্রফেশনাল ও বন্ধুভাবাপন্ন ফলো-আপ বার্তা তৈরি করে পাঠিয়ে দেবে।
                           </p>
+                        </div>
+
+                        {/* Test & Run Follow-Up Now Button */}
+                        <div className="pt-2 border-t border-amber-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-amber-50/70 rounded-xl border border-amber-200">
+                          <div>
+                            <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                              <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                              তাত্ক্ষণিক ফলো-আপ রান ও টেস্ট
+                            </div>
+                            <div className="text-[10px] text-amber-800">
+                              অপেক্ষার সময় শেষ হওয়া কাস্টমারদের কাছে এখনই স্বয়ংক্রিয়ভাবে ফলো-আপ মেসেজ পাঠাতে ক্লিক করুন।
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={runningFollowUpId === selectedPage?.id}
+                            onClick={() => selectedPage?.id && handleTriggerFollowUp(selectedPage.id)}
+                            className="w-full sm:w-auto px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 shrink-0"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${runningFollowUpId === selectedPage?.id ? 'animate-spin' : ''}`} />
+                            {runningFollowUpId === selectedPage?.id ? 'পাঠানো হচ্ছে...' : 'এখনই রান করুন'}
+                          </button>
                         </div>
                       </div>
                     )}

@@ -1,41 +1,54 @@
 import prisma from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import { sendChannelMessage, SocialChannel } from '@/lib/social';
-import { serverLogger } from '@/lib/logger';
+import { serverLogger, logActivity } from '@/lib/logger';
+
+// Global singleton to prevent duplicate workers across Next.js reloads
+const globalForFollowUp = globalThis as unknown as {
+  followUpWorkerInterval?: NodeJS.Timeout | null;
+  isFollowUpWorkerRunning?: boolean;
+};
 
 /**
- * Check all active pages with followUpEnabled and dispatch automated follow-up messages
+ * Check active pages with followUpEnabled and dispatch automated follow-up messages
  * to customers who have seen/read the last response or remained inactive for the configured wait time.
  */
-export async function runFollowUpAutomation(): Promise<{
+export async function runFollowUpAutomation(targetPageId?: string): Promise<{
   scannedPages: number;
   sentCount: number;
-  results: Array<{ pageId: string; conversationId: string; customer: string; status: string }>;
+  results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string }>;
 }> {
-  const results: Array<{ pageId: string; conversationId: string; customer: string; status: string }> = [];
+  const results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string }> = [];
   let sentCount = 0;
 
   try {
+    const pageFilter: any = {
+      followUpEnabled: true,
+      connectionStatus: { not: 'DISCONNECTED' },
+    };
+
+    if (targetPageId) {
+      pageFilter.id = targetPageId;
+    }
+
     const activePages = await prisma.page.findMany({
-      where: {
-        followUpEnabled: true,
-        connectionStatus: 'CONNECTED',
-      },
+      where: pageFilter,
     });
 
     for (const page of activePages) {
-      const waitMinutes = page.followUpWaitMinutes || 30;
+      const waitMinutes = Math.max(1, page.followUpWaitMinutes || 30);
       const cutoffTime = new Date(Date.now() - waitMinutes * 60 * 1000);
 
       // Determine recurrence interval
       // ONCE: only send 1 time ever
       // DAILY: 24 hours gap between subsequent messages
       // CUSTOM_INTERVAL: user-defined hours gap (e.g. 6, 12, 48 hours)
-      const intervalHours = page.followUpFrequency === 'DAILY'
-        ? 24
-        : page.followUpFrequency === 'CUSTOM_INTERVAL'
-        ? (page.followUpIntervalHours || 24)
-        : 87600; // ~10 years for ONCE
+      const intervalHours =
+        page.followUpFrequency === 'DAILY'
+          ? 24
+          : page.followUpFrequency === 'CUSTOM_INTERVAL'
+          ? (page.followUpIntervalHours || 24)
+          : 87600; // ~10 years for ONCE
       const minGapTime = new Date(Date.now() - intervalHours * 60 * 60 * 1000);
       const maxCount = page.followUpMaxCount || 1;
 
@@ -49,81 +62,111 @@ export async function runFollowUpAutomation(): Promise<{
         } catch (_) {}
       }
 
-      // Find candidates for this page
+      // Find candidate conversations
       const candidates = await prisma.conversation.findMany({
         where: {
           pageId: page.id,
           status: 'ACTIVE',
           aiEnabled: true,
-          // Has seen/read or last message was before cutoff
           lastMessageAt: { lte: cutoffTime },
-          // Maximum follow-up count condition
-          followUpSentCount: { lt: maxCount },
-          OR: [
-            { lastFollowUpSentAt: null },
-            { lastFollowUpSentAt: { lte: minGapTime } },
-          ],
         },
         include: {
           messages: {
             orderBy: { createdAt: 'desc' },
+            take: 2,
+          },
+          orders: {
+            where: {
+              createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+            },
             take: 1,
           },
         },
-        take: 20, // process in safe batches
+        take: 50,
       });
 
       for (const conv of candidates) {
-        const lastMsg = conv.messages[0];
+        const channel = (conv.channel || page.channel || 'FACEBOOK') as SocialChannel;
+        const customerName = conv.customerName || conv.senderPsid;
 
-        // Only send follow-up if the LAST message was OUTGOING (the store replied, and customer didn't respond)
+        // 1. If customer already placed an order in this conversation in the last 48h, skip sales follow-up
+        if (conv.orders && conv.orders.length > 0) {
+          continue;
+        }
+
+        // 2. Check maximum follow-up count condition in JavaScript (immune to SQLite null issues)
+        const currentSentCount = conv.followUpSentCount || 0;
+        if (currentSentCount >= maxCount) {
+          continue;
+        }
+
+        // 3. Check recurrence gap if already followed up previously
+        if (conv.lastFollowUpSentAt && conv.lastFollowUpSentAt > minGapTime) {
+          continue;
+        }
+
+        // 4. Last message must be OUTGOING (Store/AI replied and customer didn't answer)
+        const lastMsg = conv.messages[0];
         if (!lastMsg || lastMsg.direction !== 'OUTGOING') {
           continue;
         }
 
-        // If followUpOnlySeen is ON, ensure customer actually viewed/seen the message
+        // 5. Seen / Read vs Unseen condition evaluation
         if (page.followUpOnlySeen) {
-          if (!conv.lastSeenAt) {
-            continue; // Skip because customer hasn't seen it yet
-          }
-          // If seen, ensure the seen timestamp occurred before or at cutoff time
-          if (conv.lastSeenAt > cutoffTime) {
-            continue; // Customer viewed it recently, give them more time
+          if (conv.lastSeenAt) {
+            // Seen timestamp must have happened at least waitMinutes ago
+            if (conv.lastSeenAt > cutoffTime) {
+              continue; // viewed recently, give customer more time
+            }
+          } else {
+            // Read receipt not reported by platform:
+            // Telegram, X, and basic Instagram webhooks do not support read receipts.
+            const supportsReadReceipts = channel === 'FACEBOOK' || channel === 'WHATSAPP';
+            if (supportsReadReceipts) {
+              // For Facebook/WhatsApp, if read receipt wasn't fired, wait for 2x wait time before sending
+              const doubleCutoff = new Date(Date.now() - waitMinutes * 2 * 60 * 1000);
+              if (conv.lastMessageAt > doubleCutoff) {
+                continue;
+              }
+            } else {
+              // For Telegram/X/Instagram, use lastMessageAt directly
+              if (conv.lastMessageAt > cutoffTime) {
+                continue;
+              }
+            }
           }
         } else {
-          // followUpOnlySeen is OFF: Follow up on ALL unreplied customers (Seen or Unseen) after waitMinutes
-          const effectiveLastActivity = conv.lastSeenAt && conv.lastSeenAt > conv.lastMessageAt
-            ? conv.lastSeenAt
-            : conv.lastMessageAt;
+          // followUpOnlySeen is OFF (Recommended "Super Conversion"):
+          const effectiveLastActivity =
+            conv.lastSeenAt && conv.lastSeenAt > conv.lastMessageAt
+              ? conv.lastSeenAt
+              : conv.lastMessageAt;
 
           if (effectiveLastActivity > cutoffTime) {
-            continue; // Not enough time has passed since last activity
+            continue;
           }
         }
 
-        // Craft friendly personalized follow-up message
+        // 6. Craft personalized follow-up message
         const customerDisplayName = conv.customerName?.split(' ')[0] || 'স্যার/ম্যাম';
         let followUpText = page.followUpMessage?.trim();
 
         if (!followUpText) {
-          // Default human-like sales follow-up templates based on reply language
           if (page.replyLanguage === 'ENGLISH') {
             followUpText = `Hi ${customerDisplayName}, just following up to see if you have any questions or need help placing your order? We're right here to assist you! 😊`;
           } else if (page.replyLanguage === 'BANGLISH') {
-            followUpText = `Assalamu Alaikum ${customerDisplayName}! Apnar product ti niye kono proshno chilo kina jante chailam? Kono help lagle kindly bolben, amra delivery confirm kore dibo! 😊`;
+            followUpText = `Assalamu Alaikum ${customerDisplayName}! Apnar product ti niye kono proshno chilo kina jante chailam? Kono help lagle kindly bolben, amra order confirm kore dibo! 😊`;
           } else {
             followUpText = `আসসালামু আলাইকুম ${customerDisplayName}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন বা তথ্যের প্রয়োজন ছিল কি? কোনো জিজ্ঞাসা থাকলে জানাতে পারেন, আমরা অর্ডারটি কনফার্ম করে দিচ্ছি! 😊🛍️`;
           }
         } else {
-          // Replace placeholders if present
           followUpText = followUpText
             .replace(/{name}/g, customerDisplayName)
             .replace(/{customer}/g, customerDisplayName)
             .replace(/{channel}/g, page.pageName);
         }
 
-        // Dispatch message to channel
-        const channel = (conv.channel || page.channel || 'FACEBOOK') as SocialChannel;
+        // 7. Dispatch follow-up message to customer via social channel
         const sendRes = await sendChannelMessage({
           channel,
           recipientId: conv.senderPsid,
@@ -135,7 +178,8 @@ export async function runFollowUpAutomation(): Promise<{
 
         if (sendRes.success) {
           sentCount++;
-          // Save outgoing follow-up message to DB
+
+          // Record outgoing message in database
           await prisma.message.create({
             data: {
               conversationId: conv.id,
@@ -150,7 +194,7 @@ export async function runFollowUpAutomation(): Promise<{
             },
           });
 
-          // Update conversation lastFollowUpSentAt and increment followUpSentCount
+          // Update conversation lastFollowUpSentAt, lastMessage, and increment count
           await prisma.conversation.update({
             where: { id: conv.id },
             data: {
@@ -161,22 +205,31 @@ export async function runFollowUpAutomation(): Promise<{
             },
           });
 
+          await logActivity({
+            userId: page.userId,
+            pageId: page.id,
+            action: 'FOLLOW_UP_SENT',
+            description: `স্বয়ংক্রিয় ফলো-আপ বার্তা পাঠানো হয়েছে গ্রাহক ${customerDisplayName} (${conv.senderPsid})-কে (${channel})`,
+          });
+
           results.push({
             pageId: page.id,
             conversationId: conv.id,
-            customer: conv.customerName || conv.senderPsid,
+            customer: customerName,
             status: 'SENT',
+            channel,
           });
 
           serverLogger.info(
-            `Automated follow-up message sent to ${conv.customerName || conv.senderPsid} via ${channel}`
+            `Automated follow-up message sent to ${customerName} via ${channel}`
           );
         } else {
           results.push({
             pageId: page.id,
             conversationId: conv.id,
-            customer: conv.customerName || conv.senderPsid,
-            status: `FAILED: ${(sendRes as any).error}`,
+            customer: customerName,
+            status: `FAILED: ${(sendRes as any).error || 'API Error'}`,
+            channel,
           });
         }
       }
@@ -196,3 +249,34 @@ export async function runFollowUpAutomation(): Promise<{
     };
   }
 }
+
+/**
+ * Start background timer daemon for continuous follow-up checks (runs every 60s)
+ */
+export function startFollowUpWorker(intervalMs = 60000) {
+  if (globalForFollowUp.followUpWorkerInterval) {
+    return; // Already initialized
+  }
+
+  serverLogger.info(`[Follow-Up Worker] Background automation engine active (interval: ${intervalMs / 1000}s)`);
+
+  globalForFollowUp.followUpWorkerInterval = setInterval(async () => {
+    if (globalForFollowUp.isFollowUpWorkerRunning) return;
+    globalForFollowUp.isFollowUpWorkerRunning = true;
+    try {
+      const summary = await runFollowUpAutomation();
+      if (summary.sentCount > 0) {
+        serverLogger.info(`[Follow-Up Worker] Dispatched ${summary.sentCount} follow-up message(s)`);
+      }
+    } catch (err) {
+      serverLogger.error('[Follow-Up Worker] Scheduled run error:', err);
+    } finally {
+      globalForFollowUp.isFollowUpWorkerRunning = false;
+    }
+  }, intervalMs);
+
+  if (globalForFollowUp.followUpWorkerInterval && typeof globalForFollowUp.followUpWorkerInterval.unref === 'function') {
+    globalForFollowUp.followUpWorkerInterval.unref();
+  }
+}
+

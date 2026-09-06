@@ -1,5 +1,6 @@
 import prisma from './db';
 import bcrypt from 'bcryptjs';
+import { startFollowUpWorker } from './follow-up';
 
 let isDbInitialized = false;
 let initPromise: Promise<void> | null = null;
@@ -437,6 +438,9 @@ export async function ensureDatabaseReady() {
     }
 
     isDbInitialized = true;
+    try {
+      startFollowUpWorker();
+    } catch (_) {}
   } catch (err) {
     console.error('Error during database self-healing initialization:', err);
   } finally {

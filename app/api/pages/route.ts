@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
         followUpEnabled: followUpEnabled !== undefined ? Boolean(followUpEnabled) : false,
         followUpWaitMinutes: followUpWaitMinutes !== undefined ? Number(followUpWaitMinutes) : 30,
         followUpMessage: followUpMessage || null,
-        followUpOnlySeen: followUpOnlySeen !== undefined ? Boolean(followUpOnlySeen) : true,
+        followUpOnlySeen: followUpOnlySeen !== undefined ? Boolean(followUpOnlySeen) : false,
         followUpMaxCount: followUpMaxCount !== undefined ? Number(followUpMaxCount) : 1,
         followUpFrequency: followUpFrequency || 'ONCE',
         followUpIntervalHours: followUpIntervalHours !== undefined ? Number(followUpIntervalHours) : 24,
