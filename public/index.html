@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="bn" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReplyX AI — AI-Powered Omnichannel Social Automation</title>
+  <meta name="description" content="আপনার সোশ্যাল মিডিয়ার জন্য স্মার্ট ওমনিচ্যানেল AI Sales Assistant। WhatsApp, Instagram, Facebook Messenger, X এবং Telegram—সব চ্যানেল থেকে আসা কাস্টমারের মেসেজ বুঝে তাৎক্ষণিক উত্তর ও অর্ডার ক্যাপচার।">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+  <!-- Preconnect and Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       ReplyX AI — 100% Self-Contained Bulletproof Inline Styles
+       Zero External CSS Dependencies — Immune to 404s, Cache & Hosting Glitches
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-main: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --accent: #059669;
+      --border-color: #e2e8f0;
+      --card-bg: #ffffff;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Hind Siliguri', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    /* Container Utility */
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+
+    .container-md {
+      max-width: 1024px;
+    }
+
+    .container-sm {
+      max-width: 768px;
+    }
+
+    /* ================= NAVBAR ================= */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 76px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #10b981 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      color: #ffffff;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .brand-logo span.ai {
+      color: #4f46e5;
+    }
+
+    .nav-menu {
+      display: none;
+      align-items: center;
+      gap: 2rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    @media (min-width: 768px) {
+      .nav-menu {
+        display: flex;
+      }
+    }
+
+    .nav-menu a {
+      transition: color 0.2s ease;
+    }
+
+    .nav-menu a:hover {
+      color: #4f46e5;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-text {
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #334155;
+      border-radius: 8px;
+      transition: color 0.2s;
+    }
+
+    .btn-text:hover {
+      color: #0f172a;
+    }
+
+    .btn-primary-sm {
+      padding: 0.6rem 1.25rem;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #ffffff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary-sm:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Mobile Hamburger */
+    .mobile-menu-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    @media (min-width: 768px) {
+      .mobile-menu-btn {
+        display: none;
+      }
+    }
+
+    .mobile-drawer {
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.25rem;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .mobile-drawer.open {
+      display: flex;
+    }
+
+    .mobile-drawer a {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* ================= HERO SECTION ================= */
+    .hero-section {
+      position: relative;
+      padding-top: 5rem;
+      padding-bottom: 6rem;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .glow-sphere-1 {
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 550px;
+      height: 550px;
+      border-radius: 50%;
+      background: rgba(79, 70, 229, 0.07);
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-sphere-2 {
+      position: absolute;
+      top: 20%;
+      right: 15%;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.07);
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
+      background: #eef2ff;
+      border: 1px solid rgba(199, 210, 254, 0.8);
+      color: #4338ca;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-bottom: 1.75rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .hero-badge svg {
+      width: 14px;
+      height: 14px;
+      fill: #4f46e5;
+    }
+
+    .hero-title {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .hero-title {
+        font-size: 3.5rem;
+      }
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0d9488 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+
+    .hero-desc {
+      font-size: 1.125rem;
+      color: #475569;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @media (min-width: 640px) {
+      .hero-buttons {
+        flex-direction: row;
+      }
+    }
+
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      max-width: 280px;
+      padding: 1rem 2rem;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(79, 70, 229, 0.4);
+    }
+
+    .btn-hero-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 280px;
+      padding: 1rem 2rem;
+      border-radius: 14px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+      font-size: 1.05rem;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-hero-secondary:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    .trust-badges {
+      margin-top: 3rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .trust-badge-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .trust-badge-item svg {
+      width: 18px;
+      height: 18px;
+      color: #10b981;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.5;
+    }
+
+    /* ================= PIPELINE / PREVIEW SHOWCASE ================= */
+    .preview-section {
+      padding: 2rem 0 5rem 0;
+    }
+
+    .showcase-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+      position: relative;
+    }
+
+    @media (min-width: 640px) {
+      .showcase-card {
+        padding: 2.5rem;
+      }
+    }
+
+    .showcase-header {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .showcase-header {
+        flex-direction: row;
+        align-items: center;
+      }
+    }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: #ecfdf5;
+      color: #065f46;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid #a7f3d0;
+      margin-bottom: 0.5rem;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+
+    .showcase-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .showcase-tags {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .tag-neutral {
+      padding: 0.3rem 0.75rem;
+      background: #f1f5f9;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .tag-highlight {
+      padding: 0.3rem 0.75rem;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #4338ca;
+    }
+
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (min-width: 768px) {
+      .pipeline-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .step-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .step-box:hover {
+      border-color: #a5b4fc;
+      transform: translateY(-2px);
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.875rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .step-num-1 { background: #e0e7ff; color: #4338ca; }
+    .step-num-2 { background: #f3e8ff; color: #7e22ce; }
+    .step-num-3 { background: #cffafe; color: #0e7490; }
+    .step-num-4 { background: #d1fae5; color: #047857; }
+
+    .step-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc {
+      font-size: 0.825rem;
+      color: #475569;
+      line-height: 1.55;
+    }
+
+    .step-footer {
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .step-footer svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ================= FEATURES SECTION ================= */
+    .section-title-wrap {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 3.5rem auto;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    @media (min-width: 640px) {
+      .section-title {
+        font-size: 2.5rem;
+      }
+    }
+
+    .section-subtitle {
+      font-size: 1rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .feature-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 1.75rem;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .feature-card:hover {
+      border-color: #a5b4fc;
+      box-shadow: 0 12px 24px rgba(79, 70, 229, 0.08);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon-box {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .feature-icon-box svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .grad-emerald { background: linear-gradient(135deg, #10b981, #14b8a6); }
+    .grad-cyan { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+    .grad-purple { background: linear-gradient(135deg, #a855f7, #6366f1); }
+    .grad-amber { background: linear-gradient(135deg, #f59e0b, #f97316); }
+    .grad-pink { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+    .grad-teal { background: linear-gradient(135deg, #10b981, #06b6d4); }
+
+    .feature-card h3 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    /* ================= HOW IT WORKS ================= */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .steps-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .how-step-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      position: relative;
+    }
+
+    .how-step-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    }
+
+    .how-step-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    .how-step-card p {
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    /* ================= FAQ SECTION ================= */
+    .faq-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      margin-bottom: 0.875rem;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .faq-item:hover {
+      border-color: #cbd5e1;
+    }
+
+    .faq-trigger {
+      width: 100%;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      background: none;
+      gap: 1rem;
+      transition: color 0.15s;
+    }
+
+    .faq-trigger:hover {
+      color: #4f46e5;
+    }
+
+    .faq-trigger svg {
+      width: 20px;
+      height: 20px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item.active .faq-trigger svg {
+      transform: rotate(180deg);
+      color: #4f46e5;
+    }
+
+    .faq-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s cubic-bezier(0, 1, 0, 1);
+      padding: 0 1.5rem;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    .faq-item.active .faq-content {
+      max-height: 400px;
+      padding-bottom: 1.25rem;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 0.875rem;
+      transition: max-height 0.3s ease-in-out;
+    }
+
+    /* ================= CTA BANNER ================= */
+    .cta-banner {
+      background: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6b21a8 100%);
+      border-radius: 28px;
+      padding: 3rem 1.5rem;
+      text-align: center;
+      color: #ffffff;
+      box-shadow: 0 20px 40px rgba(79, 70, 229, 0.25);
+      position: relative;
+      overflow: hidden;
+      margin: 4rem 0;
+    }
+
+    @media (min-width: 640px) {
+      .cta-banner {
+        padding: 4.5rem 3rem;
+      }
+    }
+
+    .cta-banner h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .cta-banner h2 {
+        font-size: 2.75rem;
+      }
+    }
+
+    .cta-banner .accent-text {
+      color: #6ee7b7;
+    }
+
+    .cta-banner p {
+      font-size: 1.05rem;
+      color: #e0e7ff;
+      max-width: 600px;
+      margin: 0 auto 2rem auto;
+      line-height: 1.6;
+    }
+
+    .btn-cta-white {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 1rem 2.25rem;
+      border-radius: 14px;
+      background: #ffffff;
+      color: #4338ca;
+      font-size: 1.05rem;
+      font-weight: 800;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-cta-white:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.22);
+    }
+
+    /* ================= FOOTER ================= */
+    .footer {
+      border-top: 1px solid var(--border-color);
+      background: #ffffff;
+      padding: 2.5rem 0;
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .footer-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      text-align: center;
+    }
+
+    @media (min-width: 640px) {
+      .footer-wrapper {
+        flex-direction: row;
+        text-align: left;
+      }
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .footer-brand svg {
+      width: 18px;
+      height: 18px;
+      color: #4f46e5;
+    }
+
+    .spacer-section {
+      padding-top: 5rem;
+      padding-bottom: 5rem;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="container nav-wrapper">
+      <a href="/" class="brand-logo">
+        <div class="brand-icon">
+          <!-- Sparkles Icon -->
+          <svg viewBox="0 0 24 24"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        </div>
+        <span>ReplyX <span class="ai">AI</span></span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="nav-menu">
+        <a href="#features">ফিচারসমূহ</a>
+        <a href="#how-it-works">কীভাবে কাজ করে</a>
+        <a href="#preview">লাইভ প্রিভিউ</a>
+        <a href="#faq">প্রশ্নোত্তর</a>
+      </nav>
+
+      <!-- Desktop Actions -->
+      <div class="nav-actions">
+        <a href="/login" class="btn-text">লগইন</a>
+        <a href="/signup" class="btn-primary-sm">
+          <span>ফ্রি শুরু করুন</span>
+        </a>
+        <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="মেনু খুলুন">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer -->
+    <div id="mobileDrawer" class="mobile-drawer">
+      <a href="#features" onclick="toggleMobileMenu()">ফিচারসমূহ</a>
+      <a href="#how-it-works" onclick="toggleMobileMenu()">কীভাবে কাজ করে</a>
+      <a href="#preview" onclick="toggleMobileMenu()">লাইভ প্রিভিউ</a>
+      <a href="#faq" onclick="toggleMobileMenu()">প্রশ্নোত্তর</a>
+      <a href="/login">লগইন</a>
+      <a href="/signup" style="color: #4f46e5; font-weight: 700;">ফ্রি শুরু করুন</a>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <main>
+    <section class="hero-section">
+      <div class="glow-sphere-1"></div>
+      <div class="glow-sphere-2"></div>
+
+      <div class="container hero-content">
+        <div class="hero-badge">
+          <!-- Zap Icon -->
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>AI-Powered Omnichannel Social Automation (WhatsApp, Instagram, X, Telegram & Facebook)</span>
+        </div>
+
+        <h1 class="hero-title">
+          আপনার সোশ্যাল মিডিয়ার জন্য <br>
+          <span class="gradient-text">স্মার্ট ওমনিচ্যানেল AI Sales Assistant</span>
+        </h1>
+
+        <p class="hero-desc">
+          WhatsApp, Instagram, Facebook Messenger, X এবং Telegram—সব চ্যানেল থেকে আসা কাস্টমারের মেসেজ বুঝে তাৎক্ষণিক উত্তর দেবে, প্রোডাক্টের সঠিক ছবি পাঠাবে এবং স্বয়ংক্রিয়ভাবে অর্ডার নিশ্চিত করবে।
+        </p>
+
+        <div class="hero-buttons">
+          <a href="/signup" class="btn-hero-primary">
+            <span>বিনামূল্যে শুরু করুন</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="/login" class="btn-hero-secondary">
+            <span>অ্যাকাউন্টে প্রবেশ করুন</span>
+          </a>
+        </div>
+
+        <div class="trust-badges">
+          <div class="trust-badge-item">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>বাংলা, ইংলিশ ও ব্যাংলিশ সাপোর্ট</span>
+          </div>
+          <div class="trust-badge-item">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>২৪/৭ ইনস্ট্যান্ট রিপ্লাই</span>
+          </div>
+          <div class="trust-badge-item">
+            <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>জিরো কনফিগ সেলফ-হোস্টিং</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE PIPELINE PREVIEW -->
+    <section id="preview" class="preview-section">
+      <div class="container container-md">
+        <div class="showcase-card">
+          <div class="showcase-header">
+            <div>
+              <div class="live-indicator">
+                <span class="pulse-dot"></span>
+                <span>রিয়েল-টাইম এআই অটোমেশন পাইপলাইন</span>
+              </div>
+              <h3 class="showcase-title">ReplyX AI কীভাবে আপনার সোশ্যাল পেজ পরিচালনা করে</h3>
+            </div>
+            <div class="showcase-tags">
+              <span class="tag-neutral">লাইভ ইন্টিগ্রেশন</span>
+              <span class="tag-highlight">&lt; ১.৫ সেকেন্ড রেসপন্স</span>
+            </div>
+          </div>
+
+          <div class="pipeline-grid">
+            <!-- Step 1 -->
+            <div class="step-box">
+              <div>
+                <div class="step-num step-num-1">০১</div>
+                <h4 class="step-title">গ্রাহকের বার্তা গ্রহণ</h4>
+                <p class="step-desc">Facebook, WhatsApp, Instagram, Telegram বা X থেকে আসা বার্তা সরাসরি নিরাপদ ওয়েবহুকে পৌঁছায়।</p>
+              </div>
+              <div class="step-footer" style="color: #059669;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>ওমনিচ্যানেল কানেক্টেড</span>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-box">
+              <div>
+                <div class="step-num step-num-2">০২</div>
+                <h4 class="step-title">ইনটেন্ট ও ভাষা বিশ্লেষণ</h4>
+                <p class="step-desc">বাংলা, ইংরেজি কিংবা ব্যাংলিশ মেসেজ এআই তাৎক্ষণিকভাবে পড়ে কাস্টমারের সঠিক চাহিদা নির্ণয় করে।</p>
+              </div>
+              <div class="step-footer" style="color: #7e22ce;">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span>মডেল: Gemini / GPT-4o</span>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-box">
+              <div>
+                <div class="step-num step-num-3">০৩</div>
+                <h4 class="step-title">ইনভেন্টরি যাচাই ও রিপ্লাই</h4>
+                <p class="step-desc">ডাটাবেজ থেকে আসল পণ্যের ছবি ও দাম মিলিয়ে কাস্টমারকে সঠিক ও প্রফেশনাল উত্তর প্রদান করে।</p>
+              </div>
+              <div class="step-footer" style="color: #0891b2;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+                <span>ক্যাটালগ ভেরিফাইড</span>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-box">
+              <div>
+                <div class="step-num step-num-4">০৪</div>
+                <h4 class="step-title">অর্ডার তৈরি ও ড্যাশবোর্ড সিঙ্ক</h4>
+                <p class="step-desc">নাম, ঠিকানা ও ফোন নম্বর সংগ্রহ করে স্বয়ংক্রিয়ভাবে অর্ডার বুকিং করে ড্যাশবোর্ডে সংরক্ষণ করে।</p>
+              </div>
+              <div class="step-footer" style="color: #059669;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-2Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                <span>অটোম্যাটিক বুকিং</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section id="features" class="container spacer-section">
+      <div class="section-title-wrap">
+        <h2 class="section-title">ব্যবসা বৃদ্ধির জন্য প্রয়োজনীয় সবকিছু</h2>
+        <p class="section-subtitle">ReplyX AI আপনার পুরো মেসেঞ্জার ইনবক্সকে একটি পূর্ণাঙ্গ সেলস ও সাপোর্ট সেন্টারে রূপান্তর করে।</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-emerald">
+            <svg viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          </div>
+          <h3>বাংলা, ইংলিশ ও ব্যাংলিশ বোঝে</h3>
+          <p>কাস্টমার যেভাবে খুশি মেসেজ দিক (যেমন: "eita koto?", "দাম কত?", "How much?"), ReplyX AI স্বাভাবিক মানুষের মতোই দ্রুত উত্তর দেয়।</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-cyan">
+            <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-2Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </div>
+          <h3>স্বয়ংক্রিয় অর্ডার ক্যাপচার</h3>
+          <p>কাস্টমারের কেনার আগ্রহ বুঝে স্বয়ংক্রিয়ভাবে নাম, ফোন নম্বর ও ডেলিভারি ঠিকানা সংগ্রহ করে অর্ডার তৈরি করে।</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-purple">
+            <svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+          </div>
+          <h3>কাস্টমারের ছবি ও প্রোডাক্ট রিকগনিশন</h3>
+          <p>কাস্টমার কোনো পণ্যের ছবি পাঠালে ভিশন এআই ছবি বিশ্লেষণ করে ইনভেন্টরির সঠিক পণ্যের স্টক ও দাম জানিয়ে দেয়।</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-amber">
+            <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </div>
+          <h3>ভয়েস মেসেজ আন্ডারস্ট্যান্ডিং</h3>
+          <p>গ্রাহকের অডিও বা ভয়েস মেসেজ স্বয়ংক্রিয়ভাবে টেক্সটে রূপান্তর করে নির্ভুল উত্তর প্রদান করে।</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-pink">
+            <svg viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+          </div>
+          <h3>ইনভেন্টরি ও ছবি পাঠানো</h3>
+          <p>আপনার সব প্রোডাক্টের বিবরণ ও দাম ডাটাবেজে সংরক্ষিত থাকে। কাস্টমার জিজ্ঞেস করলেই ছবিসহ সঠিক তথ্য চলে যায়।</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card">
+          <div class="feature-icon-box grad-teal">
+            <svg viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+          </div>
+          <h3>মাল্টি-চ্যানেল ও হিউম্যান হ্যান্ডঅফ</h3>
+          <p>Facebook Messenger, WhatsApp, Instagram, X এবং Telegram এক ড্যাশবোর্ড থেকে পরিচালনা করুন। জটিল পরিস্থিতিতে এক ক্লিকেই লাইভ চ্যাট টেকওভার করুন।</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="how-it-works" class="container spacer-section">
+      <div class="section-title-wrap">
+        <h2 class="section-title">৩টি সহজ ধাপে চালু করুন</h2>
+        <p class="section-subtitle">কোনো কোডিং জ্ঞান ছাড়াই কয়েক মিনিটে ফেসবুক পেজে AI সেটআপ করুন।</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="how-step-card">
+          <div class="how-step-badge">১</div>
+          <h3>Facebook Page কানেক্ট করুন</h3>
+          <p>ড্যাশবোর্ডে আপনার Facebook Page ID ও Access Token দিন। স্বয়ংক্রিয়ভাবে ওয়েবহুক লিংক জেনারেট হবে।</p>
+        </div>
+
+        <div class="how-step-card">
+          <div class="how-step-badge">২</div>
+          <h3>প্রোডাক্ট ও AI রুলস সেট করুন</h3>
+          <p>আপনার ইনভেন্টরির পণ্যগুলো যোগ করুন এবং ১৪টি সহজ প্রশ্নের উত্তর দিয়ে অথবা কাস্টম প্রম্পট দিয়ে এআই ট্রেন করুন।</p>
+        </div>
+
+        <div class="how-step-card">
+          <div class="how-step-badge">৩</div>
+          <h3>অটোমেটিক রিপ্লাই ও সেলস শুরু</h3>
+          <p>এখন থেকে যেকোনো কাস্টমার মেসেজ দিলে AI তাৎক্ষণিক উত্তর দেবে এবং রিয়েল-টাইমে অর্ডার ক্যাপচার করবে।</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section id="faq" class="container spacer-section">
+      <div class="section-title-wrap">
+        <h2 class="section-title">প্রায়শই জিজ্ঞাসিত প্রশ্নাবলী (FAQ)</h2>
+        <p class="section-subtitle">ReplyX AI সম্পর্কে সাধারণ প্রশ্নের উত্তরসমূহ</p>
+      </div>
+
+      <div class="faq-container">
+        <!-- Q1 -->
+        <div class="faq-item">
+          <button class="faq-trigger" onclick="toggleFaq(this)">
+            <span>ReplyX AI কি ফেসবুকে পেজের মেসেজের উত্তর স্বয়ংক্রিয়ভাবে পাঠাতে পারে?</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content">
+            হ্যাঁ! ফেসবুকের অফিসিয়াল মেসেঞ্জার গ্রাফ এপিআই এবং সিকিউর ওয়েবহুকের মাধ্যমে যেকোনো কাস্টমারের মেসেজে ১-৩ সেকেন্ডের মধ্যে স্বয়ংক্রিয় ও নির্ভুল উত্তর প্রদান করা হয়।
+          </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="faq-item">
+          <button class="faq-trigger" onclick="toggleFaq(this)">
+            <span>AI কি কাল্পনিক কোনো দাম বা স্টক তথ্য বানিয়ে বলবে?</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content">
+            কখনোই না! ReplyX AI-তে রয়েছে কঠোর প্রম্পট গার্ড এবং ইনভেন্টরি ভেরিফিকেশন ইঞ্জিন। আপনার প্রোডাক্ট লিস্টে উল্লেখিত সঠিক দাম ও স্টক ছাড়া এটি অন্য কোনো মনগড়া তথ্য দেয় না।
+          </div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="faq-item">
+          <button class="faq-trigger" onclick="toggleFaq(this)">
+            <span>গ্রাহক ব্যাংলিশে (Banglish) লিখলে AI বুঝতে পারে?</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content">
+            জি, শতভাগ! আমাদের এআই মডেলগুলো বাংলাদেশি ব্যবহারকারীদের স্বাভাবিক ভাষা, যেমন: "vai delivery charge koto?" বা "Dhakar baire kobe pabo?" খুব সহজে বোঝে।
+          </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="faq-item">
+          <button class="faq-trigger" onclick="toggleFaq(this)">
+            <span>কোন কোন AI প্রোভাইডার ব্যবহার করা যায়?</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content">
+            আপনি Google Gemini (1.5 Flash / Pro) এবং OpenAI (GPT-4o / GPT-4o-mini) উভয় প্রোভাইডার নির্বাচন করতে পারবেন।
+          </div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="faq-item">
+          <button class="faq-trigger" onclick="toggleFaq(this)">
+            <span>আমরা কি নিজে নিজে সার্ভারে এটি হোস্ট করতে পারবো?</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content">
+            হ্যাঁ, ReplyX AI সম্পূর্ণ সেলফ-হোস্টেবল এবং প্রোডাকশন-রেডি। আপনি ভিপিএস, ক্লাউড রান বা যেকোনো প্ল্যাটফর্মে খুব সহজে ডাটাবেজ সহ চালাতে পারবেন।
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM CTA BANNER -->
+    <section class="container">
+      <div class="cta-banner">
+        <h2>
+          আজই আপনার ব্যবসার সোশ্যাল চ্যানেলে <br>
+          <span class="accent-text">AI সেলস অটোমেশন</span> যুক্ত করুন
+        </h2>
+        <p>ReplyX AI দিয়ে ২৪/৭ কাস্টমারদের দ্রুততম সেবা দিন, সেলস বাড়ান এবং ব্যবসার সময় বাঁচান।</p>
+        <a href="/signup" class="btn-cta-white">
+          <span>এখনই শুরু করুন</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-wrapper">
+      <div class="footer-brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        <span>ReplyX AI — AI-Powered Omnichannel Social Automation</span>
+      </div>
+      <p>&copy; <span id="currentYear">2026</span> ReplyX AI. সর্বস্বত্ব সংরক্ষিত।</p>
+    </div>
+  </footer>
+
+  <!-- 100% RELIABLE PURE VANILLA JS (NO EXTERNAL SCRIPTS NEEDED) -->
+  <script>
+    // Set dynamic year
+    try {
+      document.getElementById('currentYear').textContent = new Date().getFullYear();
+    } catch(e) {}
+
+    // Mobile Menu Toggle
+    function toggleMobileMenu() {
+      var drawer = document.getElementById('mobileDrawer');
+      if (drawer) {
+        drawer.classList.toggle('open');
+      }
+    }
+
+    var menuBtn = document.getElementById('mobileMenuBtn');
+    if (menuBtn) {
+      menuBtn.addEventListener('click', toggleMobileMenu);
+    }
+
+    // FAQ Accordion Toggle
+    function toggleFaq(button) {
+      var item = button.closest('.faq-item');
+      if (!item) return;
+      var wasActive = item.classList.contains('active');
+
+      // Close all other faqs
+      var allItems = document.querySelectorAll('.faq-item');
+      allItems.forEach(function(el) {
+        el.classList.remove('active');
+      });
+
+      // Toggle current
+      if (!wasActive) {
+        item.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>

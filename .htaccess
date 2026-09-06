@@ -2,6 +2,8 @@
 # ReplyX AI — Safe Hostinger LiteSpeed / Apache Configuration
 # ==============================================================================
 
+DirectoryIndex index.html index.php
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
