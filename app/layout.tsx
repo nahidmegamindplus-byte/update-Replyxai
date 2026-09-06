@@ -24,6 +24,7 @@ export default function RootLayout({
     <html lang="bn" className="light notranslate" translate="no" suppressHydrationWarning>
       <head>
         <meta name="google" content="notranslate" />
+        <link rel="stylesheet" href="/global.css" />
         <script
           id="dom-safe-guard"
           dangerouslySetInnerHTML={{
