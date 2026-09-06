@@ -229,19 +229,23 @@ function ensureStaticMirror() {
       if (!fs.existsSync(parentDir)) {
         fs.mkdirSync(parentDir, { recursive: true });
       }
-      if (!fs.existsSync(targetDir)) {
-        try {
-          fs.symlinkSync(srcDir, targetDir, 'junction');
-        } catch (_) {
-          copyDirSync(srcDir, targetDir);
+      try {
+        const stat = fs.lstatSync(targetDir);
+        if (stat.isSymbolicLink()) {
+          fs.unlinkSync(targetDir);
         }
-      }
+      } catch (_) {}
+      copyDirSync(srcDir, targetDir);
     }
   } catch (_) {}
 }
 
 function copyDirSync(src, dest) {
   try {
+    if (fs.cpSync) {
+      fs.cpSync(src, dest, { recursive: true, force: true, dereference: true });
+      return;
+    }
     fs.mkdirSync(dest, { recursive: true });
     const entries = fs.readdirSync(src, { withFileTypes: true });
     for (const entry of entries) {
