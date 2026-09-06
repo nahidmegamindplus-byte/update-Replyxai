@@ -146,12 +146,28 @@ export async function POST(req: NextRequest) {
         }
 
         // 4. Find Page in DB
-        const page = await prisma.page.findFirst({
-          where: { facebookPageId: recipientPageId },
+        let page = await prisma.page.findFirst({
+          where: {
+            OR: [
+              { facebookPageId: recipientPageId },
+              { channelIdentifier: recipientPageId },
+              { pageUsername: recipientPageId },
+            ],
+          },
           include: {
             user: true,
           },
         });
+
+        if (!page) {
+          const fbPages = await prisma.page.findMany({
+            where: { channel: 'FACEBOOK' },
+            include: { user: true },
+          });
+          if (fbPages.length === 1) {
+            page = fbPages[0];
+          }
+        }
 
         if (!page) {
           serverLogger.warn(`Page with Facebook ID ${recipientPageId} not found in database`);

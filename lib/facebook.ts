@@ -49,18 +49,28 @@ export function verifyFacebookSignature(
 export async function testPageConnection(
   facebookPageId: string,
   accessToken: string
-): Promise<{ success: boolean; pageName?: string; pageUsername?: string; error?: string }> {
+): Promise<{ success: boolean; id?: string; pageName?: string; pageUsername?: string; error?: string }> {
   try {
     if (!accessToken) {
       return { success: false, error: 'Page Access Token প্রয়োজন।' };
     }
 
-    // Modern Graph API supports id,name universally across all Page token types
-    const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+    const cleanToken = accessToken.trim();
+    // 1. Primary check: Query /me using Page Access Token
+    let res = await fetch(
+      `${GRAPH_BASE_URL}/me?fields=id,name,username&access_token=${encodeURIComponent(cleanToken)}`,
       { method: 'GET' }
     );
-    const data = await res.json();
+    let data = await res.json();
+
+    // 2. Fallback check: Query provided page ID directly
+    if ((!res.ok || data.error) && facebookPageId && facebookPageId.trim()) {
+      res = await fetch(
+        `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId.trim())}?fields=id,name,username&access_token=${encodeURIComponent(cleanToken)}`,
+        { method: 'GET' }
+      );
+      data = await res.json();
+    }
 
     if (!res.ok || data.error) {
       const fbError = data.error?.message || 'Facebook API এর সাথে সংযোগ করা যায়নি।';
@@ -72,8 +82,9 @@ export async function testPageConnection(
 
     return {
       success: true,
+      id: data.id,
       pageName: data.name,
-      pageUsername: data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined,
+      pageUsername: data.username || (data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined),
     };
   } catch (error: any) {
     serverLogger.error('Facebook connection test failed', error);

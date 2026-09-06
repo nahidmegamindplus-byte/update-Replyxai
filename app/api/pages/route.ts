@@ -135,42 +135,32 @@ export async function POST(req: NextRequest) {
     const selectedChannel = (channel || 'FACEBOOK').toUpperCase() as SocialChannel;
 
     // External ID normalization
-    const cleanId = (channelIdentifier || facebookPageId || '').trim();
+    let cleanId = (channelIdentifier || facebookPageId || '').trim();
     const cleanToken = (pageAccessToken || '').trim();
-    const cleanName = (pageName || '').trim();
+    let cleanName = (pageName || '').trim();
 
-    if (!cleanName || !cleanId || !cleanToken) {
+    if (!cleanToken) {
       return NextResponse.json(
         {
           success: false,
-          error: 'চ্যানেলের নাম, অ্যাকাউন্ট / পেজ আইডি এবং অ্যাক্সেস টোকেন প্রদান করা আবশ্যক।',
+          error: 'অ্যাক্সেস টোকেন বা API কী প্রদান করা আবশ্যক।',
         },
         { status: 400 }
       );
     }
 
-    // Check uniqueness
-    const existing = await prisma.page.findUnique({
-      where: {
-        userId_facebookPageId: {
-          userId: auth.user.id,
-          facebookPageId: cleanId,
-        },
-      },
-    });
-
-    if (existing) {
+    if (selectedChannel === 'WHATSAPP' && !cleanId) {
       return NextResponse.json(
         {
           success: false,
-          error: `এই ${selectedChannel} অ্যাকাউন্টটি ইতিমধ্যে আপনার অ্যাকাউন্টে সংযুক্ত রয়েছে।`,
+          error: 'WhatsApp Phone Number ID প্রদান করা আবশ্যক।',
         },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
     // Perform live connection test according to selected channel
-    let testResult: { success: boolean; name?: string; username?: string; error?: string } = {
+    let testResult: { success: boolean; id?: string; name?: string; username?: string; error?: string } = {
       success: false,
     };
 
@@ -191,12 +181,64 @@ export async function POST(req: NextRequest) {
       testResult = { success: false, error: 'সংযোগ যাচাইকরণের সময় প্রতিক্রিয়া মেলেনি।' };
     }
 
+    // Auto-resolve canonical ID and Name from live verified API
+    if (testResult.id) {
+      cleanId = testResult.id;
+    } else if (!cleanId && testResult.username) {
+      cleanId = testResult.username;
+    }
+
+    if (!cleanName && testResult.name) {
+      cleanName = testResult.name;
+    }
+
+    if (!cleanId) {
+      if (selectedChannel === 'TELEGRAM') {
+        cleanId = `tg_${Date.now()}`;
+      } else if (selectedChannel === 'X') {
+        cleanId = `x_${Date.now()}`;
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'চ্যানেল বা পেজ আইডি প্রদান করুন অথবা সঠিক টোকেন দিন।',
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (!cleanName) {
+      cleanName = `${selectedChannel} Channel`;
+    }
+
+    // Check uniqueness
+    const existing = await prisma.page.findFirst({
+      where: {
+        userId: auth.user.id,
+        OR: [
+          { facebookPageId: cleanId },
+          { channelIdentifier: cleanId },
+        ],
+      },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `এই ${selectedChannel} চ্যানেলটি (ID: ${cleanId}) ইতিমধ্যে আপনার অ্যাকাউন্টে সংযুক্ত রয়েছে।`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Webhook token generation
     const rawVerifyToken = `rplx_verify_${crypto.randomBytes(16).toString('hex')}`;
     let webhookUrl = getChannelWebhookUrl(selectedChannel, req);
 
     if (selectedChannel === 'TELEGRAM') {
-      webhookUrl = `${webhookUrl}?bot=${encodeURIComponent(testResult.username || cleanName)}`;
+      webhookUrl = `${webhookUrl}?bot=${encodeURIComponent(testResult.username || cleanId)}`;
       // If deployed on public HTTPS, automatically register webhook with Telegram
       if (webhookUrl.startsWith('https://')) {
         setupTelegramWebhook(cleanToken, webhookUrl).catch(() => {});
@@ -216,7 +258,7 @@ export async function POST(req: NextRequest) {
         verifyTokenEncrypted: encrypt(rawVerifyToken),
         webhookUrl,
         webhookStatus: selectedChannel === 'TELEGRAM' ? 'ACTIVE' : 'PENDING',
-        connectionStatus: testResult.success ? 'CONNECTED' : 'PENDING',
+        connectionStatus: testResult.success ? 'CONNECTED' : 'DISCONNECTED',
         aiInstructions: aiInstructions || null,
         replyLanguage: replyLanguage || 'AUTO',
         replyStyle: replyStyle || 'FRIENDLY',
@@ -250,7 +292,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: testResult.success
         ? `${selectedChannel} চ্যানেল সফলভাবে যুক্ত ও কানেক্ট হয়েছে!`
-        : `${selectedChannel} চ্যানেল যুক্ত হয়েছে, কিন্তু টোকেন যাচাইকরণে সতর্কতা পাওয়া গেছে।`,
+        : `${selectedChannel} চ্যানেল যুক্ত হয়েছে, কিন্তু টোকেন যাচাইয়ে সমস্যা হয়েছে (${testResult.error || 'Disconnected'})।`,
       page: {
         id: newPage.id,
         channel: newPage.channel,

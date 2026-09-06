@@ -9,6 +9,7 @@ export type SocialChannel = 'FACEBOOK' | 'WHATSAPP' | 'INSTAGRAM' | 'X' | 'TELEG
 
 export interface ChannelConnectionResult {
   success: boolean;
+  id?: string;
   name?: string;
   username?: string;
   avatarUrl?: string;
@@ -66,11 +67,22 @@ export async function testFacebookConnection(
   try {
     if (!accessToken) return { success: false, error: 'Facebook Page Access Token প্রয়োজন।' };
 
-    const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId)}?fields=id,name&access_token=${encodeURIComponent(accessToken)}`,
+    const cleanToken = accessToken.trim();
+    // 1. Primary check: /me with Page Access Token (Meta always returns canonical Page ID & Name)
+    let res = await fetch(
+      `${GRAPH_BASE_URL}/me?fields=id,name,username&access_token=${encodeURIComponent(cleanToken)}`,
       { method: 'GET' }
     );
-    const data = await res.json();
+    let data = await res.json();
+
+    // 2. Fallback check: query facebookPageId node if /me didn't resolve and an ID was given
+    if ((!res.ok || data.error) && facebookPageId && facebookPageId.trim()) {
+      res = await fetch(
+        `${GRAPH_BASE_URL}/${encodeURIComponent(facebookPageId.trim())}?fields=id,name,username&access_token=${encodeURIComponent(cleanToken)}`,
+        { method: 'GET' }
+      );
+      data = await res.json();
+    }
 
     if (!res.ok || data.error) {
       return {
@@ -81,8 +93,9 @@ export async function testFacebookConnection(
 
     return {
       success: true,
+      id: data.id,
       name: data.name,
-      username: data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined,
+      username: data.username || (data.name ? data.name.toLowerCase().replace(/\s+/g, '') : undefined),
     };
   } catch (error: any) {
     return { success: false, error: error?.message || 'Facebook API connection failed' };
@@ -137,8 +150,11 @@ export async function testWhatsAppConnection(
     if (!accessToken) return { success: false, error: 'WhatsApp Cloud API Access Token প্রয়োজন।' };
     if (!phoneNumberId) return { success: false, error: 'WhatsApp Phone Number ID প্রয়োজন।' };
 
+    const cleanToken = accessToken.trim();
+    const cleanPhoneId = phoneNumberId.trim();
+
     const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(phoneNumberId)}?fields=id,verified_name,display_phone_number&access_token=${encodeURIComponent(accessToken)}`,
+      `${GRAPH_BASE_URL}/${encodeURIComponent(cleanPhoneId)}?fields=id,verified_name,display_phone_number&access_token=${encodeURIComponent(cleanToken)}`,
       { method: 'GET' }
     );
     const data = await res.json();
@@ -152,6 +168,7 @@ export async function testWhatsAppConnection(
 
     return {
       success: true,
+      id: data.id || cleanPhoneId,
       name: data.verified_name || data.display_phone_number || 'WhatsApp Business',
       username: data.display_phone_number,
     };
@@ -306,23 +323,45 @@ export async function testInstagramConnection(
   try {
     if (!accessToken) return { success: false, error: 'Instagram Access Token প্রয়োজন।' };
 
-    const res = await fetch(
-      `${GRAPH_BASE_URL}/${encodeURIComponent(instagramAccountId)}?fields=id,username,name&access_token=${encodeURIComponent(accessToken)}`,
+    const cleanToken = accessToken.trim();
+    const cleanId = (instagramAccountId || '').trim();
+
+    // 1. If cleanId provided, test that node directly
+    if (cleanId) {
+      const res = await fetch(
+        `${GRAPH_BASE_URL}/${encodeURIComponent(cleanId)}?fields=id,username,name&access_token=${encodeURIComponent(cleanToken)}`,
+        { method: 'GET' }
+      );
+      const data = await res.json();
+      if (res.ok && !data.error && data.id) {
+        return {
+          success: true,
+          id: data.id,
+          name: data.name || `@${data.username}`,
+          username: data.username,
+        };
+      }
+    }
+
+    // 2. Fallback: Query /me to discover connected Instagram Business Account
+    const meRes = await fetch(
+      `${GRAPH_BASE_URL}/me?fields=id,name,instagram_business_account{id,username,name}&access_token=${encodeURIComponent(cleanToken)}`,
       { method: 'GET' }
     );
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
+    const meData = await meRes.json();
+    if (meRes.ok && meData.instagram_business_account?.id) {
+      const ig = meData.instagram_business_account;
       return {
-        success: false,
-        error: data.error?.message || 'Instagram Account ID অথবা Token সঠিক নয়।',
+        success: true,
+        id: ig.id,
+        name: ig.name || `@${ig.username}`,
+        username: ig.username,
       };
     }
 
     return {
-      success: true,
-      name: data.name || `@${data.username}`,
-      username: data.username,
+      success: false,
+      error: 'Instagram Business Account ID অথবা Access Token সঠিক নয়। Token ও Permissions যাচাই করুন।',
     };
   } catch (error: any) {
     return { success: false, error: error?.message || 'Instagram API connection failed' };
@@ -433,6 +472,7 @@ export async function testXConnection(
 
     return {
       success: true,
+      id: data.data?.id,
       name: data.data?.name || data.data?.username,
       username: data.data?.username,
     };
@@ -503,7 +543,8 @@ export async function testTelegramConnection(
 
     return {
       success: true,
-      name: data.result?.first_name || 'Telegram Bot',
+      id: String(data.result?.id),
+      name: data.result?.first_name || data.result?.username || 'Telegram Bot',
       username: data.result?.username,
     };
   } catch (error: any) {

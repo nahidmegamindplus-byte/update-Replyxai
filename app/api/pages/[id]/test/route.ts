@@ -37,7 +37,7 @@ export async function POST(
     const accessToken = decrypt(page.pageAccessTokenEncrypted);
     const identifier = page.channelIdentifier || page.facebookPageId;
 
-    let testResult: { success: boolean; name?: string; username?: string; error?: string } = {
+    let testResult: { success: boolean; id?: string; name?: string; username?: string; error?: string } = {
       success: false,
     };
 
@@ -54,13 +54,20 @@ export async function POST(
     }
 
     if (testResult.success) {
+      const updateData: any = {
+        connectionStatus: 'CONNECTED',
+        pageName: testResult.name || page.pageName,
+        pageUsername: testResult.username || page.pageUsername,
+      };
+
+      if (testResult.id && testResult.id !== page.facebookPageId) {
+        updateData.facebookPageId = testResult.id;
+        updateData.channelIdentifier = testResult.id;
+      }
+
       await prisma.page.update({
         where: { id: page.id },
-        data: {
-          connectionStatus: 'CONNECTED',
-          pageName: testResult.name || page.pageName,
-          pageUsername: testResult.username || page.pageUsername,
-        },
+        data: updateData,
       });
 
       return NextResponse.json({
@@ -69,6 +76,7 @@ export async function POST(
         message: `${channel} চ্যানেল সফলভাবে কানেক্টেড! API এক্সেস সক্রিয় আছে।`,
         pageName: testResult.name,
         pageUsername: testResult.username,
+        facebookPageId: testResult.id || page.facebookPageId,
       });
     } else {
       await prisma.page.update({

@@ -55,12 +55,23 @@ export async function processIncomingChannelMessage(
     }
 
     // 2. Find Page/Channel in DB
+    const cleanExtId = externalChannelId ? externalChannelId.replace(/^@/, '') : '';
     let page = await prisma.page.findFirst({
       where: {
         channel,
         OR: [
           { facebookPageId: externalChannelId },
           { channelIdentifier: externalChannelId },
+          { pageUsername: externalChannelId },
+          { pageName: externalChannelId },
+          ...(cleanExtId
+            ? [
+                { facebookPageId: cleanExtId },
+                { channelIdentifier: cleanExtId },
+                { pageUsername: cleanExtId },
+                { pageName: cleanExtId },
+              ]
+            : []),
         ],
       },
       include: { user: true },

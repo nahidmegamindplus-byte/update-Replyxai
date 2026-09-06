@@ -203,9 +203,9 @@ const CONNECTION_GUIDES: Record<string, {
         desc: 'টোকেন দিয়ে সেভ করলেই ReplyX AI স্বয়ংক্রিয়ভাবে Telegram Webhook কানেক্ট করে দেবে। কোনো ম্যানুয়াল সেটআপের ঝামেলা নেই!',
       },
     ],
-    idLabel: 'Telegram Bot Username *',
-    idPlaceholder: 'যেমন: @myshop_support_bot',
-    idHelp: '@BotFather থেকে তৈরি করা বটের ইউজারনেম দিন (যা _bot দিয়ে শেষ হয়েছে)।',
+    idLabel: 'Telegram Bot Username (ঐচ্ছিক)',
+    idPlaceholder: 'যেমন: @myshop_support_bot (খালি রাখলে স্বয়ংক্রিয়ভাবে ডিটেক্ট হবে)',
+    idHelp: 'টোকেন প্রদান করলে বটের আইডি ও ইউজারনেম স্বয়ংক্রিয়ভাবে ডিটেক্ট হবে। চাইলে সরাসরি ইউজারনেমও দিতে পারেন।',
     tokenLabel: 'Telegram Bot Token (HTTP API Token) *',
     tokenPlaceholder: '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ',
     tokenHelp: '@BotFather থেকে প্রাপ্ত সম্পূর্ণ API Token টি কপি করে এখানে পেস্ট করুন।',
@@ -1007,17 +1007,17 @@ export default function PagesManagementPage() {
                         : addForm.channel === 'X'
                         ? 'X ব্র্যান্ড বা হ্যান্ডেল নাম (@username) *'
                         : addForm.channel === 'TELEGRAM'
-                        ? 'বটের ডিসপ্লে নাম *'
+                        ? 'বটের ডিসপ্লে নাম (ঐচ্ছিক)'
                         : 'Facebook Page-এর নাম *'}
                     </label>
                     <input
                       type="text"
-                      required
+                      required={addForm.channel !== 'TELEGRAM'}
                       placeholder={
                         addForm.channel === 'WHATSAPP'
                           ? 'যেমন: My Shop WhatsApp'
                           : addForm.channel === 'TELEGRAM'
-                          ? 'যেমন: Shop Support Bot'
+                          ? 'যেমন: Shop Support Bot (খালি রাখলে টোকেন থেকে নেবে)'
                           : 'যেমন: Fashion House BD'
                       }
                       value={addForm.pageName}
@@ -1038,8 +1038,8 @@ export default function PagesManagementPage() {
                     </div>
                     <input
                       type="text"
-                      required
-                      placeholder={currentGuide.idPlaceholder}
+                      required={addForm.channel !== 'TELEGRAM' && addForm.channel !== 'X'}
+                      placeholder={addForm.channel === 'TELEGRAM' ? 'খালি রাখলে বটের টোকেন থেকে স্বয়ংক্রিয়ভাবে ডিটেক্ট হবে' : currentGuide.idPlaceholder}
                       value={addForm.facebookPageId}
                       onChange={(e) => setAddForm({ ...addForm, facebookPageId: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"

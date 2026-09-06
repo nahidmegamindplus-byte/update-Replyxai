@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { encrypt, decrypt, maskToken } from '@/lib/crypto';
-import { testPageConnection } from '@/lib/facebook';
+import {
+  testFacebookConnection,
+  testWhatsAppConnection,
+  testInstagramConnection,
+  testXConnection,
+  testTelegramConnection,
+  SocialChannel,
+} from '@/lib/social';
 import { logActivity } from '@/lib/logger';
 
 export async function GET(
@@ -140,8 +147,37 @@ export async function PUT(
       const cleanToken = body.pageAccessToken.trim();
       updateData.pageAccessTokenEncrypted = encrypt(cleanToken);
 
-      if (body.connectionStatus === undefined) {
-        updateData.connectionStatus = 'PENDING';
+      const targetChannel = (updateData.channel || page.channel || 'FACEBOOK') as SocialChannel;
+      const targetId = updateData.channelIdentifier || updateData.facebookPageId || page.channelIdentifier || page.facebookPageId;
+
+      let testResult: { success: boolean; id?: string; name?: string; username?: string; error?: string } = {
+        success: false,
+      };
+
+      try {
+        if (targetChannel === 'WHATSAPP') {
+          testResult = await testWhatsAppConnection(targetId, cleanToken);
+        } else if (targetChannel === 'INSTAGRAM') {
+          testResult = await testInstagramConnection(targetId, cleanToken);
+        } else if (targetChannel === 'X') {
+          testResult = await testXConnection(cleanToken);
+        } else if (targetChannel === 'TELEGRAM') {
+          testResult = await testTelegramConnection(cleanToken);
+        } else {
+          testResult = await testFacebookConnection(targetId, cleanToken);
+        }
+      } catch (_) {}
+
+      if (testResult.success) {
+        updateData.connectionStatus = 'CONNECTED';
+        if (testResult.id) {
+          updateData.facebookPageId = testResult.id;
+          updateData.channelIdentifier = testResult.id;
+        }
+        if (testResult.name) updateData.pageName = testResult.name;
+        if (testResult.username) updateData.pageUsername = testResult.username;
+      } else {
+        updateData.connectionStatus = 'DISCONNECTED';
       }
     }
 
