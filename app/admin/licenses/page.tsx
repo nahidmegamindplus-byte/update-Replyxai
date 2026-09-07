@@ -305,19 +305,19 @@ export default function AdminLicensesPage() {
       subtitle="গ্রাহকদের জন্য রেজিস্ট্রেশনবিহীন ইনস্ট্যান্ট ড্যাশবোর্ড এক্সেস লাইসেন্স কি তৈরি ও পরিচালনা করুন"
     >
       {/* Top Banner with Quick Generator Trigger */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-5 rounded-3xl bg-gradient-to-r from-[#170e2b] via-[#140f26] to-[#0f142b] border border-purple-900/40 shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 p-5 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/80 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
-            <Key className="w-6 h-6 text-black" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
+            <Key className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-base font-black text-white flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <span>লাইসেন্স কি দিয়ে রেজিস্ট্রেশন ছাড়া ১-ক্লিক প্রবেশ</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
                 1-Click Instant Access
               </span>
             </h3>
-            <p className="text-xs text-purple-300/80 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               অ্যাডমিন এখান থেকে কি জেনারেট করে ক্লায়েন্টকে দেবে; ক্লায়েন্ট কি দিয়ে সরাসরি ড্যাশবোর্ডে লগইন হতে পারবে।
             </p>
           </div>
@@ -326,7 +326,7 @@ export default function AdminLicensesPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={fetchLicenses}
-            className="p-2.5 rounded-xl bg-[#0a0812] border border-purple-900/40 text-gray-400 hover:text-white transition-colors"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-xs"
             title="তালিকা রিফ্রেশ করুন"
           >
             <RefreshCw className="w-4 h-4" />
@@ -335,9 +335,9 @@ export default function AdminLicensesPage() {
           <Link
             href="/activate"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/40 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all shadow-xs"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-4 h-4 text-indigo-600" />
             <span>ইউজার অ্যাক্টিভেশন পেজ</span>
           </Link>
 
@@ -346,7 +346,7 @@ export default function AdminLicensesPage() {
               setGeneratedBatch([]);
               setIsGenerateModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs shadow-lg shadow-purple-500/25 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>+ নতুন লাইসেন্স কি তৈরি করুন</span>
@@ -361,12 +361,12 @@ export default function AdminLicensesPage() {
           onClick={() => setStatusFilter('ALL')}
           className={`p-4 rounded-2xl border text-left transition-all ${
             statusFilter === 'ALL'
-              ? 'bg-purple-600/20 border-purple-500 text-white font-bold shadow-lg'
-              : 'bg-[#120e20] border-purple-900/30 text-gray-400 hover:text-white'
+              ? 'bg-purple-600 text-white border-purple-600 shadow-md'
+              : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
           }`}
         >
-          <span className="text-xs text-purple-300 block mb-1">মোট লাইসেন্স কি</span>
-          <span className="text-2xl font-black text-white">{counts.total}</span>
+          <span className={`text-xs block mb-1 font-medium ${statusFilter === 'ALL' ? 'text-purple-100' : 'text-slate-500'}`}>মোট লাইসেন্স কি</span>
+          <span className={`text-2xl font-black ${statusFilter === 'ALL' ? 'text-white' : 'text-slate-900'}`}>{counts.total}</span>
         </button>
 
         <button
@@ -374,12 +374,12 @@ export default function AdminLicensesPage() {
           onClick={() => setStatusFilter('ACTIVE')}
           className={`p-4 rounded-2xl border text-left transition-all ${
             statusFilter === 'ACTIVE'
-              ? 'bg-emerald-500/20 border-emerald-500 text-white font-bold shadow-lg'
-              : 'bg-[#120e20] border-purple-900/30 text-gray-400 hover:text-white'
+              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+              : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
           }`}
         >
-          <span className="text-xs text-emerald-300 block mb-1">সক্রিয় (ব্যবহারযোগ্য)</span>
-          <span className="text-2xl font-black text-emerald-400">{counts.active}</span>
+          <span className={`text-xs block mb-1 font-medium ${statusFilter === 'ACTIVE' ? 'text-emerald-100' : 'text-emerald-700'}`}>সক্রিয় (ব্যবহারযোগ্য)</span>
+          <span className={`text-2xl font-black ${statusFilter === 'ACTIVE' ? 'text-white' : 'text-emerald-600'}`}>{counts.active}</span>
         </button>
 
         <button
@@ -387,12 +387,12 @@ export default function AdminLicensesPage() {
           onClick={() => setStatusFilter('USED')}
           className={`p-4 rounded-2xl border text-left transition-all ${
             statusFilter === 'USED'
-              ? 'bg-cyan-500/20 border-cyan-500 text-white font-bold shadow-lg'
-              : 'bg-[#120e20] border-purple-900/30 text-gray-400 hover:text-white'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+              : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
           }`}
         >
-          <span className="text-xs text-cyan-300 block mb-1">ব্যবহৃত (Active User)</span>
-          <span className="text-2xl font-black text-cyan-400">{counts.used}</span>
+          <span className={`text-xs block mb-1 font-medium ${statusFilter === 'USED' ? 'text-indigo-100' : 'text-indigo-700'}`}>ব্যবহৃত (Active User)</span>
+          <span className={`text-2xl font-black ${statusFilter === 'USED' ? 'text-white' : 'text-indigo-600'}`}>{counts.used}</span>
         </button>
 
         <button
@@ -400,12 +400,12 @@ export default function AdminLicensesPage() {
           onClick={() => setStatusFilter('EXPIRED')}
           className={`p-4 rounded-2xl border text-left transition-all ${
             statusFilter === 'EXPIRED'
-              ? 'bg-amber-500/20 border-amber-500 text-white font-bold shadow-lg'
-              : 'bg-[#120e20] border-purple-900/30 text-gray-400 hover:text-white'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+              : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
           }`}
         >
-          <span className="text-xs text-amber-300 block mb-1">মেয়াদোত্তীর্ণ</span>
-          <span className="text-2xl font-black text-amber-400">{counts.expired}</span>
+          <span className={`text-xs block mb-1 font-medium ${statusFilter === 'EXPIRED' ? 'text-amber-100' : 'text-amber-700'}`}>মেয়াদোত্তীর্ণ</span>
+          <span className={`text-2xl font-black ${statusFilter === 'EXPIRED' ? 'text-white' : 'text-amber-600'}`}>{counts.expired}</span>
         </button>
 
         <button
@@ -413,66 +413,68 @@ export default function AdminLicensesPage() {
           onClick={() => setStatusFilter('REVOKED')}
           className={`p-4 rounded-2xl border text-left transition-all ${
             statusFilter === 'REVOKED'
-              ? 'bg-red-500/20 border-red-500 text-white font-bold shadow-lg'
-              : 'bg-[#120e20] border-purple-900/30 text-gray-400 hover:text-white'
+              ? 'bg-rose-600 text-white border-rose-600 shadow-md'
+              : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:text-slate-900 shadow-xs'
           }`}
         >
-          <span className="text-xs text-red-300 block mb-1">বাতিল (Revoked)</span>
-          <span className="text-2xl font-black text-red-400">{counts.revoked}</span>
+          <span className={`text-xs block mb-1 font-medium ${statusFilter === 'REVOKED' ? 'text-rose-100' : 'text-rose-700'}`}>বাতিল (Revoked)</span>
+          <span className={`text-2xl font-black ${statusFilter === 'REVOKED' ? 'text-white' : 'text-rose-600'}`}>{counts.revoked}</span>
         </button>
       </div>
 
       {/* Search Bar */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="লাইসেন্স কি, ক্লায়েন্টের নাম, নম্বর, বা নোট দিয়ে খুঁজুন..."
-            className="w-full pl-10 pr-4 py-2.5 bg-[#120e20] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 shadow-xs"
           />
         </div>
 
-        <span className="text-xs text-gray-400">
-          প্রদর্শিত হচ্ছে: <strong className="text-purple-300">{filteredLicenses.length}</strong> টি কি
+        <span className="text-xs text-slate-500">
+          প্রদর্শিত হচ্ছে: <strong className="text-purple-700 font-bold">{filteredLicenses.length}</strong> টি কি
         </span>
       </div>
 
       {/* Licenses Table */}
       {loading ? (
-        <div className="py-24 text-center text-sm text-gray-400">লাইসেন্স কি তালিকা লোড হচ্ছে...</div>
+        <div className="py-24 text-center text-sm text-slate-500">লাইসেন্স কি তালিকা লোড হচ্ছে...</div>
       ) : filteredLicenses.length === 0 ? (
-        <div className="bg-[#120e20] border border-purple-900/30 rounded-3xl p-12 text-center max-w-md mx-auto my-8">
-          <Key className="w-12 h-12 text-purple-400 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-white mb-1">কোনো লাইসেন্স কি পাওয়া যায়নি</h3>
-          <p className="text-xs text-gray-400 mb-4">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center max-w-md mx-auto my-8 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3">
+            <Key className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 mb-1">কোনো লাইসেন্স কি পাওয়া যায়নি</h3>
+          <p className="text-xs text-slate-500 mb-4">
             নতুন লাইসেন্স কি তৈরি করে ক্লায়েন্টদের ১-ক্লিক ড্যাশবোর্ড এক্সেস দিন।
           </p>
           <button
             onClick={() => setIsGenerateModalOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25"
+            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-500/20"
           >
             + নতুন লাইসেন্স কি তৈরি করুন
           </button>
         </div>
       ) : (
-        <div className="bg-[#120e20] border border-purple-900/30 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-purple-900/30 bg-[#0a0812] text-purple-300">
-                  <th className="py-3.5 px-4 font-semibold">লাইসেন্স কি (License Key)</th>
-                  <th className="py-3.5 px-4 font-semibold">প্ল্যান ও মেয়াদ</th>
-                  <th className="py-3.5 px-4 font-semibold">লিমিট (মেসেজ/পেজ)</th>
-                  <th className="py-3.5 px-4 font-semibold">অ্যাসাইন করা ক্লায়েন্ট / ইউজার</th>
-                  <th className="py-3.5 px-4 font-semibold">স্ট্যাটাস</th>
-                  <th className="py-3.5 px-4 font-semibold">তৈরি ও অ্যাক্টিভেশন</th>
-                  <th className="py-3.5 px-4 font-semibold text-right">অ্যাকশন</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                  <th className="py-3.5 px-4">লাইসেন্স কি (License Key)</th>
+                  <th className="py-3.5 px-4">প্ল্যান ও মেয়াদ</th>
+                  <th className="py-3.5 px-4">লিমিট (মেসেজ/পেজ)</th>
+                  <th className="py-3.5 px-4">অ্যাসাইন করা ক্লায়েন্ট / ইউজার</th>
+                  <th className="py-3.5 px-4">স্ট্যাটাস</th>
+                  <th className="py-3.5 px-4">তৈরি ও অ্যাক্টিভেশন</th>
+                  <th className="py-3.5 px-4 text-right">অ্যাকশন</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-900/20 text-gray-300">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {filteredLicenses.map((lic) => {
                   const isActive = lic.status === 'ACTIVE';
                   const isUsed = lic.status === 'USED';
@@ -480,17 +482,17 @@ export default function AdminLicensesPage() {
                   const isExpired = lic.status === 'EXPIRED';
 
                   return (
-                    <tr key={lic.id} className="hover:bg-purple-950/20 transition-colors">
+                    <tr key={lic.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* Key Column */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-black text-cyan-300 text-sm tracking-wider px-2.5 py-1 rounded bg-[#0a0812] border border-cyan-900/40">
+                          <span className="font-mono font-bold text-indigo-700 text-xs tracking-wider px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200/80">
                             {lic.key}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCopy(lic.key, 'লাইসেন্স কি')}
-                            className="p-1 text-gray-400 hover:text-cyan-300"
+                            className="p-1 text-slate-400 hover:text-indigo-600"
                             title="কি কপি করুন"
                           >
                             <Copy className="w-3.5 h-3.5" />
@@ -498,14 +500,14 @@ export default function AdminLicensesPage() {
                           <button
                             type="button"
                             onClick={() => handleCopyDirectLink(lic.key)}
-                            className="p-1 text-gray-400 hover:text-purple-300"
+                            className="p-1 text-slate-400 hover:text-purple-600"
                             title="১-ক্লিক ডাইরেক্ট লগইন লিংক কপি করুন"
                           >
                             <Share2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         {lic.clientNote && (
-                          <p className="text-[10px] text-gray-400 mt-1 max-w-[200px] truncate" title={lic.clientNote}>
+                          <p className="text-[10px] text-slate-500 mt-1 max-w-[200px] truncate" title={lic.clientNote}>
                             নোট: {lic.clientNote}
                           </p>
                         )}
@@ -513,20 +515,20 @@ export default function AdminLicensesPage() {
 
                       {/* Plan & Duration */}
                       <td className="py-3.5 px-4">
-                        <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold text-[11px] block w-fit mb-1">
+                        <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 font-bold text-[11px] block w-fit mb-1">
                           {lic.package?.name || lic.plan}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono">
+                        <span className="text-[10px] text-slate-500 font-mono">
                           {lic.durationDays >= 999 ? 'লাইফটাইম' : `${lic.durationDays} দিন মেয়াদ`}
                         </span>
                       </td>
 
                       {/* Limits */}
                       <td className="py-3.5 px-4">
-                        <div className="text-white font-mono font-bold">
+                        <div className="text-slate-900 font-mono font-bold">
                           {lic.messageLimit.toLocaleString()} মেসেজ
                         </div>
-                        <div className="text-[10px] text-gray-400">
+                        <div className="text-[10px] text-slate-500">
                           {lic.pageLimit}টি পেজ • {lic.productLimit}টি পণ্য
                         </div>
                       </td>
@@ -535,20 +537,20 @@ export default function AdminLicensesPage() {
                       <td className="py-3.5 px-4">
                         {lic.usedByUser ? (
                           <div>
-                            <div className="font-bold text-emerald-400 flex items-center gap-1">
+                            <div className="font-bold text-slate-900 flex items-center gap-1">
                               <span>{lic.usedByUser.businessName || lic.usedByUser.fullName}</span>
                             </div>
-                            <div className="text-[10px] text-gray-400 font-mono">
+                            <div className="text-[10px] text-slate-500 font-mono">
                               {lic.usedByUser.email} {lic.usedByUser.phone ? `• ${lic.usedByUser.phone}` : ''}
                             </div>
                           </div>
                         ) : lic.clientName ? (
                           <div>
-                            <div className="font-semibold text-white">{lic.clientName}</div>
-                            <div className="text-[10px] text-gray-400 font-mono">{lic.clientPhone || 'অ্যাসাইন করা'}</div>
+                            <div className="font-semibold text-slate-900">{lic.clientName}</div>
+                            <div className="text-[10px] text-slate-500 font-mono">{lic.clientPhone || 'অ্যাসাইন করা'}</div>
                           </div>
                         ) : (
-                          <span className="text-gray-500 italic text-[11px]">উন্মুক্ত (যেকোনো ইউজার)</span>
+                          <span className="text-slate-400 italic text-[11px]">উন্মুক্ত (যেকোনো ইউজার)</span>
                         )}
                       </td>
 
@@ -557,32 +559,32 @@ export default function AdminLicensesPage() {
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider inline-flex items-center gap-1 ${
                             isActive
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : isUsed
-                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                               : isExpired
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                              : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
                           }`}
                         >
                           {isActive ? (
                             <>
-                              <Zap className="w-3 h-3 text-emerald-400" />
+                              <Zap className="w-3 h-3 text-emerald-600" />
                               <span>সক্রিয়</span>
                             </>
                           ) : isUsed ? (
                             <>
-                              <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+                              <CheckCircle2 className="w-3 h-3 text-indigo-600" />
                               <span>ব্যবহৃত</span>
                             </>
                           ) : isExpired ? (
                             <>
-                              <Clock className="w-3 h-3 text-amber-400" />
+                              <Clock className="w-3 h-3 text-amber-600" />
                               <span>মেয়াদ শেষ</span>
                             </>
                           ) : (
                             <>
-                              <XCircle className="w-3 h-3 text-red-400" />
+                              <XCircle className="w-3 h-3 text-rose-600" />
                               <span>বাতিল</span>
                             </>
                           )}
@@ -590,15 +592,15 @@ export default function AdminLicensesPage() {
                       </td>
 
                       {/* Dates */}
-                      <td className="py-3.5 px-4 text-[10px] text-gray-400">
+                      <td className="py-3.5 px-4 text-[10px] text-slate-500">
                         <div>তৈরি: {new Date(lic.createdAt).toLocaleDateString('bn-BD')}</div>
                         {lic.usedAt && (
-                          <div className="text-cyan-300">
+                          <div className="text-indigo-600 font-medium">
                             ব্যবহার: {new Date(lic.usedAt).toLocaleDateString('bn-BD')}
                           </div>
                         )}
                         {lic.expiresAt && (
-                          <div className="text-amber-300">
+                          <div className="text-amber-600 font-medium">
                             মেয়াদ: {new Date(lic.expiresAt).toLocaleDateString('bn-BD')}
                           </div>
                         )}
@@ -610,7 +612,7 @@ export default function AdminLicensesPage() {
                           {/* 1-Click Copy Link */}
                           <button
                             onClick={() => handleCopyDirectLink(lic.key)}
-                            className="p-1.5 rounded-xl bg-purple-900/30 hover:bg-purple-900/60 text-purple-300 border border-purple-500/30 transition-colors"
+                            className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors"
                             title="১-ক্লিক ডাইরেক্ট অ্যাক্টিভেশন লিংক কপি করুন"
                           >
                             <Share2 className="w-3.5 h-3.5" />
@@ -619,7 +621,7 @@ export default function AdminLicensesPage() {
                           {/* View details */}
                           <button
                             onClick={() => setViewingLicense(lic)}
-                            className="p-1.5 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/30 transition-colors"
+                            className="p-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
                             title="বিস্তারিত দেখুন"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -628,7 +630,7 @@ export default function AdminLicensesPage() {
                           {/* Edit */}
                           <button
                             onClick={() => handleOpenEdit(lic)}
-                            className="p-1.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border border-blue-500/30 transition-colors"
+                            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
                             title="সম্পাদনা করুন"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -639,8 +641,8 @@ export default function AdminLicensesPage() {
                             onClick={() => handleToggleStatus(lic)}
                             className={`p-1.5 rounded-xl border transition-colors ${
                               isRevoked
-                                ? 'bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-400 border-emerald-500/30'
-                                : 'bg-amber-950/30 hover:bg-amber-900/50 text-amber-400 border-amber-500/30'
+                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'
                             }`}
                             title={isRevoked ? 'সক্রিয় করুন' : 'বাতিল (Revoke) করুন'}
                           >
@@ -650,7 +652,7 @@ export default function AdminLicensesPage() {
                           {/* Delete */}
                           <button
                             onClick={() => handleDeleteLicense(lic)}
-                            className="p-1.5 rounded-xl bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-500/30 transition-colors"
+                            className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
                             title="মুছে ফেলুন"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -668,37 +670,37 @@ export default function AdminLicensesPage() {
 
       {/* Generate License Key Modal */}
       {isGenerateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-[#120e20] border border-purple-900/40 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
             <button
               onClick={() => setIsGenerateModalOpen(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">
+              <div className="w-10 h-10 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-600 font-bold">
                 <Key className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">নতুন লাইসেন্স কি তৈরি করুন</h3>
-                <p className="text-xs text-purple-300/70">একক বা একাধিক (বাল্ক) লাইসেন্স কি জেনারেট করুন</p>
+                <h3 className="text-base font-bold text-slate-900">নতুন লাইসেন্স কি তৈরি করুন</h3>
+                <p className="text-xs text-slate-500">একক বা একাধিক (বাল্ক) লাইসেন্স কি জেনারেট করুন</p>
               </div>
             </div>
 
             {/* Generated Batch Success Box */}
             {generatedBatch.length > 0 && (
-              <div className="mb-6 p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-3">
+              <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>{generatedBatch.length}টি লাইসেন্স কি সফলভাবে তৈরি হয়েছে!</span>
                   </span>
                   <button
                     type="button"
                     onClick={handleCopyAllBatch}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs transition-all shadow"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-xs"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     <span>সব কপি করুন</span>
@@ -709,14 +711,14 @@ export default function AdminLicensesPage() {
                   {generatedBatch.map((k) => (
                     <div
                       key={k.id}
-                      className="p-2 rounded-xl bg-[#090b14] border border-emerald-500/20 flex items-center justify-between text-xs"
+                      className="p-2 rounded-xl bg-white border border-emerald-200 flex items-center justify-between text-xs"
                     >
-                      <span className="font-mono font-bold text-cyan-300">{k.key}</span>
+                      <span className="font-mono font-bold text-indigo-700">{k.key}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400">{k.plan} ({k.durationDays}d)</span>
+                        <span className="text-[10px] text-slate-500">{k.plan} ({k.durationDays}d)</span>
                         <button
                           onClick={() => handleCopy(k.key, 'লাইসেন্স কি')}
-                          className="text-gray-400 hover:text-emerald-400 p-0.5"
+                          className="text-slate-400 hover:text-emerald-600 p-0.5"
                           title="কি কপি করুন"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -732,13 +734,13 @@ export default function AdminLicensesPage() {
               {/* Package Selector & Plan */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     প্যাকেজ টেমপ্লেট
                   </label>
                   <select
                     value={formPackageId}
                     onChange={(e) => handlePackageChange(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   >
                     <option value="">-- কাস্টম কনফিগারেশন --</option>
                     {packages.map((p) => (
@@ -750,13 +752,13 @@ export default function AdminLicensesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     প্ল্যান টিয়ার (Plan Tier)
                   </label>
                   <select
                     value={formPlan}
                     onChange={(e) => setFormPlan(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   >
                     <option value="STARTER">STARTER (স্টার্টার)</option>
                     <option value="BUSINESS">BUSINESS (বিজনেস)</option>
@@ -768,13 +770,13 @@ export default function AdminLicensesPage() {
               {/* Count & Duration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     কতগুলো কি জেনারেট করবেন? *
                   </label>
                   <select
                     value={formCount}
                     onChange={(e) => setFormCount(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   >
                     <option value="1">১টি কি (Single Key)</option>
                     <option value="5">৫টি কি (5 Keys Bulk)</option>
@@ -785,7 +787,7 @@ export default function AdminLicensesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     মেয়াদ (দিন) *
                   </label>
                   <input
@@ -795,7 +797,7 @@ export default function AdminLicensesPage() {
                     value={formDurationDays}
                     onChange={(e) => setFormDurationDays(e.target.value)}
                     placeholder="30"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
@@ -803,7 +805,7 @@ export default function AdminLicensesPage() {
               {/* Message Limit & Page Limit */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     মেসেজ লিমিট *
                   </label>
                   <input
@@ -813,12 +815,12 @@ export default function AdminLicensesPage() {
                     value={formMessageLimit}
                     onChange={(e) => setFormMessageLimit(e.target.value)}
                     placeholder="3000"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     পেজ লিমিট *
                   </label>
                   <input
@@ -828,12 +830,12 @@ export default function AdminLicensesPage() {
                     value={formPageLimit}
                     onChange={(e) => setFormPageLimit(e.target.value)}
                     placeholder="3"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     কাস্টম প্রিফিক্স
                   </label>
                   <input
@@ -841,15 +843,15 @@ export default function AdminLicensesPage() {
                     value={formCustomPrefix}
                     onChange={(e) => setFormCustomPrefix(e.target.value.toUpperCase())}
                     placeholder="RPLX"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono uppercase focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono uppercase focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
 
               {/* Optional Client Assignment */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-purple-900/30">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     নির্দিষ্ট ক্লায়েন্টের নাম (ঐচ্ছিক)
                   </label>
                   <input
@@ -857,12 +859,12 @@ export default function AdminLicensesPage() {
                     value={formClientName}
                     onChange={(e) => setFormClientName(e.target.value)}
                     placeholder="যেমন: Tanvir Fashion"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     ক্লায়েন্ট ফোন নম্বর (ঐচ্ছিক)
                   </label>
                   <input
@@ -870,14 +872,14 @@ export default function AdminLicensesPage() {
                     value={formClientPhone}
                     onChange={(e) => setFormClientPhone(e.target.value)}
                     placeholder="017XXXXXXXX"
-                    className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
 
               {/* Client Note */}
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   অ্যাডমিন নোট / নির্দেশনা
                 </label>
                 <textarea
@@ -885,23 +887,23 @@ export default function AdminLicensesPage() {
                   value={formClientNote}
                   onChange={(e) => setFormClientNote(e.target.value)}
                   placeholder="যেমন: ৩ মাসের বিজনেস অফার কি।"
-                  className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 />
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-900/30">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsGenerateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#0a0812] text-gray-400 text-xs font-semibold hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors"
                 >
                   বন্ধ করুন
                 </button>
                 <button
                   type="submit"
                   disabled={generating}
-                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 disabled:opacity-50 transition-all"
+                  className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-500/20 disabled:opacity-50 transition-all"
                 >
                   {generating ? 'জেনারেট হচ্ছে...' : '⚡ লাইসেন্স কি তৈরি করুন'}
                 </button>
@@ -913,28 +915,28 @@ export default function AdminLicensesPage() {
 
       {/* Edit License Modal */}
       {isEditModalOpen && editingLicense && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#120e20] border border-purple-900/40 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-bold text-white mb-1">লাইসেন্স কি সম্পাদনা</h3>
-            <p className="text-xs text-purple-300 font-mono mb-4">{editingLicense.key}</p>
+            <h3 className="text-base font-bold text-slate-900 mb-1">লাইসেন্স কি সম্পাদনা</h3>
+            <p className="text-xs text-indigo-700 font-mono mb-4">{editingLicense.key}</p>
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     স্ট্যাটাস *
                   </label>
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   >
                     <option value="ACTIVE">ACTIVE (সক্রিয়)</option>
                     <option value="USED">USED (ব্যবহৃত)</option>
@@ -944,7 +946,7 @@ export default function AdminLicensesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     মেয়াদ (দিন) *
                   </label>
                   <input
@@ -952,14 +954,14 @@ export default function AdminLicensesPage() {
                     required
                     value={editDurationDays}
                     onChange={(e) => setEditDurationDays(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     মেসেজ লিমিট *
                   </label>
                   <input
@@ -967,12 +969,12 @@ export default function AdminLicensesPage() {
                     required
                     value={editMessageLimit}
                     onChange={(e) => setEditMessageLimit(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     পেজ লিমিট *
                   </label>
                   <input
@@ -980,47 +982,47 @@ export default function AdminLicensesPage() {
                     required
                     value={editPageLimit}
                     onChange={(e) => setEditPageLimit(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   ক্লায়েন্টের নাম
                 </label>
                 <input
                   type="text"
                   value={editClientName}
                   onChange={(e) => setEditClientName(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   নোট
                 </label>
                 <textarea
                   rows={2}
                   value={editClientNote}
                   onChange={(e) => setEditClientNote(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-900/30">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#0a0812] text-gray-400 text-xs font-semibold hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={updating}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 disabled:opacity-50 transition-all"
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-500/20 disabled:opacity-50 transition-all"
                 >
                   {updating ? 'আপডেট হচ্ছে...' : 'সংরক্ষণ করুন'}
                 </button>
@@ -1032,74 +1034,74 @@ export default function AdminLicensesPage() {
 
       {/* View License Modal */}
       {viewingLicense && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#120e20] border border-purple-900/40 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               onClick={() => setViewingLicense(null)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-cyan-300 font-bold">
+              <div className="w-10 h-10 rounded-2xl bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-600 font-bold">
                 <Key className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">লাইসেন্স বিস্তারিত</h3>
-                <span className="text-xs text-purple-300/70">{viewingLicense.plan} প্ল্যান</span>
+                <h3 className="text-base font-bold text-slate-900">লাইসেন্স বিস্তারিত</h3>
+                <span className="text-xs text-slate-500">{viewingLicense.plan} প্ল্যান</span>
               </div>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-2xl bg-[#0a0812] border border-purple-900/30">
-                <span className="text-gray-400 block mb-1">লাইসেন্স কি:</span>
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-500 block mb-1">লাইসেন্স কি:</span>
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-black text-cyan-300 text-sm">{viewingLicense.key}</span>
+                  <span className="font-mono font-bold text-indigo-700 text-sm">{viewingLicense.key}</span>
                   <button
                     onClick={() => handleCopy(viewingLicense.key, 'লাইসেন্স কি')}
-                    className="p-1 rounded bg-purple-900/40 text-purple-300 hover:text-white"
+                    className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-xs"
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-[#0a0812] border border-purple-900/30 space-y-2">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-gray-400">মেয়াদ:</span>
-                    <p className="font-bold text-white">{viewingLicense.durationDays} দিন</p>
+                    <span className="text-slate-500">মেয়াদ:</span>
+                    <p className="font-bold text-slate-900">{viewingLicense.durationDays} দিন</p>
                   </div>
                   <div>
-                    <span className="text-gray-400">মেসেজ লিমিট:</span>
-                    <p className="font-mono font-bold text-emerald-400">{viewingLicense.messageLimit.toLocaleString()}</p>
+                    <span className="text-slate-500">মেসেজ লিমিট:</span>
+                    <p className="font-mono font-bold text-emerald-600">{viewingLicense.messageLimit.toLocaleString()}</p>
                   </div>
                   <div>
-                    <span className="text-gray-400">পেজ লিমিট:</span>
-                    <p className="font-bold text-white">{viewingLicense.pageLimit} টি</p>
+                    <span className="text-slate-500">পেজ লিমিট:</span>
+                    <p className="font-bold text-slate-900">{viewingLicense.pageLimit} টি</p>
                   </div>
                   <div>
-                    <span className="text-gray-400">স্ট্যাটাস:</span>
-                    <p className="font-bold text-cyan-300">{viewingLicense.status}</p>
+                    <span className="text-slate-500">স্ট্যাটাস:</span>
+                    <p className="font-bold text-indigo-600">{viewingLicense.status}</p>
                   </div>
                 </div>
               </div>
 
               {viewingLicense.usedByUser && (
-                <div className="p-3.5 rounded-2xl bg-[#0a0812] border border-emerald-500/30 space-y-1">
-                  <span className="text-emerald-400 font-bold block">ব্যবহারকারী তথ্য:</span>
-                  <p className="text-white font-bold">{viewingLicense.usedByUser.businessName || viewingLicense.usedByUser.fullName}</p>
-                  <p className="text-gray-400 font-mono">{viewingLicense.usedByUser.email}</p>
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
+                  <span className="text-emerald-800 font-bold block">ব্যবহারকারী তথ্য:</span>
+                  <p className="text-slate-900 font-bold">{viewingLicense.usedByUser.businessName || viewingLicense.usedByUser.fullName}</p>
+                  <p className="text-slate-600 font-mono">{viewingLicense.usedByUser.email}</p>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-purple-900/30">
+            <div className="flex items-center justify-end gap-3 pt-5 mt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => handleCopyDirectLink(viewingLicense.key)}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-500/20"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 <span>ডাইরেক্ট লিংক কপি করুন</span>

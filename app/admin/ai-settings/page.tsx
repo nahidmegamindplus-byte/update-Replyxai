@@ -255,20 +255,20 @@ export default function AdminAiSettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Configuration Form (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-[#120e20] border border-purple-900/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-purple-900/20">
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs text-slate-900">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
                   <span>সেন্ট্রাল AI প্রোভাইডার নির্বাচন</span>
                 </h3>
-                <p className="text-xs text-purple-300/70 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   সিস্টেমের সমস্ত মেসেঞ্জার অটোরিপ্লাইয়ের জন্য প্রাথমিক AI ইঞ্জিন বেছে নিন
                 </p>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+              <span className="px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
                 <span>AES-256 Secure</span>
               </span>
             </div>
@@ -276,7 +276,7 @@ export default function AdminAiSettingsPage() {
             <form onSubmit={handleSaveSettings} className="space-y-6">
               {/* Provider Selector Cards */}
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-2.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2.5">
                   অ্যাক্টিভ AI প্রোভাইডার
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -286,18 +286,18 @@ export default function AdminAiSettingsPage() {
                     onClick={() => handleProviderChange('GOROUTER')}
                     className={`p-3.5 rounded-2xl border text-left transition-all ${
                       provider === 'GOROUTER'
-                        ? 'bg-purple-600/20 border-purple-500 text-white font-bold shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/50'
-                        : 'bg-[#0a0812] border-purple-900/30 text-gray-400 hover:text-white'
+                        ? 'bg-purple-50 border-purple-500 text-purple-900 font-bold shadow-xs ring-1 ring-purple-500/30'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
-                        <Globe className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
+                        <Globe className="w-3.5 h-3.5 text-amber-600" />
                         <span>GoRouter</span>
                       </span>
-                      {provider === 'GOROUTER' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+                      {provider === 'GOROUTER' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-normal leading-tight">
+                    <p className="text-[10px] text-slate-500 font-normal leading-tight">
                       All-in-one Router (DeepSeek, Claude, GPT, Llama)
                     </p>
                   </button>
@@ -308,18 +308,18 @@ export default function AdminAiSettingsPage() {
                     onClick={() => handleProviderChange('DEEPSEEK')}
                     className={`p-3.5 rounded-2xl border text-left transition-all ${
                       provider === 'DEEPSEEK'
-                        ? 'bg-purple-600/20 border-purple-500 text-white font-bold shadow-lg shadow-purple-500/10'
-                        : 'bg-[#0a0812] border-purple-900/30 text-gray-400 hover:text-white'
+                        ? 'bg-purple-50 border-purple-500 text-purple-900 font-bold shadow-xs ring-1 ring-purple-500/30'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-cyan-300 flex items-center gap-1">
-                        <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-xs font-bold text-cyan-700 flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-cyan-600" />
                         <span>DeepSeek</span>
                       </span>
-                      {provider === 'DEEPSEEK' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+                      {provider === 'DEEPSEEK' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-normal leading-tight">
+                    <p className="text-[10px] text-slate-500 font-normal leading-tight">
                       সুপার ফাস্ট ও সাশ্রয়ী
                     </p>
                   </button>
@@ -330,15 +330,15 @@ export default function AdminAiSettingsPage() {
                     onClick={() => handleProviderChange('GEMINI')}
                     className={`p-3.5 rounded-2xl border text-left transition-all ${
                       provider === 'GEMINI'
-                        ? 'bg-purple-600/20 border-purple-500 text-white font-bold shadow-lg shadow-purple-500/10'
-                        : 'bg-[#0a0812] border-purple-900/30 text-gray-400 hover:text-white'
+                        ? 'bg-purple-50 border-purple-500 text-purple-900 font-bold shadow-xs ring-1 ring-purple-500/30'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-emerald-300">Google Gemini</span>
-                      {provider === 'GEMINI' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+                      <span className="text-xs font-bold text-emerald-700">Google Gemini</span>
+                      {provider === 'GEMINI' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-normal leading-tight">
+                    <p className="text-[10px] text-slate-500 font-normal leading-tight">
                       মাল্টিমোডাল ভিশন & ভয়েস
                     </p>
                   </button>
@@ -349,15 +349,15 @@ export default function AdminAiSettingsPage() {
                     onClick={() => handleProviderChange('OPENAI')}
                     className={`p-3.5 rounded-2xl border text-left transition-all ${
                       provider === 'OPENAI'
-                        ? 'bg-purple-600/20 border-purple-500 text-white font-bold shadow-lg shadow-purple-500/10'
-                        : 'bg-[#0a0812] border-purple-900/30 text-gray-400 hover:text-white'
+                        ? 'bg-purple-50 border-purple-500 text-purple-900 font-bold shadow-xs ring-1 ring-purple-500/30'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-blue-300">OpenAI</span>
-                      {provider === 'OPENAI' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />}
+                      <span className="text-xs font-bold text-blue-700">OpenAI</span>
+                      {provider === 'OPENAI' && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-normal leading-tight">
+                    <p className="text-[10px] text-slate-500 font-normal leading-tight">
                       GPT-4o / GPT-4o-mini
                     </p>
                   </button>
@@ -366,13 +366,13 @@ export default function AdminAiSettingsPage() {
 
               {/* Model Selection */}
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   মডেল নির্বাচন ({provider})
                 </label>
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 >
                   {provider === 'GOROUTER' ? (
                     <>
@@ -409,20 +409,20 @@ export default function AdminAiSettingsPage() {
                     value={customModel}
                     onChange={(e) => setCustomModel(e.target.value)}
                     placeholder="যেমন: mistralai/mistral-large-2411 বা qwen/qwen-2.5-72b-instruct"
-                    className="w-full mt-2 px-3.5 py-2 bg-[#0a0812] border border-amber-500/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-amber-400"
+                    className="w-full mt-2 px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-amber-500"
                   />
                 )}
               </div>
 
               {/* GoRouter / OpenRouter API Key & Base URL Input */}
-              <div className="p-4 rounded-2xl bg-[#0a0812] border border-amber-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5" />
+                  <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-amber-700" />
                     <span>GoRouter / OpenRouter API Key (gorouter.app / openrouter.ai)</span>
                   </label>
                   {keyStatus.gorouter.hasKey && (
-                    <span className="text-[11px] text-emerald-400 font-mono">
+                    <span className="text-[11px] text-emerald-700 font-mono font-semibold">
                       সংরক্ষিত: {keyStatus.gorouter.maskedKey}
                     </span>
                   )}
@@ -438,13 +438,13 @@ export default function AdminAiSettingsPage() {
                         ? 'নতুন GoRouter / OpenRouter Key দিতে চাইলে লিখুন...'
                         : 'sk-or-v1-... (gorouter.app বা openrouter.ai থেকে সংগ্রহ করুন)'
                     }
-                    className="flex-1 px-3.5 py-2 bg-[#140f24] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-amber-400"
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-xs font-mono focus:outline-none focus:border-amber-500"
                   />
                   <button
                     type="button"
                     disabled={testingKey === 'GOROUTER'}
                     onClick={() => handleTestApiKey('GOROUTER', gorouterKey)}
-                    className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>{testingKey === 'GOROUTER' ? 'টেস্ট হচ্ছে...' : 'টেস্ট করুন'}</span>
@@ -452,7 +452,7 @@ export default function AdminAiSettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
                     API Base URL (Default: https://openrouter.ai/api/v1 অথবা https://gorouter.app/api/v1)
                   </label>
                   <input
@@ -460,7 +460,7 @@ export default function AdminAiSettingsPage() {
                     value={gorouterBaseUrl}
                     onChange={(e) => setGorouterBaseUrl(e.target.value)}
                     placeholder="https://openrouter.ai/api/v1"
-                    className="w-full px-3.5 py-1.5 bg-[#140f24] border border-purple-900/40 rounded-xl text-gray-300 text-xs font-mono focus:outline-none focus:border-amber-400"
+                    className="w-full px-3.5 py-1.5 bg-white border border-slate-300 rounded-xl text-slate-800 text-xs font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -468,14 +468,14 @@ export default function AdminAiSettingsPage() {
                   <div
                     className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                       keyTestResults.gorouter.success
-                        ? 'bg-emerald-950/30 border border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-950/30 border border-red-500/40 text-red-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}
                   >
                     {keyTestResults.gorouter.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     )}
                     <span>{keyTestResults.gorouter.message}</span>
                   </div>
@@ -483,14 +483,14 @@ export default function AdminAiSettingsPage() {
               </div>
 
               {/* DeepSeek API Key Input & Live Test Button */}
-              <div className="p-4 rounded-2xl bg-[#0a0812] border border-cyan-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-cyan-50/60 border border-cyan-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5" />
+                  <label className="text-xs font-bold text-cyan-900 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-cyan-700" />
                     <span>DeepSeek Direct API Key</span>
                   </label>
                   {keyStatus.deepseek.hasKey && (
-                    <span className="text-[11px] text-emerald-400 font-mono">
+                    <span className="text-[11px] text-emerald-700 font-mono font-semibold">
                       সংরক্ষিত: {keyStatus.deepseek.maskedKey}
                     </span>
                   )}
@@ -505,13 +505,13 @@ export default function AdminAiSettingsPage() {
                         ? 'নতুন DeepSeek API Key সেট করতে চাইলে লিখুন...'
                         : 'sk-... (platform.deepseek.com থেকে সংগ্রহ করুন)'
                     }
-                    className="flex-1 px-3.5 py-2 bg-[#140f24] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400"
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-xs font-mono focus:outline-none focus:border-cyan-500"
                   />
                   <button
                     type="button"
                     disabled={testingKey === 'DEEPSEEK'}
                     onClick={() => handleTestApiKey('DEEPSEEK', deepseekKey)}
-                    className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-cyan-100 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>{testingKey === 'DEEPSEEK' ? 'টেস্ট হচ্ছে...' : 'টেস্ট করুন'}</span>
@@ -521,14 +521,14 @@ export default function AdminAiSettingsPage() {
                   <div
                     className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                       keyTestResults.deepseek.success
-                        ? 'bg-emerald-950/30 border border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-950/30 border border-red-500/40 text-red-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}
                   >
                     {keyTestResults.deepseek.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     )}
                     <span>{keyTestResults.deepseek.message}</span>
                   </div>
@@ -536,14 +536,14 @@ export default function AdminAiSettingsPage() {
               </div>
 
               {/* Gemini API Key Input & Live Test Button */}
-              <div className="p-4 rounded-2xl bg-[#0a0812] border border-emerald-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5" />
+                  <label className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-emerald-700" />
                     <span>Google Gemini API Key</span>
                   </label>
                   {keyStatus.gemini.hasKey && (
-                    <span className="text-[11px] text-emerald-400 font-mono">
+                    <span className="text-[11px] text-emerald-700 font-mono font-semibold">
                       সংরক্ষিত: {keyStatus.gemini.maskedKey}
                     </span>
                   )}
@@ -558,13 +558,13 @@ export default function AdminAiSettingsPage() {
                         ? 'নতুন Gemini API Key সেট করতে চাইলে লিখুন...'
                         : 'AIzaSy... (aistudio.google.com থেকে সংগ্রহ করুন)'
                     }
-                    className="flex-1 px-3.5 py-2 bg-[#140f24] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-emerald-400"
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-xs font-mono focus:outline-none focus:border-emerald-500"
                   />
                   <button
                     type="button"
                     disabled={testingKey === 'GEMINI'}
                     onClick={() => handleTestApiKey('GEMINI', geminiKey)}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>{testingKey === 'GEMINI' ? 'টেস্ট হচ্ছে...' : 'টেস্ট করুন'}</span>
@@ -574,14 +574,14 @@ export default function AdminAiSettingsPage() {
                   <div
                     className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                       keyTestResults.gemini.success
-                        ? 'bg-emerald-950/30 border border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-950/30 border border-red-500/40 text-red-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}
                   >
                     {keyTestResults.gemini.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     )}
                     <span>{keyTestResults.gemini.message}</span>
                   </div>
@@ -589,14 +589,14 @@ export default function AdminAiSettingsPage() {
               </div>
 
               {/* OpenAI API Key Input & Live Test Button */}
-              <div className="p-4 rounded-2xl bg-[#0a0812] border border-blue-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5" />
+                  <label className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-blue-700" />
                     <span>OpenAI API Key</span>
                   </label>
                   {keyStatus.openai.hasKey && (
-                    <span className="text-[11px] text-emerald-400 font-mono">
+                    <span className="text-[11px] text-emerald-700 font-mono font-semibold">
                       সংরক্ষিত: {keyStatus.openai.maskedKey}
                     </span>
                   )}
@@ -611,13 +611,13 @@ export default function AdminAiSettingsPage() {
                         ? 'নতুন OpenAI API Key সেট করতে চাইলে লিখুন...'
                         : 'sk-... (platform.openai.com থেকে সংগ্রহ করুন)'
                     }
-                    className="flex-1 px-3.5 py-2 bg-[#140f24] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-blue-400"
+                    className="flex-1 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-xs font-mono focus:outline-none focus:border-blue-500"
                   />
                   <button
                     type="button"
                     disabled={testingKey === 'OPENAI'}
                     onClick={() => handleTestApiKey('OPENAI', openaiKey)}
-                    className="px-3.5 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    className="px-3.5 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-300 text-xs font-bold transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                   >
                     <Activity className="w-3.5 h-3.5" />
                     <span>{testingKey === 'OPENAI' ? 'টেস্ট হচ্ছে...' : 'টেস্ট করুন'}</span>
@@ -627,14 +627,14 @@ export default function AdminAiSettingsPage() {
                   <div
                     className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                       keyTestResults.openai.success
-                        ? 'bg-emerald-950/30 border border-emerald-500/40 text-emerald-300'
-                        : 'bg-red-950/30 border border-red-500/40 text-red-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-800'
                     }`}
                   >
                     {keyTestResults.openai.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
                     )}
                     <span>{keyTestResults.openai.message}</span>
                   </div>
@@ -645,8 +645,8 @@ export default function AdminAiSettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-purple-300 font-semibold">Temperature:</span>
-                    <span className="text-cyan-400 font-bold font-mono">{temperature}</span>
+                    <span className="text-slate-700 font-semibold">Temperature:</span>
+                    <span className="text-purple-700 font-bold font-mono">{temperature}</span>
                   </div>
                   <input
                     type="range"
@@ -655,14 +655,14 @@ export default function AdminAiSettingsPage() {
                     step="0.1"
                     value={temperature}
                     onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                    className="w-full accent-purple-500"
+                    className="w-full accent-purple-600"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="text-purple-300 font-semibold">Max Output Tokens:</span>
-                    <span className="text-cyan-400 font-bold font-mono">{maxTokens}</span>
+                    <span className="text-slate-700 font-semibold">Max Output Tokens:</span>
+                    <span className="text-purple-700 font-bold font-mono">{maxTokens}</span>
                   </div>
                   <input
                     type="range"
@@ -671,16 +671,16 @@ export default function AdminAiSettingsPage() {
                     step="100"
                     value={maxTokens}
                     onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
-                    className="w-full accent-purple-500"
+                    className="w-full accent-purple-600"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-purple-900/30 flex justify-end">
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 disabled:opacity-50 transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 transition-all"
                 >
                   <Save className="w-4 h-4" />
                   <span>{saving ? 'সংরক্ষণ হচ্ছে...' : 'AI সেটিংস ও API Keys সংরক্ষণ করুন'}</span>
@@ -691,15 +691,15 @@ export default function AdminAiSettingsPage() {
         </div>
 
         {/* Right: Live AI Sandbox Chat Tester (5 cols) */}
-        <div className="lg:col-span-5 bg-[#120e20] border border-purple-900/30 rounded-3xl p-6 shadow-2xl flex flex-col h-[650px]">
-          <div className="flex items-center justify-between pb-3 border-b border-purple-900/20 mb-3">
+        <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs flex flex-col h-[650px] text-slate-900">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <div>
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Bot className="w-4 h-4 text-purple-400" />
+              <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Bot className="w-4 h-4 text-purple-600" />
                 <span>লাইভ AI রেসপন্স টেস্ট</span>
               </h4>
-              <p className="text-[11px] text-purple-300/70 mt-0.5">
-                অ্যাক্টিভ ইঞ্জিন: <strong className="text-cyan-300">{provider} ({model})</strong>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                অ্যাক্টিভ ইঞ্জিন: <strong className="text-purple-700 font-semibold">{provider} ({model})</strong>
               </p>
             </div>
             <button
@@ -712,7 +712,7 @@ export default function AdminAiSettingsPage() {
                   },
                 ])
               }
-              className="text-[10px] text-purple-400 hover:text-purple-300 underline"
+              className="text-[10px] text-purple-600 hover:text-purple-800 underline"
             >
               ক্লিয়ার চ্যাট
             </button>
@@ -727,8 +727,8 @@ export default function AdminAiSettingsPage() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${
                       isUser
-                        ? 'bg-purple-600 text-white rounded-tr-none'
-                        : 'bg-[#1a142c] text-purple-100 rounded-tl-none border border-purple-900/30'
+                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-tr-none shadow-xs'
+                        : 'bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200/80 shadow-2xs'
                     }`}
                   >
                     <div className="flex items-center justify-between text-[10px] opacity-75 mb-1">
@@ -741,7 +741,7 @@ export default function AdminAiSettingsPage() {
             })}
             {testingChat && (
               <div className="flex justify-start">
-                <div className="bg-[#1a142c] text-purple-300 rounded-2xl p-3 text-xs rounded-tl-none border border-purple-900/30 animate-pulse">
+                <div className="bg-purple-50 text-purple-700 rounded-2xl p-3 text-xs rounded-tl-none border border-purple-200 animate-pulse">
                   AI টাইপ করছে...
                 </div>
               </div>
@@ -749,18 +749,18 @@ export default function AdminAiSettingsPage() {
           </div>
 
           {/* Chat Input */}
-          <form onSubmit={handleTestChat} className="pt-3 border-t border-purple-900/20 flex gap-2">
+          <form onSubmit={handleTestChat} className="pt-3 border-t border-slate-100 flex gap-2">
             <input
               type="text"
               value={testMessage}
               onChange={(e) => setTestMessage(e.target.value)}
               placeholder="বাংলা, English বা Banglish এ টেস্ট মেসেজ লিখুন..."
-              className="flex-1 px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500"
+              className="flex-1 px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
             />
             <button
               type="submit"
               disabled={testingChat || !testMessage.trim()}
-              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs disabled:opacity-50 transition-all flex items-center gap-1.5"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs disabled:opacity-50 transition-all flex items-center gap-1.5 shadow-xs"
             >
               <Send className="w-3.5 h-3.5" />
               <span>পাঠান</span>

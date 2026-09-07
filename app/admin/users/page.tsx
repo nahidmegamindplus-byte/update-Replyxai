@@ -214,15 +214,15 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-900">{u.fullName}</div>
-                      <div className="text-[11px] text-gray-400 font-mono">{u.email}</div>
+                      <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
                       {u.phone && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] text-gray-400 font-mono">{u.phone}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">{u.phone}</span>
                           <a
                             href={`https://wa.me/${u.phone.replace(/[^\d]/g, '').replace(/^01/, '8801')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[9px] font-bold"
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-[9px] font-bold"
                             title="WhatsApp এ কথা বলুন"
                           >
                             <MessageCircle className="w-2.5 h-2.5" />
@@ -233,20 +233,20 @@ export default function AdminUsersPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-white mb-0.5">{u.businessName || 'N/A'}</div>
+                      <div className="font-bold text-slate-900 mb-0.5">{u.businessName || 'N/A'}</div>
                       {u.facebookPageUrl ? (
                         <a
                           href={u.facebookPageUrl.startsWith('http') ? u.facebookPageUrl : `https://${u.facebookPageUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-400 hover:underline max-w-[200px] truncate"
+                          className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 hover:underline max-w-[200px] truncate"
                           title={u.facebookPageUrl}
                         >
                           <Globe className="w-3 h-3 shrink-0" />
                           <span className="truncate">{u.facebookPageUrl.replace(/^https?:\/\/(www\.)?facebook\.com\//, '')}</span>
                         </a>
                       ) : (
-                        <span className="text-[10px] text-gray-500">পেজ লিঙ্ক নেই</span>
+                        <span className="text-[10px] text-slate-400">পেজ লিঙ্ক নেই</span>
                       )}
                     </td>
 
@@ -254,8 +254,8 @@ export default function AdminUsersPage() {
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           u.role === 'ADMIN'
-                            ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                            : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}
                       >
                         {u.role}
@@ -263,14 +263,14 @@ export default function AdminUsersPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-mono font-semibold text-emerald-400 text-xs">{u.plan}</div>
+                      <div className="font-mono font-semibold text-purple-700 text-xs">{u.plan}</div>
                       <span
                         className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold ${
                           u.planStatus === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : u.planStatus === 'PENDING_APPROVAL'
-                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
-                            : 'bg-gray-500/10 text-gray-400 border border-gray-500/30'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-slate-100 text-slate-500 border border-slate-200'
                         }`}
                       >
                         {u.planStatus === 'ACTIVE'
@@ -281,7 +281,7 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 text-gray-400">
+                    <td className="py-3.5 px-4 text-slate-500">
                       {u._count.pages} পেজ • {u._count.products} প্রোডাক্ট • {u._count.orders} অর্ডার
                     </td>
 
@@ -290,8 +290,8 @@ export default function AdminUsersPage() {
                         onClick={() => handleToggleStatus(u.id, u.status)}
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                           u.status === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
@@ -299,7 +299,7 @@ export default function AdminUsersPage() {
                       </button>
                     </td>
 
-                    <td className="py-3.5 px-4 text-gray-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
 
@@ -307,21 +307,21 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg bg-[#1a1f2e] hover:bg-purple-500/20 text-gray-300 hover:text-purple-300 transition-colors"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs"
                           title="সম্পাদনা ও পাসওয়ার্ড সেট করুন"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg bg-[#1a1f2e] hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 transition-colors"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs"
                           title="পাসওয়ার্ড রিসেট করুন"
                         >
                           <Key className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteUser(u.id, u.email)}
-                          className="p-1.5 rounded-lg bg-[#1a1f2e] hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs"
                           title="মুছে ফেলুন"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

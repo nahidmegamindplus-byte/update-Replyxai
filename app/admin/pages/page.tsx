@@ -121,14 +121,14 @@ export default function AdminPagesPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={p.autoReplyEnabled ? 'text-emerald-400 font-semibold' : 'text-gray-500'}>
+                      <span className={p.autoReplyEnabled ? 'text-emerald-700 font-semibold' : 'text-slate-400'}>
                         {p.autoReplyEnabled ? 'সক্রিয় (ON)' : 'বন্ধ (OFF)'}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-gray-400">
+                    <td className="py-3.5 px-4 text-slate-500">
                       {p.counts?.conversations || 0} চ্যাট • {p.counts?.orders || 0} অর্ডার
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500 text-[11px]">
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                       {new Date(p.createdAt).toLocaleDateString()}
                     </td>
                   </tr>

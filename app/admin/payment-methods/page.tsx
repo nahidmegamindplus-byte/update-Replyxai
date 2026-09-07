@@ -141,9 +141,9 @@ export default function AdminPaymentMethodsPage() {
     >
       <div className="max-w-5xl space-y-6">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-xs text-purple-200">
-            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-purple-50 border border-purple-200/80 p-5 rounded-2xl shadow-xs">
+          <div className="flex items-center gap-3 text-xs text-slate-700">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
             <span>
               গ্রাহকরা চেকআউট পেজে এই নম্বরগুলোতে <strong>Send Money</strong> করবে এবং TrxID প্রদান করবে।
             </span>
@@ -151,7 +151,7 @@ export default function AdminPaymentMethodsPage() {
 
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 transition-all shrink-0"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-xs transition-all shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>নতুন মেথড যুক্ত করুন</span>
@@ -160,23 +160,23 @@ export default function AdminPaymentMethodsPage() {
 
         {/* Methods Grid */}
         {loading ? (
-          <div className="py-24 text-center text-sm text-gray-400">পেমেন্ট মেথড লোড হচ্ছে...</div>
+          <div className="py-24 text-center text-sm text-slate-500">পেমেন্ট মেথড লোড হচ্ছে...</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {methods.map((pm) => {
               const colorMap: any = {
-                BKASH: 'from-pink-500/20 to-rose-500/10 border-pink-500/30 text-pink-400',
-                NAGAD: 'from-orange-500/20 to-amber-500/10 border-orange-500/30 text-orange-400',
-                ROCKET: 'from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400',
-                UPAY: 'from-blue-500/20 to-cyan-500/10 border-blue-500/30 text-blue-400',
+                BKASH: 'from-pink-50 to-rose-50 border-pink-200 text-pink-700',
+                NAGAD: 'from-orange-50 to-amber-50 border-orange-200 text-orange-700',
+                ROCKET: 'from-purple-50 to-indigo-50 border-purple-200 text-purple-700',
+                UPAY: 'from-blue-50 to-cyan-50 border-blue-200 text-blue-700',
               };
 
-              const style = colorMap[pm.name] || 'from-purple-500/20 to-indigo-500/10 border-purple-500/30 text-purple-400';
+              const style = colorMap[pm.name] || 'from-purple-50 to-indigo-50 border-purple-200 text-purple-700';
 
               return (
                 <div
                   key={pm.id}
-                  className="bg-[#120e20] border border-purple-900/30 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col justify-between"
+                  className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all relative overflow-hidden flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -186,45 +186,45 @@ export default function AdminPaymentMethodsPage() {
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           pm.isActive
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                            : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
                         {pm.isActive ? 'সক্রিয় (Active)' : 'নিষ্ক্রিয় (Inactive)'}
                       </span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-[#0a0812] border border-purple-900/30 space-y-2 mb-4">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 mb-4">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">একাউন্ট টাইপ:</span>
-                        <span className="font-semibold text-white">{pm.accountType}</span>
+                        <span className="text-slate-500">একাউন্ট টাইপ:</span>
+                        <span className="font-semibold text-slate-900">{pm.accountType}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">রিসিভার নম্বর:</span>
-                        <span className="font-mono text-cyan-300 font-extrabold text-sm">{pm.accountNumber}</span>
+                        <span className="text-slate-500">রিসিভার নম্বর:</span>
+                        <span className="font-mono text-purple-700 font-extrabold text-sm">{pm.accountNumber}</span>
                       </div>
                     </div>
 
-                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {pm.instructions || 'Send Money করে TrxID দিন।'}
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-purple-900/20 flex items-center justify-between">
-                    <span className="text-[11px] text-gray-500">
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500">
                       {pm._count?.orders || 0} টি পেমেন্ট অর্ডার
                     </span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenEdit(pm)}
-                        className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 border border-purple-500/30 text-xs transition-colors"
+                        className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs transition-colors shadow-2xs"
                         title="সম্পাদনা করুন"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(pm.id, pm.displayName)}
-                        className="p-2 rounded-xl bg-[#0a0812] hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-purple-900/40 text-xs transition-colors"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 text-xs transition-colors shadow-2xs"
                         title="মুছে ফেলুন"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -240,24 +240,24 @@ export default function AdminPaymentMethodsPage() {
 
       {/* Add / Edit Payment Method Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#120e20] border border-purple-900/40 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative text-slate-900">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-white p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-bold text-white mb-1">
+            <h3 className="text-base font-bold text-slate-900 mb-1">
               {editingMethod ? `${editingMethod.displayName} কনফিগারেশন` : 'নতুন পেমেন্ট মেথড তৈরি'}
             </h3>
-            <p className="text-xs text-purple-300/70 mb-6">রিসিভার মোবাইল নম্বর এবং গ্রাহক নির্দেশনা লিখুন</p>
+            <p className="text-xs text-slate-500 mb-6">রিসিভার মোবাইল নম্বর এবং গ্রাহক নির্দেশনা লিখুন</p>
 
             <form onSubmit={handleSave} className="space-y-4">
               {!editingMethod && (
                 <div>
-                  <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     মেথডের কীওয়ার্ড/কোড (e.g. CELLFIN, TAP) *
                   </label>
                   <input
@@ -266,13 +266,13 @@ export default function AdminPaymentMethodsPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="যেমন: CELLFIN"
-                    className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono uppercase focus:outline-none focus:border-purple-500"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono uppercase focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   ডিসপ্লে নাম (Display Name) *
                 </label>
                 <input
@@ -281,35 +281,35 @@ export default function AdminPaymentMethodsPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="যেমন: সেলফিন / বিকাশ"
-                  className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   টাকা গ্রহণের মোবাইল নম্বর *
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
                     placeholder="01XXXXXXXXX"
-                    className="w-full pl-10 pr-4 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   একাউন্ট টাইপ
                 </label>
                 <select
                   value={accountType}
                   onChange={(e) => setAccountType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
                 >
                   <option value="Personal">Personal (ব্যক্তিগত)</option>
                   <option value="Merchant">Merchant (মার্চেন্ট)</option>
@@ -318,7 +318,7 @@ export default function AdminPaymentMethodsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   গ্রাহকদের জন্য নির্দেশনা (Instructions)
                 </label>
                 <textarea
@@ -326,12 +326,12 @@ export default function AdminPaymentMethodsPage() {
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                   placeholder="যেমন: বিকাশ অ্যাপ থেকে Send Money করুন এবং Transaction ID দিন।"
-                  className="w-full px-3.5 py-2 bg-[#0a0812] border border-purple-900/40 rounded-xl text-white text-xs leading-relaxed focus:outline-none focus:border-purple-500"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs leading-relaxed focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10"
                 />
               </div>
 
               <div className="pt-2">
-                <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isActive}
@@ -342,18 +342,18 @@ export default function AdminPaymentMethodsPage() {
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-900/30">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#0a0812] text-gray-400 text-xs font-semibold hover:text-white"
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/25 disabled:opacity-50 transition-all"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-xs disabled:opacity-50 transition-all"
                 >
                   {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
                 </button>
