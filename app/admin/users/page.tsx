@@ -181,7 +181,7 @@ export default function AdminUsersPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="নাম, ইমেইল, ব্যবসা বা FB Page URL খুঁজুন..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 shadow-xs transition-all"
             />
           </div>
         </div>
@@ -360,7 +360,7 @@ export default function AdminUsersPage() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
                 />
               </div>
 
@@ -373,7 +373,7 @@ export default function AdminUsersPage() {
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
                 />
               </div>
 
@@ -386,7 +386,7 @@ export default function AdminUsersPage() {
                   value={facebookPageUrl}
                   onChange={(e) => setFacebookPageUrl(e.target.value)}
                   placeholder="https://facebook.com/yourpage"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
                 />
               </div>
 
@@ -399,7 +399,7 @@ export default function AdminUsersPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="যেমন: +8801521716613"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
                 />
               </div>
 
@@ -437,7 +437,7 @@ export default function AdminUsersPage() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
+                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
                   >
                     <option value="USER">USER</option>
                     <option value="ADMIN">ADMIN</option>
@@ -449,7 +449,7 @@ export default function AdminUsersPage() {
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
+                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
                   >
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="DISABLED">DISABLED</option>
@@ -461,7 +461,7 @@ export default function AdminUsersPage() {
                   <select
                     value={plan}
                     onChange={(e) => setPlan(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-indigo-600"
+                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
                   >
                     <option value="STARTER">STARTER</option>
                     <option value="BUSINESS">BUSINESS</option>

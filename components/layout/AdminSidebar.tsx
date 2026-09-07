@@ -66,7 +66,7 @@ export default function AdminSidebar({ user, isOpenMobile, onCloseMobile }: Admi
     <>
       {isOpenMobile && (
         <div
-          className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-slate-900/60 z-40 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={onCloseMobile}
         />
       )}

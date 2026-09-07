@@ -66,7 +66,7 @@ export default function AdminPagesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="পেজ নাম, Page ID বা মালিকের নাম..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 shadow-xs transition-all"
             />
           </div>
         </div>
