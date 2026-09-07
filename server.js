@@ -215,6 +215,21 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    // C2. ROUTE ALIASES: Direct friendly URLs redirect to canonical dashboard routes
+    const routeAliases = {
+      '/automation': '/dashboard/ai-rules',
+      '/customers': '/dashboard/conversations',
+      '/messages': '/dashboard/conversations',
+      '/analytics': '/dashboard/reports',
+      '/settings': '/dashboard/settings',
+      '/profile': '/dashboard/settings',
+    };
+    if (routeAliases[pathname]) {
+      res.statusCode = 307;
+      res.setHeader('Location', routeAliases[pathname]);
+      return res.end();
+    }
+
     // D. DYNAMIC PAGES & API ROUTES: Await engine if still preparing
     if (!isReady) {
       await preparePromise;

@@ -71,6 +71,14 @@ export default function RootLayout({
           }}
         />
 
+        {/* ChunkLoadError & CDN Cache Auto-Recovery */}
+        <script
+          id="chunk-recovery"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof window==='undefined')return;window.addEventListener('error',function(e){var msg=(e&&e.message)?e.message:'';if(/Loading chunk .* failed/i.test(msg)||/ChunkLoadError/i.test(msg)){var key='replyx_chunk_retry';var now=Date.now();var last=Number(sessionStorage.getItem(key)||'0');if(!last||now-last>5000){sessionStorage.setItem(key,String(now));window.location.reload();}}});window.addEventListener('load',function(){try{sessionStorage.removeItem('replyx_chunk_retry');}catch(_){}});})();`,
+          }}
+        />
+
         {/* Inlined CSS: Guaranteed instant layout with zero FOUC on all browsers */}
         {inlinedTailwindCss ? (
           <style

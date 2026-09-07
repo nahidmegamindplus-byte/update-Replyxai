@@ -52,6 +52,12 @@ try {
     safeCopyDir(nextStaticDir, underscoreNextStaticDir);
     console.log('[Assets] Static chunks mirrored to _next/static.');
   }
+  // Bidirectional protection: keep historical chunks in both directories to prevent ChunkLoadError
+  const oldChunksDir = path.join(underscoreNextStaticDir, 'chunks');
+  const newChunksDir = path.join(nextStaticDir, 'chunks');
+  if (fs.existsSync(oldChunksDir) && fs.existsSync(newChunksDir)) {
+    safeCopyDir(oldChunksDir, newChunksDir);
+  }
 } catch (err) {
   console.warn('[Assets Warning] Mirroring notice:', err.message);
 }

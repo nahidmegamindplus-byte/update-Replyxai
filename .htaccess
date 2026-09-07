@@ -1,6 +1,14 @@
 # ==============================================================================
-# ReplyX AI — Safe Hostinger LiteSpeed / Apache Configuration
+# ReplyX AI — Production Hostinger LiteSpeed / Apache & Passenger Configuration
 # ==============================================================================
+
+# Phusion Passenger configuration for Hostinger Cloud / Shared cPanel Node.js Selector
+<IfModule mod_passenger.c>
+  PassengerNodejs /usr/bin/node
+  PassengerAppType node
+  PassengerStartupFile server.js
+  PassengerRestartDir tmp
+</IfModule>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -48,9 +56,18 @@
   AddType font/woff2 .woff2
 </IfModule>
 
-# CORS & Security headers so no browser blocks stylesheets or scripts
+# Granular Caching & CORS Headers:
+# 1. HTML pages: Always fresh (prevents outdated chunk hashes & ChunkLoadError after deploy)
+# 2. Static assets: 1-Year immutable caching with CORS & nosniff
 <IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
   <FilesMatch "\.(css|js|mjs|json|svg|png|jpg|jpeg|webp|gif|ico|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
     Header set X-Content-Type-Options "nosniff"
@@ -61,4 +78,5 @@
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json image/svg+xml
 </IfModule>
+
 
