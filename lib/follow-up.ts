@@ -3,6 +3,7 @@ import { decrypt } from '@/lib/crypto';
 import { sendChannelMessage, SocialChannel } from '@/lib/social';
 import { serverLogger, logActivity } from '@/lib/logger';
 import { getAdminAiSettings } from '@/lib/ai';
+import { ensureDatabaseReady } from '@/lib/db-init';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 
@@ -76,6 +77,7 @@ export const DEFAULT_SCHEDULE_STEPS: ScheduleStepItem[] = [
  */
 export async function getActiveScheduleSteps(userId?: string, pageId?: string): Promise<ScheduleStepItem[]> {
   try {
+    await ensureDatabaseReady();
     if (pageId) {
       const pageSteps = await prisma.followUpScheduleStep.findMany({
         where: { pageId, isEnabled: true },
@@ -270,6 +272,7 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
   let sentCount = 0;
 
   try {
+    await ensureDatabaseReady();
     const pageFilter: any = {
       followUpEnabled: true,
       connectionStatus: { not: 'DISCONNECTED' },

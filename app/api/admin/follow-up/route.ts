@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { ensureDatabaseReady } from '@/lib/db-init';
 import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker } from '@/lib/follow-up';
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const auth = await requireAdmin(req);
     if ('response' in auth) return auth.response;
 
@@ -95,6 +97,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const auth = await requireAdmin(req);
     if ('response' in auth) return auth.response;
 
@@ -167,6 +170,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    await ensureDatabaseReady();
     const auth = await requireAdmin(req);
     if ('response' in auth) return auth.response;
 

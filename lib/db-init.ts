@@ -284,6 +284,43 @@ export async function ensureDatabaseReady() {
       );
     `);
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FollowUpScheduleStep" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT,
+        "pageId" TEXT,
+        "stepNumber" INTEGER NOT NULL DEFAULT 1,
+        "dayOffset" INTEGER NOT NULL DEFAULT 1,
+        "timeOfDay" TEXT NOT NULL DEFAULT '10:00',
+        "title" TEXT NOT NULL,
+        "guidelinePrompt" TEXT,
+        "isEnabled" BOOLEAN NOT NULL DEFAULT 1,
+        "isGlobalDefault" BOOLEAN NOT NULL DEFAULT 0,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "FollowUpLog" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        "pageId" TEXT NOT NULL,
+        "conversationId" TEXT NOT NULL,
+        "stepNumber" INTEGER NOT NULL DEFAULT 1,
+        "dayOffset" INTEGER NOT NULL DEFAULT 1,
+        "scheduledTime" TEXT,
+        "messageText" TEXT NOT NULL,
+        "channel" TEXT NOT NULL DEFAULT 'FACEBOOK',
+        "customerName" TEXT,
+        "senderPsid" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'SENT',
+        "aiModel" TEXT,
+        "responseReceivedAt" DATETIME,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Self-healing migration for multi-channel support with column pre-check
     try {
       const pageColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Page");`)) as Array<{ name: string }>;
@@ -300,6 +337,9 @@ export async function ensureDatabaseReady() {
       }
       if (!existingPageCols.has('replyDelaySeconds')) {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "replyDelaySeconds" INTEGER NOT NULL DEFAULT 3;`);
+      }
+      if (!existingPageCols.has('aiInstructions')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "aiInstructions" TEXT;`);
       }
       if (!existingPageCols.has('followUpEnabled')) {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "followUpEnabled" BOOLEAN NOT NULL DEFAULT 0;`);
@@ -355,6 +395,15 @@ export async function ensureDatabaseReady() {
       }
       if (!existingConvCols.has('followUpSentCount')) {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpSentCount" INTEGER NOT NULL DEFAULT 0;`);
+      }
+      if (!existingConvCols.has('followUpStatus')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "followUpStatus" TEXT NOT NULL DEFAULT 'IDLE';`);
+      }
+      if (!existingConvCols.has('currentFollowUpStep')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "currentFollowUpStep" INTEGER NOT NULL DEFAULT 0;`);
+      }
+      if (!existingConvCols.has('nextFollowUpDueAt')) {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "Conversation" ADD COLUMN "nextFollowUpDueAt" DATETIME;`);
       }
 
       // Ensure null connectionStatus defaults to PENDING
