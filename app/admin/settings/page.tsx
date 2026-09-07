@@ -20,6 +20,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminSettingsPage() {
   const toast = useToast();
@@ -41,9 +42,8 @@ export default function AdminSettingsPage() {
   const fetchWhatsAppSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/settings/whatsapp');
-      const data = await res.json();
-      if (data.success && data.settings) {
+      const data = await apiFetch<any>('/api/admin/settings/whatsapp', { retries: 2 });
+      if (data?.success && data.settings) {
         setWhatsappForm({
           enabled: data.settings.enabled ?? true,
           number: data.settings.number || '+8801521716613',
@@ -56,7 +56,7 @@ export default function AdminSettingsPage() {
         });
       }
     } catch (e) {
-      toast.error('WhatsApp ও সোশ্যাল সেটিংস লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

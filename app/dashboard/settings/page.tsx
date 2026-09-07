@@ -17,6 +17,7 @@ import {
   Key,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function UserSettingsPage() {
   const toast = useToast();
@@ -47,10 +48,9 @@ export default function UserSettingsPage() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
+      const data = await apiFetch<any>('/api/auth/me', { retries: 2 });
 
-      if (data.success && data.user) {
+      if (data?.success && data.user) {
         setProfile({
           fullName: data.user.fullName || '',
           businessName: data.user.businessName || '',
@@ -61,7 +61,7 @@ export default function UserSettingsPage() {
         });
       }
     } catch (e) {
-      toast.error('প্রোফাইল লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

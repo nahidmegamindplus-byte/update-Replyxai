@@ -17,6 +17,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AiRulesPage() {
   const toast = useToast();
@@ -60,9 +61,8 @@ export default function AiRulesPage() {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/pages');
-      const data = await res.json();
-      if (data.success && data.pages.length > 0) {
+      const data = await apiFetch<any>('/api/pages', { retries: 2 });
+      if (data?.success && Array.isArray(data.pages) && data.pages.length > 0) {
         setPages(data.pages);
         setSelectedPageId(data.pages[0].id);
         setCustomPrompt(data.pages[0].aiInstructions || '');

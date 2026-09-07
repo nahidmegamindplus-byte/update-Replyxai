@@ -13,17 +13,25 @@ interface DashboardLayoutProps {
   subtitle?: string;
 }
 
+// In-memory module cache for instant sub-page navigation without blocking loading spinner
+let cachedDashboardUser: any = null;
+
 export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(cachedDashboardUser);
+  const [loading, setLoading] = useState(!cachedDashboardUser);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function checkAuth() {
       try {
-        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 600 });
+        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 400, timeoutMs: 8000 });
+        if (!isMounted) return;
+
         if (data && data.success && data.user) {
+          cachedDashboardUser = data.user;
           // Gating: If normal user does not have an active package, redirect to /subscribe
           if (data.user.role !== 'ADMIN' && data.user.planStatus !== 'ACTIVE') {
             router.push('/subscribe');
@@ -31,19 +39,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           }
           setUser(data.user);
         } else {
+          cachedDashboardUser = null;
           router.push('/login');
         }
       } catch (err) {
-        router.push('/login');
+        if (!cachedDashboardUser) {
+          router.push('/login');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

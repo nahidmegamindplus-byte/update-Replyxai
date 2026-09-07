@@ -23,6 +23,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -83,31 +84,26 @@ function CheckoutContent() {
     try {
       setLoading(true);
 
-      const [userRes, subRes, pkgRes, pmRes] = await Promise.all([
-        fetch('/api/auth/me'),
-        fetch('/api/packages/my-subscription'),
-        fetch('/api/packages'),
-        fetch('/api/payment-methods'),
+      const [userData, subData, pkgData, pmData] = await Promise.all([
+        apiFetch<any>('/api/auth/me', { retries: 2 }),
+        apiFetch<any>('/api/packages/my-subscription', { retries: 2 }),
+        apiFetch<any>('/api/packages', { retries: 2 }),
+        apiFetch<any>('/api/payment-methods', { retries: 2 }),
       ]);
 
-      const userData = await userRes.json();
-      if (!userData.success || !userData.user) {
+      if (!userData?.success || !userData?.user) {
         toast.error('অর্ডার সম্পন্ন করতে অনুগ্রহ করে প্রথমে লগইন বা রেজিস্ট্রেশন করুন।');
         router.push(`/login?redirect=/checkout${packageIdParam ? `?packageId=${packageIdParam}` : ''}`);
         return;
       }
       setCurrentUser(userData.user);
 
-      const subData = await subRes.json();
-      if (subData.success) {
+      if (subData?.success) {
         setSubscription(subData.subscription);
       }
 
-      const pkgData = await pkgRes.json();
-      const pmData = await pmRes.json();
-
       let targetPkg = null;
-      if (pkgData.success && pkgData.packages?.length > 0) {
+      if (pkgData?.success && pkgData.packages?.length > 0) {
         setPackages(pkgData.packages);
 
         if (packageIdParam) {
@@ -119,7 +115,7 @@ function CheckoutContent() {
         setSelectedPackage(targetPkg);
       }
 
-      if (pmData.success && pmData.paymentMethods?.length > 0) {
+      if (pmData?.success && pmData.paymentMethods?.length > 0) {
         setPaymentMethods(pmData.paymentMethods);
         setSelectedMethod(pmData.paymentMethods[0]);
       }

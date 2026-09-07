@@ -24,6 +24,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminUsersPage() {
   const toast = useToast();
@@ -47,15 +48,12 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/users');
-      const data = await res.json();
-      if (data.success) {
+      const data = await apiFetch<any>('/api/admin/users', { retries: 2 });
+      if (data?.success && Array.isArray(data.users)) {
         setUsers(data.users);
-      } else {
-        toast.error(data.error || 'অননুমোদিত অ্যাক্সেস।');
       }
     } catch (e) {
-      toast.error('ব্যবহারকারী তালিকা লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

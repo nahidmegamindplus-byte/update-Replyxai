@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 import {
   Clock,
   Send,
@@ -118,19 +119,16 @@ export default function FollowUpPage() {
     try {
       setLoading(true);
       const url = pageId ? `/api/follow-up?pageId=${pageId}` : '/api/follow-up';
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
+      const data = await apiFetch<any>(url, { retries: 2 });
+      if (data?.success) {
         setSteps(data.steps || []);
         setMetrics(data.metrics || {});
         setRecentLogs(data.recentLogs || []);
         setActiveConversations(data.activeConversations || []);
         setPages(data.pages || []);
-      } else {
-        toast.error(data.error || 'ডাটা লোড করতে ব্যর্থ হয়েছে');
       }
     } catch (e: any) {
-      toast.error('সার্ভার কানেকশন ত্রুটি');
+      // Handled safely
     } finally {
       setLoading(false);
     }

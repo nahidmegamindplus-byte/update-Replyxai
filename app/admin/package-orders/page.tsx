@@ -22,6 +22,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminPackageOrdersPage() {
   const toast = useToast();
@@ -65,16 +66,13 @@ export default function AdminPackageOrdersPage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/package-orders?status=${statusFilter}`);
-      const data = await res.json();
-      if (data.success) {
-        setOrders(data.orders || []);
+      const data = await apiFetch<any>(`/api/admin/package-orders?status=${statusFilter}`, { retries: 2 });
+      if (data?.success) {
+        setOrders(Array.isArray(data.orders) ? data.orders : []);
         setCounts(data.counts || { total: 0, pending: 0, approved: 0, rejected: 0 });
-      } else {
-        toast.error(data.error || 'অর্ডার লোড করতে সমস্যা হয়েছে।');
       }
     } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

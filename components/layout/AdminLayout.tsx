@@ -15,37 +15,55 @@ interface AdminLayoutProps {
   subtitle?: string;
 }
 
+// In-memory module cache for instant sub-page navigation in Admin panel
+let cachedAdminUser: any = null;
+
 export default function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(cachedAdminUser);
+  const [loading, setLoading] = useState(!cachedAdminUser);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function checkAdminAuth() {
       try {
-        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 600 });
+        const data = await apiFetch<any>('/api/auth/me', { retries: 2, retryDelayMs: 400, timeoutMs: 8000 });
+        if (!isMounted) return;
+
         if (data && data.success && data.user) {
           if (data.user.role !== 'ADMIN') {
+            cachedAdminUser = null;
             setIsUnauthorized(true);
           } else {
+            cachedAdminUser = data.user;
             setUser(data.user);
           }
         } else {
+          cachedAdminUser = null;
           router.push('/login');
         }
       } catch (err) {
-        router.push('/login');
+        if (!cachedAdminUser) {
+          router.push('/login');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     checkAdminAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
-  if (loading) {
+  if (loading && !user && !isUnauthorized) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">

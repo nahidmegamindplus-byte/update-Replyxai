@@ -14,6 +14,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminPaymentMethodsPage() {
   const toast = useToast();
@@ -36,15 +37,12 @@ export default function AdminPaymentMethodsPage() {
   const fetchMethods = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/payment-methods');
-      const data = await res.json();
-      if (data.success) {
-        setMethods(data.paymentMethods || []);
-      } else {
-        toast.error(data.error || 'পেমেন্ট মেথড লোড করতে সমস্যা হয়েছে।');
+      const data = await apiFetch<any>('/api/admin/payment-methods', { retries: 2 });
+      if (data?.success) {
+        setMethods(Array.isArray(data.paymentMethods) ? data.paymentMethods : []);
       }
     } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

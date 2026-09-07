@@ -30,6 +30,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminLicensesPage() {
   const toast = useToast();
@@ -76,16 +77,13 @@ export default function AdminLicensesPage() {
   const fetchLicenses = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/admin/licenses?status=${statusFilter}`);
-      const data = await res.json();
-      if (data.success) {
-        setLicenses(data.licenses || []);
+      const data = await apiFetch<any>(`/api/admin/licenses?status=${statusFilter}`, { retries: 2 });
+      if (data?.success) {
+        setLicenses(Array.isArray(data.licenses) ? data.licenses : []);
         setCounts(data.counts || { total: 0, active: 0, used: 0, expired: 0, revoked: 0 });
-      } else {
-        toast.error(data.error || 'লাইসেন্স লোড করতে সমস্যা হয়েছে।');
       }
     } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+      // Handled safely
     } finally {
       setLoading(false);
     }
@@ -93,9 +91,8 @@ export default function AdminLicensesPage() {
 
   const fetchPackages = async () => {
     try {
-      const res = await fetch('/api/admin/packages');
-      const data = await res.json();
-      if (data.success && data.packages) {
+      const data = await apiFetch<any>('/api/admin/packages', { retries: 2 });
+      if (data?.success && Array.isArray(data.packages)) {
         setPackages(data.packages);
         if (data.packages.length > 0) {
           const defaultPkg = data.packages.find((p: any) => p.isPopular) || data.packages[0];

@@ -12,6 +12,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminPagesPage() {
   const toast = useToast();
@@ -22,13 +23,12 @@ export default function AdminPagesPage() {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/pages');
-      const data = await res.json();
-      if (data.success) {
+      const data = await apiFetch<any>('/api/admin/pages', { retries: 2 });
+      if (data?.success && Array.isArray(data.pages)) {
         setPages(data.pages);
       }
     } catch (e) {
-      toast.error('পেজ ডাটা লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

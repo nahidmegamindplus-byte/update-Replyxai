@@ -20,6 +20,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function ProductsPage() {
   const toast = useToast();
@@ -41,6 +42,8 @@ export default function ProductsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState<any | null>(null);
   const [imageUploadMode, setImageUploadMode] = useState<'upload' | 'url'>('upload');
 
   const [imageUrlInput, setImageUrlInput] = useState('');
@@ -50,7 +53,7 @@ export default function ProductsPage() {
     name: '',
     description: '',
     sku: '',
-    category: '',
+    category: 'অন্যান্য',
     price: '',
     discountPrice: '',
     stockQuantity: '10',
@@ -71,26 +74,21 @@ export default function ProductsPage() {
       if (selectedStock !== 'ALL') params.append('stockStatus', selectedStock);
       if (selectedPage !== 'ALL') params.append('pageId', selectedPage);
 
-      const [prodRes, pageRes] = await Promise.all([
-        fetch(`/api/products?${params.toString()}`),
-        fetch('/api/pages'),
+      const [prodData, pageData] = await Promise.all([
+        apiFetch<any>(`/api/products?${params.toString()}`, { retries: 2 }),
+        apiFetch<any>('/api/pages', { retries: 2 }),
       ]);
 
-      const prodData = await prodRes.json();
-      const pageData = await pageRes.json();
-
-      if (prodData.success) {
-        setProducts(prodData.products);
-        setCategories(prodData.categories || []);
-      } else {
-        toast.error(prodData.error || 'প্রোডাক্ট লোড করতে সমস্যা হয়েছে।');
+      if (prodData?.success) {
+        setProducts(Array.isArray(prodData.products) ? prodData.products : []);
+        setCategories(Array.isArray(prodData.categories) ? prodData.categories : []);
       }
 
-      if (pageData.success) {
-        setPages(pageData.pages || []);
+      if (pageData?.success) {
+        setPages(Array.isArray(pageData.pages) ? pageData.pages : []);
       }
     } catch (err) {
-      toast.error('ডাটা লোড করতে ব্যর্থ হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

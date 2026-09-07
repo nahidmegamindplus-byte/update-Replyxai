@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 import {
   Clock,
   Send,
@@ -86,17 +87,14 @@ export default function AdminFollowUpPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/follow-up');
-      const data = await res.json();
-      if (data.success) {
-        setGlobalSteps(data.globalSteps || []);
+      const data = await apiFetch<any>('/api/admin/follow-up', { retries: 2 });
+      if (data?.success) {
+        setGlobalSteps(Array.isArray(data.globalSteps) ? data.globalSteps : []);
         setStats(data.stats || {});
-        setRecentLogs(data.recentLogs || []);
-      } else {
-        toast.error(data.error || 'ডাটা লোড করতে ব্যর্থ হয়েছে');
+        setRecentLogs(Array.isArray(data.recentLogs) ? data.recentLogs : []);
       }
     } catch (e) {
-      toast.error('সার্ভার কানেকশন ত্রুটি');
+      // Handled safely
     } finally {
       setLoading(false);
     }

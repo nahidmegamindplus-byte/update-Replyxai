@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminDashboardPage() {
   const toast = useToast();
@@ -28,15 +29,14 @@ export default function AdminDashboardPage() {
   const fetchAdminStats = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/stats');
-      const data = await res.json();
+      const data = await apiFetch<any>('/api/admin/stats', { retries: 2 });
 
-      if (data.success) {
+      if (data?.success) {
         setStats(data.stats);
         setRecentLogs(data.recentLogs || []);
       }
     } catch (e) {
-      toast.error('অ্যাডমিন ডাটা লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

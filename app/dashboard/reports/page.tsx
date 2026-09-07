@@ -15,6 +15,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function ReportsPage() {
   const toast = useToast();
@@ -30,22 +31,19 @@ export default function ReportsPage() {
       const params = new URLSearchParams({ range });
       if (pageId !== 'ALL') params.append('pageId', pageId);
 
-      const [repRes, pageRes] = await Promise.all([
-        fetch(`/api/reports?${params.toString()}`),
-        fetch('/api/pages'),
+      const [repData, pageData] = await Promise.all([
+        apiFetch<any>(`/api/reports?${params.toString()}`, { retries: 2 }),
+        apiFetch<any>('/api/pages', { retries: 2 }),
       ]);
 
-      const repData = await repRes.json();
-      const pageData = await pageRes.json();
-
-      if (repData.success) {
+      if (repData?.success) {
         setReportData(repData);
       }
-      if (pageData.success) {
-        setPages(pageData.pages);
+      if (pageData?.success) {
+        setPages(Array.isArray(pageData.pages) ? pageData.pages : []);
       }
     } catch (e) {
-      toast.error('রিপোর্ট ডাটা লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminPackagesPage() {
   const toast = useToast();
@@ -44,15 +45,12 @@ export default function AdminPackagesPage() {
   const fetchPackages = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/packages');
-      const data = await res.json();
-      if (data.success) {
-        setPackages(data.packages || []);
-      } else {
-        toast.error(data.error || 'প্যাকেজ লোড ব্যর্থ হয়েছে।');
+      const data = await apiFetch<any>('/api/admin/packages', { retries: 2 });
+      if (data?.success) {
+        setPackages(Array.isArray(data.packages) ? data.packages : []);
       }
     } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

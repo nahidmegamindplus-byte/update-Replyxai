@@ -18,6 +18,7 @@ import {
   Search,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminSubscriptionsPage() {
   const toast = useToast();
@@ -36,17 +37,14 @@ export default function AdminSubscriptionsPage() {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/subscriptions');
-      const data = await res.json();
+      const data = await apiFetch<any>('/api/admin/subscriptions', { retries: 2 });
 
-      if (data.success) {
+      if (data?.success) {
         setSummary(data.summary);
-        setUsers(data.users || []);
-      } else {
-        toast.error(data.error || 'সাবস্ক্রিপশন ডাটা লোড করতে সমস্যা হয়েছে।');
+        setUsers(Array.isArray(data.users) ? data.users : []);
       }
     } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

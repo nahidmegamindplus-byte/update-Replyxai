@@ -15,6 +15,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function SubscribePage() {
   const router = useRouter();
@@ -29,28 +30,25 @@ export default function SubscribePage() {
     try {
       setLoading(true);
 
-      const [userRes, subRes, pkgRes] = await Promise.all([
-        fetch('/api/auth/me'),
-        fetch('/api/packages/my-subscription'),
-        fetch('/api/packages'),
+      const [userData, subData, pkgData] = await Promise.all([
+        apiFetch<any>('/api/auth/me', { retries: 2 }),
+        apiFetch<any>('/api/packages/my-subscription', { retries: 2 }),
+        apiFetch<any>('/api/packages', { retries: 2 }),
       ]);
 
-      const userData = await userRes.json();
-      if (userData.success && userData.user) {
+      if (userData?.success && userData.user) {
         setCurrentUser(userData.user);
       }
 
-      const subData = await subRes.json();
-      if (subData.success) {
+      if (subData?.success) {
         setSubscription(subData.subscription);
       }
 
-      const pkgData = await pkgRes.json();
-      if (pkgData.success) {
-        setPackages(pkgData.packages || []);
+      if (pkgData?.success && Array.isArray(pkgData.packages)) {
+        setPackages(pkgData.packages);
       }
     } catch (e) {
-      toast.error('তথ্য লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

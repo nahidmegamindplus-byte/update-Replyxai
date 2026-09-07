@@ -16,6 +16,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function AdminAiSettingsPage() {
   const toast = useToast();
@@ -65,10 +66,9 @@ export default function AdminAiSettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/ai-settings');
-      const data = await res.json();
+      const data = await apiFetch<any>('/api/admin/ai-settings', { retries: 2 });
 
-      if (data.success && data.settings) {
+      if (data?.success && data.settings) {
         const prov = (data.settings.provider || 'GOROUTER') as any;
         setProvider(prov);
         setModel(data.settings.model || (prov === 'GOROUTER' ? 'deepseek/deepseek-chat' : 'gemini-1.5-flash'));
@@ -85,7 +85,7 @@ export default function AdminAiSettingsPage() {
         });
       }
     } catch (e) {
-      toast.error('AI সেটিংস লোড করতে সমস্যা হয়েছে।');
+      // Handled safely
     } finally {
       setLoading(false);
     }

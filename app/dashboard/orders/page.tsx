@@ -23,6 +23,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { apiFetch } from '@/lib/api-client';
 
 export default function OrdersPage() {
   const toast = useToast();
@@ -84,19 +85,16 @@ export default function OrdersPage() {
       if (statusFilter !== 'ALL') params.append('status', statusFilter);
       if (selectedPageId !== 'ALL') params.append('pageId', selectedPageId);
 
-      const [orderRes, pageRes] = await Promise.all([
-        fetch(`/api/orders?${params.toString()}`),
-        fetch('/api/pages'),
+      const [orderData, pageData] = await Promise.all([
+        apiFetch<any>(`/api/orders?${params.toString()}`, { retries: 2 }),
+        apiFetch<any>('/api/pages', { retries: 2 }),
       ]);
 
-      const orderData = await orderRes.json();
-      const pageData = await pageRes.json();
-
-      if (orderData.success) {
-        setOrders(orderData.orders || []);
+      if (orderData?.success) {
+        setOrders(Array.isArray(orderData.orders) ? orderData.orders : []);
         if (orderData.counts) setCounts(orderData.counts);
       }
-      if (pageData.success && pageData.pages?.length > 0) {
+      if (pageData?.success && pageData.pages?.length > 0) {
         setPages(pageData.pages);
         if (!addForm.pageId) {
           setAddForm((prev) => ({ ...prev, pageId: pageData.pages[0].id }));
