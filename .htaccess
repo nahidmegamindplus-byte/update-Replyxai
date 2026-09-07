@@ -17,10 +17,22 @@
   RewriteRule ^prisma/.*\.db-wal - [F,L,NC]
   RewriteRule ^prisma/.*\.db-shm - [F,L,NC]
 
-  # 3. Allow direct access to physical static assets in _next/static and public
+  # 3. Direct access to existing physical static files
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Direct access for Next.js static CSS & JS in .next/static or _next/static
+  RewriteCond %{DOCUMENT_ROOT}/.next/static/$1 -f
+  RewriteRule ^_next/static/(.*)$ .next/static/$1 [L]
+
   RewriteCond %{DOCUMENT_ROOT}/_next/static/$1 -f
   RewriteRule ^_next/static/(.*)$ _next/static/$1 [L]
 
+  # Direct access for global.css
+  RewriteCond %{DOCUMENT_ROOT}/public/global.css -f
+  RewriteRule ^global\.css$ public/global.css [L]
+
+  # Direct access for public assets
   RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
   RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
@@ -36,7 +48,17 @@
   AddType font/woff2 .woff2
 </IfModule>
 
+# CORS & Security headers so no browser blocks stylesheets or scripts
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|mjs|json|svg|png|jpg|jpeg|webp|gif|ico|woff|woff2|ttf|eot)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+    Header set X-Content-Type-Options "nosniff"
+  </FilesMatch>
+</IfModule>
+
 # Browser Gzip / Deflate compression for ultra-fast page loading
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript application/json image/svg+xml
 </IfModule>
+

@@ -120,6 +120,9 @@ function serveStaticFile(filePath, res) {
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', contentType);
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   const stream = fs.createReadStream(filePath);
   stream.on('error', () => {
     if (!res.headersSent) {
@@ -159,28 +162,44 @@ const server = createServer(async (req, res) => {
     const parsedUrl = parse(req.url, true);
     const pathname = parsedUrl.pathname || '';
 
+    // Handle OPTIONS preflight requests for static assets and API
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS, PUT, DELETE');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.statusCode = 204;
+      return res.end();
+    }
+
     // A. INSTANT STATIC DELIVERY FOR /global.css
     if (pathname === '/global.css') {
-      const globalCssPath = path.join(__dirname, 'public', 'global.css');
-      if (fs.existsSync(globalCssPath)) {
-        return serveStaticFile(globalCssPath, res);
-      }
-      const rootCssPath = path.join(__dirname, 'global.css');
-      if (fs.existsSync(rootCssPath)) {
-        return serveStaticFile(rootCssPath, res);
+      const candidates = [
+        path.join(__dirname, 'public', 'global.css'),
+        path.join(__dirname, 'global.css'),
+      ];
+      for (const p of candidates) {
+        if (fs.existsSync(p) && !fs.statSync(p).isDirectory()) {
+          return serveStaticFile(p, res);
+        }
       }
     }
 
     // B. INSTANT STATIC DELIVERY FOR /_next/static/ (Fixes broken styles & 404s completely)
     if (pathname.startsWith('/_next/static/')) {
       const relPath = pathname.slice('/_next/static/'.length);
-      const fullPath = path.normalize(path.join(__dirname, '.next', 'static', relPath));
-      if (
-        fullPath.startsWith(path.join(__dirname, '.next', 'static')) &&
-        fs.existsSync(fullPath) &&
-        !fs.statSync(fullPath).isDirectory()
-      ) {
-        return serveStaticFile(fullPath, res);
+      const candidates = [
+        path.normalize(path.join(__dirname, '.next', 'static', relPath)),
+        path.normalize(path.join(__dirname, '_next', 'static', relPath)),
+      ];
+      for (const fullPath of candidates) {
+        if (
+          (fullPath.startsWith(path.join(__dirname, '.next', 'static')) ||
+           fullPath.startsWith(path.join(__dirname, '_next', 'static'))) &&
+          fs.existsSync(fullPath) &&
+          !fs.statSync(fullPath).isDirectory()
+        ) {
+          return serveStaticFile(fullPath, res);
+        }
       }
     }
 

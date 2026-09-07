@@ -1,4 +1,4 @@
-// File: /Users/naimulislam/Documents/Update  replay X/app/api/webhooks/telegram/route.ts
+// File: C:\Users\User\.gemini\antigravity-ide\scratch\update-Replyxai\app\api\webhooks\telegram\route.ts
 import * as entry from '../../../../../../app/api/webhooks/telegram/route.js'
 import type { NextRequest } from 'next/server.js'
 

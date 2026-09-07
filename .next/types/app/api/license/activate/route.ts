@@ -1,4 +1,4 @@
-// File: /Users/naimulislam/Documents/Update  replay X/app/api/license/activate/route.ts
+// File: C:\Users\User\.gemini\antigravity-ide\scratch\update-Replyxai\app\api\license\activate\route.ts
 import * as entry from '../../../../../../app/api/license/activate/route.js'
 import type { NextRequest } from 'next/server.js'
 

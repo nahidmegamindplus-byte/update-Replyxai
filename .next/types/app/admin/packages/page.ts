@@ -1,4 +1,4 @@
-// File: /Users/naimulislam/Documents/Update  replay X/app/admin/packages/page.tsx
+// File: C:\Users\User\.gemini\antigravity-ide\scratch\update-Replyxai\app\admin\packages\page.tsx
 import * as entry from '../../../../../app/admin/packages/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

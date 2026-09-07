@@ -1,4 +1,4 @@
-// File: /Users/naimulislam/Documents/Update  replay X/app/api/pages/[id]/route.ts
+// File: C:\Users\User\.gemini\antigravity-ide\scratch\update-Replyxai\app\api\pages\[id]\route.ts
 import * as entry from '../../../../../../app/api/pages/[id]/route.js'
 import type { NextRequest } from 'next/server.js'
 
