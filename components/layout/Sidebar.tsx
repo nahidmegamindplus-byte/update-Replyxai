@@ -16,6 +16,7 @@ import {
   LogOut,
   Sparkles,
   X,
+  Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
@@ -52,6 +53,7 @@ export default function Sidebar({ user, isOpenMobile, onCloseMobile }: SidebarPr
     { href: '/dashboard/pages', label: 'সোশ্যাল চ্যানেল', icon: Layers },
     { href: '/dashboard/products', label: 'প্রোডাক্ট ইনভেন্টরি', icon: Package },
     { href: '/dashboard/ai-rules', label: 'AI নিয়মাবলী', icon: Bot },
+    { href: '/dashboard/follow-up', label: 'AI ফলো-আপ শিডিউল', icon: Clock },
     { href: '/dashboard/conversations', label: 'কথোপকথন', icon: MessageSquare },
     { href: '/dashboard/orders', label: 'অর্ডারসমূহ', icon: ShoppingCart },
     { href: '/dashboard/reports', label: 'রিপোর্ট ও অ্যানালিটিক্স', icon: BarChart3 },

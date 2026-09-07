@@ -2,6 +2,9 @@ import prisma from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import { sendChannelMessage, SocialChannel } from '@/lib/social';
 import { serverLogger, logActivity } from '@/lib/logger';
+import { getAdminAiSettings } from '@/lib/ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
 // Global singleton to prevent duplicate workers across Next.js reloads
 const globalForFollowUp = globalThis as unknown as {
@@ -9,16 +12,261 @@ const globalForFollowUp = globalThis as unknown as {
   isFollowUpWorkerRunning?: boolean;
 };
 
+export interface ScheduleStepItem {
+  id?: string;
+  stepNumber: number;
+  dayOffset: number;
+  timeOfDay: string; // "10:00", "16:00", "20:00"
+  title: string;
+  guidelinePrompt?: string | null;
+  isEnabled: boolean;
+  isGlobalDefault?: boolean;
+}
+
+export const DEFAULT_SCHEDULE_STEPS: ScheduleStepItem[] = [
+  {
+    stepNumber: 1,
+    dayOffset: 1,
+    timeOfDay: '10:00',
+    title: '১ম ফলো-আপ (১ দিন পর - সকাল ১০টা)',
+    guidelinePrompt: 'পছন্দের পণ্য নিয়ে কোনো জিজ্ঞাসা আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সহায়তা প্রয়োজন কিনা তা অত্যন্ত আন্তরিক ও বিনম্রভাবে জানতে চান।',
+    isEnabled: true,
+    isGlobalDefault: true,
+  },
+  {
+    stepNumber: 2,
+    dayOffset: 3,
+    timeOfDay: '16:00',
+    title: '২য় ফলো-আপ (৩ দিন পর - বিকাল ৪টা)',
+    guidelinePrompt: 'পণ্যের প্রিমিয়াম কোয়ালিটি ও ক্যাশ অন ডেলিভারি (COD) সুবিধার কথা মনে করিয়ে দিয়ে অর্ডার কনফার্ম করার সহজ প্রক্রিয়া জানান।',
+    isEnabled: true,
+    isGlobalDefault: true,
+  },
+  {
+    stepNumber: 3,
+    dayOffset: 7,
+    timeOfDay: '20:00',
+    title: '৩য় ফলো-আপ (৭ দিন পর - রাত ৮টা)',
+    guidelinePrompt: 'স্টক লিমিটেড হতে পারে বা দ্রুত ডেলিভারি সার্ভিসের বন্ধুত্বপূর্ণ রিমাইন্ডার দিন। আগের মেসেজের কথা সরাসরি পুনরাবৃত্তি করবেন না।',
+    isEnabled: true,
+    isGlobalDefault: true,
+  },
+  {
+    stepNumber: 4,
+    dayOffset: 15,
+    timeOfDay: '11:00',
+    title: '৪র্থ ফলো-আপ (১৫ দিন পর - সকাল ১১টা)',
+    guidelinePrompt: 'কোনো বিশেষ ছাড় বা পছন্দের অন্য কোনো পণ্য দেখতে চান কিনা অথবা কোনো ফিডব্যাক আছে কিনা জানতে চান।',
+    isEnabled: true,
+    isGlobalDefault: true,
+  },
+  {
+    stepNumber: 5,
+    dayOffset: 25,
+    timeOfDay: '17:00',
+    title: '৫ম ফলো-আপ (২৫ দিন পর - বিকাল ৫টা)',
+    guidelinePrompt: 'মাসের সমাপনী আন্তরিক সম্ভাষণ জানান এবং ভবিষ্যতে যেকোনো পণ্য বা সেবার জন্য যোগাযোগ করতে আমন্ত্রণ জানান।',
+    isEnabled: true,
+    isGlobalDefault: true,
+  },
+];
+
 /**
- * Check active pages with followUpEnabled and dispatch automated follow-up messages
- * to customers who have seen/read the last response or remained inactive for the configured wait time.
+ * Fetch active schedule steps for a specific page / user, falling back to global defaults
+ */
+export async function getActiveScheduleSteps(userId?: string, pageId?: string): Promise<ScheduleStepItem[]> {
+  try {
+    if (pageId) {
+      const pageSteps = await prisma.followUpScheduleStep.findMany({
+        where: { pageId, isEnabled: true },
+        orderBy: { stepNumber: 'asc' },
+      });
+      if (pageSteps.length > 0) return pageSteps;
+    }
+
+    if (userId) {
+      const userSteps = await prisma.followUpScheduleStep.findMany({
+        where: { userId, pageId: null, isEnabled: true },
+        orderBy: { stepNumber: 'asc' },
+      });
+      if (userSteps.length > 0) return userSteps;
+    }
+
+    const globalSteps = await prisma.followUpScheduleStep.findMany({
+      where: { isGlobalDefault: true, isEnabled: true },
+      orderBy: { stepNumber: 'asc' },
+    });
+    if (globalSteps.length > 0) return globalSteps;
+  } catch (error) {
+    serverLogger.error('Error fetching schedule steps:', error);
+  }
+
+  return DEFAULT_SCHEDULE_STEPS;
+}
+
+/**
+ * AI-powered Contextual Follow-up Message Generator with Past Follow-up Memory
+ * Guarantees distinct, non-repetitive, high-converting messages.
+ */
+export async function generateAiFollowUpMessage(params: {
+  conversationId: string;
+  customerName?: string | null;
+  step: ScheduleStepItem;
+  conversationHistory: Array<{ direction: string; text: string }>;
+  previousFollowUps: string[];
+  pageName: string;
+  replyLanguage?: string;
+  businessInstructions?: string;
+}): Promise<{ text: string; model: string }> {
+  const {
+    customerName = 'গ্রাহক',
+    step,
+    conversationHistory,
+    previousFollowUps,
+    pageName,
+    replyLanguage = 'বাংলা',
+    businessInstructions = '',
+  } = params;
+
+  const customerDisplayName = customerName?.split(' ')[0] || 'সম্মানিত গ্রাহক';
+
+  try {
+    const adminAi = await getAdminAiSettings();
+    const provider = adminAi.provider;
+    const modelName = adminAi.model;
+
+    const historyFormatted = conversationHistory
+      .slice(-8)
+      .map((m) => `${m.direction === 'INCOMING' ? 'Customer' : 'Page/Shop'}: ${m.text}`)
+      .join('\n');
+
+    const previousFollowUpsFormatted =
+      previousFollowUps.length > 0
+        ? previousFollowUps.map((p, idx) => `[Follow-Up #${idx + 1} Sent]: "${p}"`).join('\n')
+        : 'None (This is the 1st follow-up)';
+
+    const systemPrompt = `You are a high-conversion, extremely polite, natural sales & customer success assistant for "${pageName}".
+Your task is to craft an intelligent, personalized follow-up message to a customer who previously chatted with our page but has not yet placed an order or completed service.
+
+CRITICAL NON-REPETITION & CONTEXT RULES:
+1. STRICTLY DO NOT repeat the exact phrases, greetings, or sentences from previous follow-ups listed below.
+2. Read the customer's previous conversation history to understand what product or inquiry they were interested in.
+3. This is Step #${step.stepNumber} (${step.title}). Step guidance: "${step.guidelinePrompt || 'Polite, helpful follow-up.'}".
+4. Tone: Warm, helpful, respectful, non-pushy, and professional (Bengali e-commerce standard).
+5. Language: Use natural ${replyLanguage} (e.g. Standard Bengali with emojis like 😊, 🛍️, 📦).
+6. Length: Concise (1-3 sentences). Do NOT add quotation marks or metadata tags. Return ONLY the raw message to be sent directly to the customer.
+
+[PREVIOUS FOLLOW-UPS SENT TO THIS CUSTOMER (DO NOT REPEAT THESE)]:
+${previousFollowUpsFormatted}
+
+[BUSINESS INSTRUCTIONS / POLICIES]:
+${businessInstructions || 'Cash on Delivery (COD) available all over Bangladesh. Fast delivery.'}
+`;
+
+    const userPrompt = `[CUSTOMER NAME]: ${customerDisplayName}
+[PREVIOUS CHAT HISTORY]:
+${historyFormatted || 'Customer previously greeted and asked for product information.'}
+
+Please craft the Step #${step.stepNumber} follow-up message now:`;
+
+    if (provider === 'GEMINI') {
+      const activeGeminiKey = adminAi.geminiKey || process.env.GEMINI_API_KEY || '';
+      if (activeGeminiKey) {
+        const genAI = new GoogleGenerativeAI(activeGeminiKey);
+        const geminiModel = genAI.getGenerativeModel({
+          model: modelName || 'gemini-1.5-flash',
+          systemInstruction: systemPrompt,
+          generationConfig: {
+            temperature: 0.75,
+            maxOutputTokens: 250,
+          },
+        });
+
+        const result = await geminiModel.generateContent(userPrompt);
+        const generatedText = result.response.text().trim().replace(/^["']|["']$/g, '');
+        if (generatedText) {
+          return { text: generatedText, model: `GEMINI:${modelName || 'gemini-1.5-flash'}` };
+        }
+      }
+    } else if (provider === 'OPENAI') {
+      const activeOpenaiKey = adminAi.openaiKey || process.env.OPENAI_API_KEY || '';
+      if (activeOpenaiKey) {
+        const openai = new OpenAI({ apiKey: activeOpenaiKey });
+        const res = await openai.chat.completions.create({
+          model: modelName || 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.75,
+          max_tokens: 250,
+        });
+        const generatedText = res.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, '');
+        if (generatedText) {
+          return { text: generatedText, model: `OPENAI:${modelName || 'gpt-4o-mini'}` };
+        }
+      }
+    } else if (provider === 'DEEPSEEK' || provider === 'GOROUTER' || provider === 'OPENROUTER') {
+      const apiKey =
+        provider === 'DEEPSEEK'
+          ? adminAi.deepseekKey || process.env.DEEPSEEK_API_KEY || ''
+          : adminAi.gorouterKey || process.env.GOROUTER_API_KEY || '';
+      const baseURL = provider === 'DEEPSEEK' ? 'https://api.deepseek.com/v1' : adminAi.gorouterBaseUrl;
+
+      if (apiKey) {
+        const client = new OpenAI({ apiKey, baseURL });
+        const res = await client.chat.completions.create({
+          model: modelName || (provider === 'DEEPSEEK' ? 'deepseek-chat' : 'deepseek/deepseek-chat'),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.75,
+          max_tokens: 250,
+        });
+        const generatedText = res.choices[0]?.message?.content?.trim().replace(/^["']|["']$/g, '');
+        if (generatedText) {
+          return { text: generatedText, model: `${provider}:${modelName || 'chat'}` };
+        }
+      }
+    }
+  } catch (err) {
+    serverLogger.warn('AI follow-up generation failed, falling back to smart dynamic template:', err);
+  }
+
+  // Smart Dynamic Fallbacks based on Step Number
+  let fallbackText = '';
+  switch (step.stepNumber) {
+    case 1:
+      fallbackText = `আসসালামু আলাইকুম ${customerDisplayName}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন ছিল কি? কোনো সহায়তা লাগলে জানাবেন, আমরা এখনই অর্ডার কনফার্ম করে দিচ্ছি! 😊🛍️`;
+      break;
+    case 2:
+      fallbackText = `প্রিয় ${customerDisplayName}, আশা করি ভালো আছেন। আমাদের পণ্যটিতে ক্যাশ অন ডেলিভারি (COD) এবং দ্রুত ডেলিভারির সুবিধা রয়েছে। আপনার অর্ডারটি কি কনফার্ম করে দেব? 📦✨`;
+      break;
+    case 3:
+      fallbackText = `হ্যালো ${customerDisplayName}! আপনার পছন্দের প্রোডাক্টটির স্টক কিন্তু সীমিত। আপনি চাইলে আপনার জন্য স্টক হোল্ড করে রাখতে পারি। জানাতে পারেন! 😊`;
+      break;
+    case 4:
+      fallbackText = `আসসালামু আলাইকুম ${customerDisplayName}, কোনো বিশেষ অফার বা অন্য কোনো প্রোডাক্ট দেখতে চাইলে আমাদের জানাতে পারেন। আপনার সেবায় আমরা সর্বদা প্রস্তুত! 🌟`;
+      break;
+    case 5:
+    default:
+      fallbackText = `শ্রদ্ধেয় ${customerDisplayName}, আমাদের সাথে যুক্ত থাকার জন্য আন্তরিক ধন্যবাদ। যেকোনো সময় পণ্য বা সেবার জন্য আমাদের মেসেজ দিতে পারেন। শুভকামনা! 💐`;
+      break;
+  }
+
+  return { text: fallbackText, model: 'TEMPLATE_FALLBACK' };
+}
+
+/**
+ * Check active pages with followUpEnabled and dispatch multi-step automated follow-up messages.
  */
 export async function runFollowUpAutomation(targetPageId?: string): Promise<{
   scannedPages: number;
   sentCount: number;
-  results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string }>;
+  results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string; stepNumber?: number }>;
 }> {
-  const results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string }> = [];
+  const results: Array<{ pageId: string; conversationId: string; customer: string; status: string; channel: string; stepNumber?: number }> = [];
   let sentCount = 0;
 
   try {
@@ -36,22 +284,6 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
     });
 
     for (const page of activePages) {
-      const waitMinutes = Math.max(1, page.followUpWaitMinutes || 30);
-      const cutoffTime = new Date(Date.now() - waitMinutes * 60 * 1000);
-
-      // Determine recurrence interval
-      // ONCE: only send 1 time ever
-      // DAILY: 24 hours gap between subsequent messages
-      // CUSTOM_INTERVAL: user-defined hours gap (e.g. 6, 12, 48 hours)
-      const intervalHours =
-        page.followUpFrequency === 'DAILY'
-          ? 24
-          : page.followUpFrequency === 'CUSTOM_INTERVAL'
-          ? (page.followUpIntervalHours || 24)
-          : 87600; // ~10 years for ONCE
-      const minGapTime = new Date(Date.now() - intervalHours * 60 * 60 * 1000);
-      const maxCount = page.followUpMaxCount || 1;
-
       const pageAccessToken = decrypt(page.pageAccessTokenEncrypted);
       if (!pageAccessToken) continue;
 
@@ -62,111 +294,123 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         } catch (_) {}
       }
 
-      // Find candidate conversations
+      // Fetch customized or global schedule steps for this page/user
+      const scheduleSteps = await getActiveScheduleSteps(page.userId, page.id);
+      if (scheduleSteps.length === 0) continue;
+
+      // Scans conversations within the 35-day window
+      const thirtyFiveDaysAgo = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000);
+
       const candidates = await prisma.conversation.findMany({
         where: {
           pageId: page.id,
           status: 'ACTIVE',
           aiEnabled: true,
-          lastMessageAt: { lte: cutoffTime },
+          followUpStatus: { notIn: ['COMPLETED', 'PAUSED', 'ORDER_PLACED', 'CUSTOMER_REPLIED'] },
+          lastMessageAt: { gte: thirtyFiveDaysAgo },
         },
         include: {
           messages: {
             orderBy: { createdAt: 'desc' },
-            take: 2,
+            take: 10,
           },
           orders: {
             where: {
-              createdAt: { gte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+              createdAt: { gte: thirtyFiveDaysAgo },
             },
             take: 1,
           },
+          followUpLogs: {
+            orderBy: { createdAt: 'asc' },
+            take: 10,
+          },
         },
-        take: 50,
+        take: 100,
       });
 
       for (const conv of candidates) {
         const channel = (conv.channel || page.channel || 'FACEBOOK') as SocialChannel;
         const customerName = conv.customerName || conv.senderPsid;
 
-        // 1. If customer already placed an order in this conversation in the last 48h, skip sales follow-up
+        // 1. Check if customer placed an order -> mark status and stop follow-ups
         if (conv.orders && conv.orders.length > 0) {
+          await prisma.conversation.update({
+            where: { id: conv.id },
+            data: { followUpStatus: 'ORDER_PLACED' },
+          });
           continue;
         }
 
-        // 2. Check maximum follow-up count condition in JavaScript (immune to SQLite null issues)
-        const currentSentCount = conv.followUpSentCount || 0;
-        if (currentSentCount >= maxCount) {
-          continue;
-        }
-
-        // 3. Check recurrence gap if already followed up previously
-        if (conv.lastFollowUpSentAt && conv.lastFollowUpSentAt > minGapTime) {
-          continue;
-        }
-
-        // 4. Last message must be OUTGOING (Store/AI replied and customer didn't answer)
-        const lastMsg = conv.messages[0];
-        if (!lastMsg || lastMsg.direction !== 'OUTGOING') {
-          continue;
-        }
-
-        // 5. Seen / Read vs Unseen condition evaluation
-        if (page.followUpOnlySeen) {
-          if (conv.lastSeenAt) {
-            // Seen timestamp must have happened at least waitMinutes ago
-            if (conv.lastSeenAt > cutoffTime) {
-              continue; // viewed recently, give customer more time
-            }
-          } else {
-            // Read receipt not reported by platform:
-            // Telegram, X, and basic Instagram webhooks do not support read receipts.
-            const supportsReadReceipts = channel === 'FACEBOOK' || channel === 'WHATSAPP';
-            if (supportsReadReceipts) {
-              // For Facebook/WhatsApp, if read receipt wasn't fired, wait for 2x wait time before sending
-              const doubleCutoff = new Date(Date.now() - waitMinutes * 2 * 60 * 1000);
-              if (conv.lastMessageAt > doubleCutoff) {
-                continue;
-              }
-            } else {
-              // For Telegram/X/Instagram, use lastMessageAt directly
-              if (conv.lastMessageAt > cutoffTime) {
-                continue;
-              }
-            }
+        // 2. Check if customer replied after our last follow-up / outgoing message
+        const latestMsg = conv.messages[0];
+        if (latestMsg && latestMsg.direction === 'INCOMING') {
+          // If customer sent the last message, update status to CUSTOMER_REPLIED
+          if (conv.currentFollowUpStep > 0 || conv.followUpSentCount > 0) {
+            await prisma.conversation.update({
+              where: { id: conv.id },
+              data: { followUpStatus: 'CUSTOMER_REPLIED' },
+            });
+            continue;
           }
-        } else {
-          // followUpOnlySeen is OFF (Recommended "Super Conversion"):
-          const effectiveLastActivity =
-            conv.lastSeenAt && conv.lastSeenAt > conv.lastMessageAt
-              ? conv.lastSeenAt
-              : conv.lastMessageAt;
+          // If customer just messaged and no follow-up sent yet, wait for normal bot reply first
+          continue;
+        }
 
-          if (effectiveLastActivity > cutoffTime) {
+        // 3. Determine next target step
+        const currentStepIndex = conv.currentFollowUpStep || 0;
+        if (currentStepIndex >= scheduleSteps.length) {
+          await prisma.conversation.update({
+            where: { id: conv.id },
+            data: { followUpStatus: 'COMPLETED' },
+          });
+          continue;
+        }
+
+        const targetStep = scheduleSteps[currentStepIndex];
+        const stepDayOffset = targetStep.dayOffset;
+
+        // Calculate time elapsed since the original customer interaction / conversation start
+        // or last non-follow-up outgoing message
+        const conversationBaseTime = conv.createdAt ? new Date(conv.createdAt).getTime() : Date.now();
+        const requiredDelayMs = stepDayOffset * 24 * 60 * 60 * 1000;
+        const targetDueTime = conversationBaseTime + requiredDelayMs;
+
+        // Condition A: Has the required day offset passed?
+        if (Date.now() < targetDueTime) {
+          continue;
+        }
+
+        // Condition B: Prevent multiple follow-ups on the same day (minimum 18 hours gap from last follow-up)
+        if (conv.lastFollowUpSentAt) {
+          const lastSentTime = new Date(conv.lastFollowUpSentAt).getTime();
+          const minGapMs = 18 * 60 * 60 * 1000;
+          if (Date.now() - lastSentTime < minGapMs) {
             continue;
           }
         }
 
-        // 6. Craft personalized follow-up message
-        const customerDisplayName = conv.customerName?.split(' ')[0] || 'স্যার/ম্যাম';
-        let followUpText = page.followUpMessage?.trim();
+        // 4. Generate AI follow-up message with non-repetition memory
+        const previousFollowUpTexts = (conv.followUpLogs || [])
+          .map((l) => l.messageText)
+          .filter((t) => typeof t === 'string' && t.trim().length > 0);
 
-        if (!followUpText) {
-          if (page.replyLanguage === 'ENGLISH') {
-            followUpText = `Hi ${customerDisplayName}, just following up to see if you have any questions or need help placing your order? We're right here to assist you! 😊`;
-          } else if (page.replyLanguage === 'BANGLISH') {
-            followUpText = `Assalamu Alaikum ${customerDisplayName}! Apnar product ti niye kono proshno chilo kina jante chailam? Kono help lagle kindly bolben, amra order confirm kore dibo! 😊`;
-          } else {
-            followUpText = `আসসালামু আলাইকুম ${customerDisplayName}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন বা তথ্যের প্রয়োজন ছিল কি? কোনো জিজ্ঞাসা থাকলে জানাতে পারেন, আমরা অর্ডারটি কনফার্ম করে দিচ্ছি! 😊🛍️`;
-          }
-        } else {
-          followUpText = followUpText
-            .replace(/{name}/g, customerDisplayName)
-            .replace(/{customer}/g, customerDisplayName)
-            .replace(/{channel}/g, page.pageName);
-        }
+        const historyForAI = [...conv.messages].reverse().map((m) => ({
+          direction: m.direction,
+          text: m.messageText || '',
+        }));
 
-        // 7. Dispatch follow-up message to customer via social channel
+        const { text: followUpText, model: aiModelUsed } = await generateAiFollowUpMessage({
+          conversationId: conv.id,
+          customerName: conv.customerName,
+          step: targetStep,
+          conversationHistory: historyForAI,
+          previousFollowUps: previousFollowUpTexts,
+          pageName: page.pageName,
+          replyLanguage: page.replyLanguage || 'বাংলা',
+          businessInstructions: page.aiInstructions || '',
+        });
+
+        // 5. Send message via Social Channel
         const sendRes = await sendChannelMessage({
           channel,
           recipientId: conv.senderPsid,
@@ -179,7 +423,36 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         if (sendRes.success) {
           sentCount++;
 
-          // Record outgoing message in database
+          const isLastStep = currentStepIndex + 1 >= scheduleSteps.length;
+          const nextStatus = isLastStep ? 'COMPLETED' : 'IN_PROGRESS';
+          const nextStepNumber = currentStepIndex + 1;
+
+          // Next due date calculation
+          let nextDueAt: Date | null = null;
+          if (!isLastStep && scheduleSteps[nextStepNumber]) {
+            const nextStepObj = scheduleSteps[nextStepNumber];
+            nextDueAt = new Date(conversationBaseTime + nextStepObj.dayOffset * 24 * 60 * 60 * 1000);
+          }
+
+          // Record in FollowUpLog
+          await prisma.followUpLog.create({
+            data: {
+              userId: page.userId,
+              pageId: page.id,
+              conversationId: conv.id,
+              stepNumber: targetStep.stepNumber,
+              dayOffset: targetStep.dayOffset,
+              scheduledTime: targetStep.timeOfDay,
+              messageText: followUpText,
+              channel,
+              customerName: conv.customerName,
+              senderPsid: conv.senderPsid,
+              status: 'SENT',
+              aiModel: aiModelUsed,
+            },
+          });
+
+          // Record in Message table
           await prisma.message.create({
             data: {
               conversationId: conv.id,
@@ -190,18 +463,21 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
               messageType: 'TEXT',
               messageText: followUpText,
               aiGenerated: true,
-              aiModel: 'FOLLOW_UP_BOT',
+              aiModel: aiModelUsed,
             },
           });
 
-          // Update conversation lastFollowUpSentAt, lastMessage, and increment count
+          // Update Conversation
           await prisma.conversation.update({
             where: { id: conv.id },
             data: {
+              currentFollowUpStep: nextStepNumber,
+              followUpStatus: nextStatus,
               lastFollowUpSentAt: new Date(),
               lastMessage: followUpText,
               lastMessageAt: new Date(),
               followUpSentCount: { increment: 1 },
+              nextFollowUpDueAt: nextDueAt,
             },
           });
 
@@ -209,7 +485,7 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             userId: page.userId,
             pageId: page.id,
             action: 'FOLLOW_UP_SENT',
-            description: `স্বয়ংক্রিয় ফলো-আপ বার্তা পাঠানো হয়েছে গ্রাহক ${customerDisplayName} (${conv.senderPsid})-কে (${channel})`,
+            description: `স্বয়ংক্রিয় ধাপ #${targetStep.stepNumber} ফলো-আপ পাঠানো হয়েছে (${customerName}, ${channel})`,
           });
 
           results.push({
@@ -218,18 +494,36 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             customer: customerName,
             status: 'SENT',
             channel,
+            stepNumber: targetStep.stepNumber,
           });
 
-          serverLogger.info(
-            `Automated follow-up message sent to ${customerName} via ${channel}`
-          );
+          serverLogger.info(`[Follow-Up] Step #${targetStep.stepNumber} sent to ${customerName} (${channel})`);
         } else {
+          // Log failed attempt
+          await prisma.followUpLog.create({
+            data: {
+              userId: page.userId,
+              pageId: page.id,
+              conversationId: conv.id,
+              stepNumber: targetStep.stepNumber,
+              dayOffset: targetStep.dayOffset,
+              scheduledTime: targetStep.timeOfDay,
+              messageText: followUpText,
+              channel,
+              customerName: conv.customerName,
+              senderPsid: conv.senderPsid,
+              status: `FAILED: ${(sendRes as any).error || 'API Error'}`,
+              aiModel: aiModelUsed,
+            },
+          });
+
           results.push({
             pageId: page.id,
             conversationId: conv.id,
             customer: customerName,
             status: `FAILED: ${(sendRes as any).error || 'API Error'}`,
             channel,
+            stepNumber: targetStep.stepNumber,
           });
         }
       }
@@ -279,4 +573,3 @@ export function startFollowUpWorker(intervalMs = 60000) {
     globalForFollowUp.followUpWorkerInterval.unref();
   }
 }
-

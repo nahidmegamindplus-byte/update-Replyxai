@@ -19,6 +19,7 @@ import {
   CreditCard,
   FileCheck2,
   Key,
+  Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
@@ -56,6 +57,7 @@ export default function AdminSidebar({ user, isOpenMobile, onCloseMobile }: Admi
     { href: '/admin/packages', label: 'প্যাকেজসমূহ (Packages)', icon: PackageIcon },
     { href: '/admin/payment-methods', label: 'পেমেন্ট মেথডস (bKash/Nagad)', icon: CreditCard },
     { href: '/admin/ai-settings', label: 'AI ও API সেটিংস', icon: Cpu },
+    { href: '/admin/follow-up', label: 'গ্লোবাল AI ফলো-আপ কন্ট্রোল', icon: Clock },
     { href: '/admin/subscriptions', label: 'সাবস্ক্রিপশন ও ব্যবহার ট্র্যাকিং', icon: Sparkles },
     { href: '/admin/users', label: 'ব্যবহারকারী পরিচালনা', icon: Users },
     { href: '/admin/pages', label: 'গ্লোবাল পেজ সমূহ', icon: Layers },

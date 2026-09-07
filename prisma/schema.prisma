@@ -38,6 +38,8 @@ model User {
   aiSettings    AiSetting[]
   activityLogs  ActivityLog[]
   licenseKeys   LicenseKey[]
+  followUpSteps FollowUpScheduleStep[]
+  followUpLogs  FollowUpLog[]
 
   @@index([email])
   @@index([role])
@@ -75,8 +77,8 @@ model Page {
   followUpWaitMinutes       Int           @default(30) // Minutes to wait after seen/last message (e.g. 1, 5, 15, 30, 60)
   followUpMessage           String?       // Custom follow-up message template
   followUpOnlySeen          Boolean       @default(true) // Only send if customer seen/read the message
-  followUpMaxCount          Int           @default(1) // How many times total: 1 (only once), 2, 3, 5, or 99 (unlimited until reply)
-  followUpFrequency         String        @default("ONCE") // "ONCE" (only 1 time ever), "DAILY" (every day), "CUSTOM_INTERVAL" (every N hours)
+  followUpMaxCount          Int           @default(5) // How many times total: 1, 2, 3, 5, or 99
+  followUpFrequency         String        @default("CUSTOM_INTERVAL") // "ONCE", "DAILY", "CUSTOM_INTERVAL"
   followUpIntervalHours     Int           @default(24) // If DAILY or CUSTOM_INTERVAL: gap in hours between subsequent follow-ups
   createdAt                 DateTime      @default(now())
   updatedAt                 DateTime      @updatedAt
@@ -87,6 +89,8 @@ model Page {
   messages                  Message[]
   orders                    Order[]
   activityLogs              ActivityLog[]
+  followUpSteps             FollowUpScheduleStep[]
+  followUpLogs              FollowUpLog[]
 
   @@unique([userId, facebookPageId])
   @@index([userId])
@@ -137,6 +141,9 @@ model Conversation {
   lastSeenAt    DateTime?     // When the customer seen / read the last reply
   lastFollowUpSentAt DateTime? // When the automated follow-up was dispatched
   followUpSentCount  Int           @default(0) // How many automated follow-up messages have been dispatched
+  followUpStatus     String        @default("IDLE") // IDLE, IN_PROGRESS, COMPLETED, CUSTOMER_REPLIED, ORDER_PLACED, PAUSED
+  currentFollowUpStep Int          @default(0) // 0, 1, 2, 3, 4, 5
+  nextFollowUpDueAt  DateTime?     // Specific scheduled target timestamp
   imagesSentCount    Int           @default(0) // How many product images have been sent in this conversation
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -145,6 +152,7 @@ model Conversation {
   page          Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
   messages      Message[]
   orders        Order[]
+  followUpLogs  FollowUpLog[]
 
   @@unique([pageId, senderPsid])
   @@index([userId])
@@ -152,6 +160,8 @@ model Conversation {
   @@index([channel])
   @@index([senderPsid])
   @@index([lastMessageAt])
+  @@index([followUpStatus])
+  @@index([nextFollowUpDueAt])
 }
 
 model Message {
@@ -345,5 +355,56 @@ model LicenseKey {
   @@index([key])
   @@index([status])
   @@index([usedByUserId])
+}
+
+model FollowUpScheduleStep {
+  id              String         @id @default(uuid())
+  userId          String?
+  pageId          String?
+  stepNumber      Int            @default(1) // 1, 2, 3, 4, 5
+  dayOffset       Int            @default(1) // 1, 3, 7, 15, 25
+  timeOfDay       String         @default("10:00") // 24-hr format "10:00", "16:00", "20:00"
+  title           String         // e.g. "১ম ফলো-আপ (১ দিন পর)"
+  guidelinePrompt String?        // Custom AI guidance for this step
+  isEnabled       Boolean        @default(true)
+  isGlobalDefault Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user            User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page            Page?          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([pageId])
+  @@index([isGlobalDefault])
+  @@index([stepNumber])
+}
+
+model FollowUpLog {
+  id                  String       @id @default(uuid())
+  userId              String
+  pageId              String
+  conversationId      String
+  stepNumber          Int          @default(1)
+  dayOffset           Int          @default(1)
+  scheduledTime       String?
+  messageText         String
+  channel             String       @default("FACEBOOK")
+  customerName        String?
+  senderPsid          String
+  status              String       @default("SENT") // SENT, FAILED, CUSTOMER_REPLIED, CONVERTED
+  aiModel             String?
+  responseReceivedAt  DateTime?
+  createdAt           DateTime     @default(now())
+
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page                Page         @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([pageId])
+  @@index([conversationId])
+  @@index([status])
+  @@index([createdAt])
 }
 
