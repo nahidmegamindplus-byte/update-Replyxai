@@ -1498,7 +1498,7 @@ export default function PagesManagementPage() {
                                 key={preset.value}
                                 type="button"
                                 onClick={() => setEditForm({ ...editForm, maxImagesPerConversation: preset.value })}
-                                className={`py-1.5 px-2 rounded-lg text-xs font-semibold text-center transition-all ${
+                                className={`py-1.5 rounded-lg text-xs font-semibold transition-all ${
                                   (editForm.maxImagesPerConversation ?? 2) === preset.value
                                     ? 'bg-indigo-600 text-white shadow-sm'
                                     : 'bg-white text-slate-700 hover:bg-indigo-100/60 border border-indigo-200/60'
@@ -1637,12 +1637,21 @@ export default function PagesManagementPage() {
                     </div>
                   </div>
 
-                  {/* Section 5: Automated Follow-Up Messages for Seen/Unreplied Customers (User Request) */}
-                  <div className="bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-200/90 rounded-xl p-4 space-y-4">
+                  {/* Section 5: Automated Follow-Up Messages for Seen/Unreplied Customers (Moved to Follow-Up Hub) */}
+                  <div className="bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-amber-100/30 border border-amber-200 rounded-2xl p-5 space-y-4 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
-                        <MessageSquareReply className="w-4 h-4 text-amber-600" />
-                        অটোমেটেড ফলো-আপ মেসেজ (Seen কিন্তু Reply দেয়নি)
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                          <MessageSquareReply className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">
+                            অটোমেটেড ফলো-আপ (Seen কিন্তু Reply দেয়নি)
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            AI ফলো-আপ অটোমেশন ও শিডিউল হাব
+                          </div>
+                        </div>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -1656,388 +1665,42 @@ export default function PagesManagementPage() {
                     </div>
 
                     <p className="text-[11px] text-slate-600 leading-relaxed">
-                      যেসব গ্রাহক পেজের রিপ্লাই সিন (Seen / Read) করেছেন কিন্তু কোনো উত্তর বা অর্ডার দেননি, তাদের কাছে নির্দিষ্ট সময় পর স্বয়ংক্রিয়ভাবে আন্তরিক ফলো-আপ বার্তা পাঠানো হবে যাতে সেলস ড্রপ না হয়।
+                      যেসব গ্রাহক পেজের রিপ্লাই সিন (Seen / Read) করেছেন কিন্তু কোনো উত্তর বা অর্ডার দেননি, তাদের নির্দিষ্ট সময় (মিনিট/ঘন্টা/দিন) পর স্বয়ংক্রিয় ফলো-আপ বার্তা পাঠানো হয়। সম্পূর্ণ কাস্টম সময় ও মাল্টি-স্টেপ শিডিউল ফলো-আপ সেকশন থেকে ম্যানেজ করুন।
                     </p>
 
                     {editForm.followUpEnabled && (
-                      <div className="space-y-3 pt-2 border-t border-amber-200/60 animate-fadeIn">
-                        {/* Flexible Wait Time Selector (Starts from 1 minute) */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <label className="text-xs font-semibold text-slate-800">
-                              কতক্ষণ পর ফলো-আপ পাঠানো হবে? (১ মিনিট থেকে ইচ্ছামতো)
-                            </label>
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-600 text-white shadow-xs">
-                              {editForm.followUpWaitMinutes ?? 30} মিনিট পর
-                            </span>
+                      <div className="pt-2 border-t border-amber-200/70 space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200/60">
+                            <span className="text-slate-500 block text-[10px]">অপেক্ষার সময়:</span>
+                            <span className="font-bold text-amber-900">{editForm.followUpWaitMinutes ?? 30} মিনিট</span>
                           </div>
-
-                          {/* Quick Presets */}
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 mb-2.5">
-                            {[
-                              { mins: 1, label: '১ মিনিট', sub: 'তাৎক্ষণিক টেস্ট' },
-                              { mins: 5, label: '৫ মিনিট', sub: 'খুব দ্রুত' },
-                              { mins: 15, label: '১৫ মিনিট', sub: 'দ্রুত' },
-                              { mins: 30, label: '৩০ মিনিট', sub: 'স্ট্যান্ডার্ড' },
-                              { mins: 60, label: '১ ঘন্টা', sub: 'স্বাভাবিক' },
-                              { mins: 120, label: '২ ঘন্টা', sub: 'ধীরেসুস্থে' },
-                            ].map((p) => {
-                              const isSel = (editForm.followUpWaitMinutes ?? 30) === p.mins;
-                              return (
-                                <button
-                                  key={p.mins}
-                                  type="button"
-                                  onClick={() => setEditForm({ ...editForm, followUpWaitMinutes: p.mins })}
-                                  className={`p-1.5 rounded-xl border text-center transition-all ${
-                                    isSel
-                                      ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
-                                      : 'bg-white border-amber-200/80 text-slate-700 hover:border-amber-400 hover:bg-amber-50/50'
-                                  }`}
-                                >
-                                  <div className="text-xs font-bold">{p.label}</div>
-                                  <div className={`text-[9px] ${isSel ? 'text-amber-100' : 'text-slate-400'}`}>
-                                    {p.sub}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Custom Input & Range Slider */}
-                          <div className="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-[11px] font-medium text-slate-700">
-                                নিজের ইচ্ছামতো মিনিট টাইপ করুন:
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="10080"
-                                  value={editForm.followUpWaitMinutes ?? 30}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    setEditForm({
-                                      ...editForm,
-                                      followUpWaitMinutes: isNaN(val) ? '' : Math.max(1, val),
-                                    });
-                                  }}
-                                  className="w-20 px-2.5 py-1 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg text-amber-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                                />
-                                <span className="text-xs font-semibold text-slate-600">মিনিট</span>
-                              </div>
-                            </div>
-
-                            <input
-                              type="range"
-                              min="1"
-                              max="180"
-                              step="1"
-                              value={Math.min(180, editForm.followUpWaitMinutes || 1)}
-                              onChange={(e) =>
-                                setEditForm({
-                                  ...editForm,
-                                  followUpWaitMinutes: parseInt(e.target.value, 10),
-                                })
-                              }
-                              className="w-full accent-amber-600 cursor-pointer"
-                            />
-                            <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
-                              <span>১ মিনিট</span>
-                              <span>৩০ মিনিট</span>
-                              <span>১ ঘন্টা (৬০ মি)</span>
-                              <span>৩ ঘন্টা (১৮০ মি)</span>
-                            </div>
+                          <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200/60">
+                            <span className="text-slate-500 block text-[10px]">টার্গেট ফিল্টার:</span>
+                            <span className="font-bold text-amber-900">{editForm.followUpOnlySeen ? 'শুধু সিন করা গ্রাহক' : 'সকল গ্রাহক'}</span>
                           </div>
                         </div>
 
-                        {/* Condition Selector: Seen vs Unseen Target Audience */}
-                        <div className="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
-                          <label className="block text-xs font-semibold text-slate-800">
-                            ফলো-আপের টার্গেট অডিয়েন্স নির্বাচন করুন:
-                          </label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setEditForm({ ...editForm, followUpOnlySeen: false })}
-                              className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
-                                !editForm.followUpOnlySeen
-                                  ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
-                                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/70'
-                              }`}
-                            >
-                              <MessageSquareReply className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                              <div>
-                                <div className="text-xs font-bold text-slate-900">সিন না করলেও পাঠাবে (সুপার কনভার্সন)</div>
-                                <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
-                                  গ্রাহক সিন করুক বা না করুক, নির্ধারিত সময় পার হলেই স্বয়ংক্রিয় ফলো-আপ যাবে।
-                                </div>
-                              </div>
-                            </button>
+                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                          <a
+                            href={`/dashboard/follow-up?pageId=${selectedPage?.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                            AI ফলো-আপ ও শিডিউল কনফিগার করুন
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </a>
 
-                            <button
-                              type="button"
-                              onClick={() => setEditForm({ ...editForm, followUpOnlySeen: true })}
-                              className={`p-2.5 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
-                                editForm.followUpOnlySeen
-                                  ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
-                                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/70'
-                              }`}
-                            >
-                              <Eye className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                              <div>
-                                <div className="text-xs font-bold text-slate-900">শুধুমাত্র সিন (Seen) করলে পাঠাবে</div>
-                                <div className="text-[10px] text-slate-500 leading-tight mt-0.5">
-                                  গ্রাহক মেসেজ ওপেন করে পড়েছে নিশ্চিত হওয়ার পর নির্ধারিত সময় পর ফলো-আপ যাবে।
-                                </div>
-                              </div>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Frequency & Recurrence: 1 bar vs Daily vs Custom hours */}
-                        <div className="bg-white p-3 rounded-xl border border-amber-200 space-y-2.5">
-                          <div className="flex items-center justify-between">
-                            <label className="block text-xs font-semibold text-slate-800">
-                              পুনরাবৃত্তি ও শিডিউল (Frequency):
-                            </label>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
-                              {editForm.followUpFrequency === 'DAILY'
-                                ? 'প্রতিদিন'
-                                : editForm.followUpFrequency === 'CUSTOM_INTERVAL'
-                                ? `প্রতি ${editForm.followUpIntervalHours || 24} ঘন্টা পর পর`
-                                : '১ বার মাত্র'}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setEditForm({ ...editForm, followUpFrequency: 'ONCE', followUpMaxCount: 1 })}
-                              className={`p-2.5 rounded-xl border text-left transition-all ${
-                                (!editForm.followUpFrequency || editForm.followUpFrequency === 'ONCE')
-                                  ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
-                                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/70'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                <span className="text-xs font-bold text-slate-900">১ বার মাত্র (One-off)</span>
-                              </div>
-                              <div className="text-[10px] text-slate-500 leading-tight">
-                                শুধুমাত্র ১ বারই ফলো-আপ পাঠানো হবে। কাস্টমার উত্তর না দিলেও আর বিরক্ত করবে না।
-                              </div>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setEditForm({ ...editForm, followUpFrequency: 'DAILY', followUpMaxCount: (editForm.followUpMaxCount && editForm.followUpMaxCount > 1) ? editForm.followUpMaxCount : 3 })}
-                              className={`p-2.5 rounded-xl border text-left transition-all ${
-                                editForm.followUpFrequency === 'DAILY'
-                                  ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
-                                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/70'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                <span className="text-xs font-bold text-slate-900">প্রতিদিন (Daily)</span>
-                              </div>
-                              <div className="text-[10px] text-slate-500 leading-tight">
-                                কাস্টমার কোনো রিপ্লাই না দিলে প্রতিদিন (প্রতি ২৪ ঘন্টা পর পর) নতুন ফলো-আপ বার্তা পাঠাবে।
-                              </div>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setEditForm({ ...editForm, followUpFrequency: 'CUSTOM_INTERVAL', followUpMaxCount: (editForm.followUpMaxCount && editForm.followUpMaxCount > 1) ? editForm.followUpMaxCount : 3 })}
-                              className={`p-2.5 rounded-xl border text-left transition-all ${
-                                editForm.followUpFrequency === 'CUSTOM_INTERVAL'
-                                  ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
-                                  : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100/70'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <Repeat className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                <span className="text-xs font-bold text-slate-900">কাস্টম ঘন্টা পর পর</span>
-                              </div>
-                              <div className="text-[10px] text-slate-500 leading-tight">
-                                আপনার নির্ধারিত নির্দিষ্ট ঘন্টা (যেমন ১২, ৪৮ বা ৭২ ঘন্টা) পর পর স্বয়ংক্রিয় ফলো-আপ করবে।
-                              </div>
-                            </button>
-                          </div>
-
-                          {/* Custom Hours Input if CUSTOM_INTERVAL */}
-                          {editForm.followUpFrequency === 'CUSTOM_INTERVAL' && (
-                            <div className="pt-2 border-t border-amber-100 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-semibold text-slate-700">পরবর্তী মেসেজ পাঠানোর বিরতি:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="720"
-                                    value={editForm.followUpIntervalHours ?? 24}
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value, 10);
-                                      setEditForm({
-                                        ...editForm,
-                                        followUpIntervalHours: isNaN(val) ? '' : Math.max(1, val),
-                                      });
-                                    }}
-                                    className="w-16 px-2 py-1 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg text-amber-900 focus:outline-none focus:border-amber-500"
-                                  />
-                                  <span className="text-xs font-semibold text-slate-600">ঘন্টা পর পর</span>
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {[
-                                  { h: 6, label: '৬ ঘন্টা' },
-                                  { h: 12, label: '১২ ঘন্টা' },
-                                  { h: 24, label: '২৪ ঘন্টা (১ দিন)' },
-                                  { h: 48, label: '৪৮ ঘন্টা (২ দিন)' },
-                                  { h: 72, label: '৭২ ঘন্টা (৩ দিন)' },
-                                ].map((item) => (
-                                  <button
-                                    key={item.h}
-                                    type="button"
-                                    onClick={() => setEditForm({ ...editForm, followUpIntervalHours: item.h })}
-                                    className={`px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
-                                      (editForm.followUpIntervalHours ?? 24) === item.h
-                                        ? 'bg-amber-600 text-white border-amber-600'
-                                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                                    }`}
-                                  >
-                                    {item.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Max Follow-Up Count Selector */}
-                        <div className="bg-white p-3 rounded-xl border border-amber-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="block text-xs font-semibold text-slate-800">
-                              মোট সর্বোচ্চ কয়বার ফলো-আপ পাঠানো হবে?
-                            </label>
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-600 text-white">
-                              {editForm.followUpFrequency === 'ONCE'
-                                ? '১ বার'
-                                : (editForm.followUpMaxCount ?? 1) >= 999
-                                ? 'আনলিমিটেড (রিপ্লাই পর্যন্ত)'
-                                : `${editForm.followUpMaxCount ?? 1} বার`}
-                            </span>
-                          </div>
-
-                          {editForm.followUpFrequency === 'ONCE' ? (
-                            <div className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-100 text-[11px] text-amber-900 flex items-center gap-2">
-                              <span>✓ ১ বার মাত্র শিডিউল মোডে রয়েছে — কাস্টমার উত্তর না দিলে সর্বোচ্চ একবারই পাঠাবে।</span>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                                {[
-                                  { count: 1, label: '১ বার', sub: 'শুধুমাত্র ১ বার' },
-                                  { count: 2, label: '২ বার', sub: 'মডারেট' },
-                                  { count: 3, label: '৩ বার', sub: 'সুপারিশকৃত' },
-                                  { count: 5, label: '৫ বার', sub: 'সর্বোচ্চ চেষ্টা' },
-                                  { count: 999, label: 'আনলিমিটেড', sub: 'রিপ্লাই পর্যন্ত' },
-                                ].map((c) => {
-                                  const isSel = (editForm.followUpMaxCount ?? 1) === c.count;
-                                  return (
-                                    <button
-                                      key={c.count}
-                                      type="button"
-                                      onClick={() => setEditForm({ ...editForm, followUpMaxCount: c.count })}
-                                      className={`p-2 rounded-xl border text-center transition-all ${
-                                        isSel
-                                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-amber-50/60'
-                                      }`}
-                                    >
-                                      <div className="text-xs font-bold">{c.label}</div>
-                                      <div className={`text-[9px] ${isSel ? 'text-amber-100' : 'text-slate-400'}`}>
-                                        {c.sub}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-
-                              <div className="flex items-center justify-between gap-3 pt-1">
-                                <span className="text-[11px] text-slate-600">অথবা নিজের ইচ্ছামতো সংখ্যা দিন:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max="50"
-                                    value={(editForm.followUpMaxCount ?? 1) >= 999 ? '' : editForm.followUpMaxCount}
-                                    placeholder="কাস্টম সংখ্যা"
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value, 10);
-                                      setEditForm({
-                                        ...editForm,
-                                        followUpMaxCount: isNaN(val) ? 1 : Math.max(1, val),
-                                      });
-                                    }}
-                                    className="w-20 px-2 py-1 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg text-amber-900 focus:outline-none focus:border-amber-500"
-                                  />
-                                  <span className="text-xs font-semibold text-slate-600">বার</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] text-emerald-800 flex items-start gap-1.5">
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                            <span>
-                              <strong>স্বয়ংক্রিয় স্টপ ও রিসেট:</strong> কাস্টমার যেকোনো মুহূর্তে কোনো রিপ্লাই দিলে অথবা মেসেজে অর্ডার কনফার্ম করলে তাৎক্ষণিকভাবে ফলো-আপ বন্ধ হয়ে যাবে এবং পরবর্তী কোনো নতুন কথোপকথনের জন্য কাউন্ট রিসেট হবে।
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Custom Follow-up Message Template */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs font-semibold text-slate-800">
-                              কাস্টম ফলো-আপ মেসেজ (ঐচ্ছিক)
-                            </label>
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              প্লেসহোল্ডার: &#123;name&#125;
-                            </span>
-                          </div>
-                          <textarea
-                            rows={2}
-                            placeholder="যেমন: আসসালামু আলাইকুম {name}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন ছিল কি? স্টক সীমিত, কোনো হেল্প লাগলে জানান... (খালি রাখলে এআই ডিফল্ট মেসেজ দেবে)"
-                            value={editForm.followUpMessage || ''}
-                            onChange={(e) => setEditForm({ ...editForm, followUpMessage: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-slate-900 text-xs focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
-                          />
-                          <p className="text-[10px] text-slate-500 mt-1">
-                            💡 খালি রাখলে সিস্টেম স্বয়ংক্রিয়ভাবে প্রফেশনাল ও বন্ধুভাবাপন্ন ফলো-আপ বার্তা তৈরি করে পাঠিয়ে দেবে।
-                          </p>
-                        </div>
-
-                        {/* Test & Run Follow-Up Now Button */}
-                        <div className="pt-2 border-t border-amber-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-amber-50/70 rounded-xl border border-amber-200">
-                          <div>
-                            <div className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                              <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                              তাত্ক্ষণিক ফলো-আপ রান ও টেস্ট
-                            </div>
-                            <div className="text-[10px] text-amber-800">
-                              অপেক্ষার সময় শেষ হওয়া কাস্টমারদের কাছে এখনই স্বয়ংক্রিয়ভাবে ফলো-আপ মেসেজ পাঠাতে ক্লিক করুন।
-                            </div>
-                          </div>
                           <button
                             type="button"
                             disabled={runningFollowUpId === selectedPage?.id}
                             onClick={() => selectedPage?.id && handleTriggerFollowUp(selectedPage.id)}
-                            className="w-full sm:w-auto px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 shrink-0"
+                            className="px-3 py-2.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${runningFollowUpId === selectedPage?.id ? 'animate-spin' : ''}`} />
-                            {runningFollowUpId === selectedPage?.id ? 'পাঠানো হচ্ছে...' : 'এখনই রান করুন'}
+                            {runningFollowUpId === selectedPage?.id ? 'চলছে...' : 'এখনই টেস্ট রান'}
                           </button>
                         </div>
                       </div>

@@ -26,6 +26,11 @@ import {
   X,
   ArrowRight,
   Settings2,
+  Zap,
+  RotateCcw,
+  Repeat,
+  Check,
+  MessageSquareReply,
 } from 'lucide-react';
 
 interface ScheduleStep {
@@ -75,14 +80,36 @@ interface ConversationItem {
   followUpLogs?: FollowUpLogItem[];
 }
 
+interface PageFollowUpSettings {
+  id?: string;
+  followUpEnabled: boolean;
+  followUpWaitMinutes: number;
+  followUpOnlySeen: boolean;
+  followUpFrequency: string; // 'ONCE' | 'DAILY' | 'CUSTOM_INTERVAL'
+  followUpIntervalHours: number;
+  followUpMaxCount: number;
+  followUpMessage: string;
+}
+
 export default function FollowUpPage() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [runningManual, setRunningManual] = useState(false);
   const [savingSteps, setSavingSteps] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Data states
   const [steps, setSteps] = useState<ScheduleStep[]>([]);
+  const [pageSettings, setPageSettings] = useState<PageFollowUpSettings>({
+    followUpEnabled: true,
+    followUpWaitMinutes: 30,
+    followUpOnlySeen: true,
+    followUpFrequency: 'CUSTOM_INTERVAL',
+    followUpIntervalHours: 24,
+    followUpMaxCount: 5,
+    followUpMessage: '',
+  });
+
   const [metrics, setMetrics] = useState({
     totalConversations: 0,
     inProgressCount: 0,
@@ -98,12 +125,15 @@ export default function FollowUpPage() {
   const [selectedPageId, setSelectedPageId] = useState<string>('');
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<'schedule' | 'pipeline' | 'logs'>('schedule');
+  const [activeTab, setActiveTab] = useState<'rules' | 'schedule' | 'pipeline' | 'logs'>('rules');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Step Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const [stepTimeUnit, setStepTimeUnit] = useState<'minutes' | 'hours' | 'days'>('days');
+  const [stepCustomMinutes, setStepCustomMinutes] = useState<number>(30);
+  const [stepCustomHours, setStepCustomHours] = useState<number>(2);
   const [stepFormData, setStepFormData] = useState({
     dayOffset: 1,
     timeOfDay: '10:00',
@@ -126,6 +156,17 @@ export default function FollowUpPage() {
         setRecentLogs(data.recentLogs || []);
         setActiveConversations(data.activeConversations || []);
         setPages(data.pages || []);
+        if (data.pageSettings) {
+          setPageSettings({
+            followUpEnabled: Boolean(data.pageSettings.followUpEnabled),
+            followUpWaitMinutes: data.pageSettings.followUpWaitMinutes ?? 30,
+            followUpOnlySeen: data.pageSettings.followUpOnlySeen !== false,
+            followUpFrequency: data.pageSettings.followUpFrequency || 'CUSTOM_INTERVAL',
+            followUpIntervalHours: data.pageSettings.followUpIntervalHours ?? 24,
+            followUpMaxCount: data.pageSettings.followUpMaxCount ?? 5,
+            followUpMessage: data.pageSettings.followUpMessage || '',
+          });
+        }
       }
     } catch (e: any) {
       // Handled safely
@@ -161,6 +202,40 @@ export default function FollowUpPage() {
     }
   };
 
+  // Save Page-level Follow-up Settings
+  const handleSavePageSettings = async (updatedSettings?: Partial<PageFollowUpSettings>) => {
+    const payload = {
+      ...pageSettings,
+      ...(updatedSettings || {}),
+    };
+    try {
+      setSavingSettings(true);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_PAGE_SETTINGS',
+          pageId: selectedPageId || undefined,
+          ...payload,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (updatedSettings) {
+          setPageSettings(payload);
+        }
+        toast.success('অটোমেটেড ফলো-আপ রুলস ও সেটিংস সংরক্ষিত হয়েছে!');
+        fetchFollowUpData(selectedPageId || undefined);
+      } else {
+        toast.error(data.error || 'সেটিংস সংরক্ষণ ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      toast.error('সার্ভার কানেকশন ত্রুটি');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   // Open Step Modal
   const openAddStepModal = () => {
     const nextStepNum = steps.length + 1;
@@ -168,6 +243,7 @@ export default function FollowUpPage() {
     const suggestedDay = lastDay === 0 ? 1 : lastDay < 3 ? 3 : lastDay < 7 ? 7 : lastDay < 15 ? 15 : 25;
 
     setEditingStepIndex(null);
+    setStepTimeUnit('days');
     setStepFormData({
       dayOffset: suggestedDay,
       timeOfDay: '10:00',
@@ -181,6 +257,7 @@ export default function FollowUpPage() {
   const openEditStepModal = (index: number) => {
     const target = steps[index];
     setEditingStepIndex(index);
+    setStepTimeUnit('days');
     setStepFormData({
       dayOffset: target.dayOffset,
       timeOfDay: target.timeOfDay,
@@ -196,21 +273,39 @@ export default function FollowUpPage() {
     e.preventDefault();
     const updatedSteps = [...steps];
 
+    let computedDayOffset = Number(stepFormData.dayOffset) || 1;
+    if (stepTimeUnit === 'minutes') {
+      computedDayOffset = Math.max(1, Math.round(stepCustomMinutes / 1440) || 1);
+    } else if (stepTimeUnit === 'hours') {
+      computedDayOffset = Math.max(1, Math.round(stepCustomHours / 24) || 1);
+    }
+
+    let defaultTitle = stepFormData.title;
+    if (!defaultTitle) {
+      if (stepTimeUnit === 'minutes') {
+        defaultTitle = `ফলো-আপ (${stepCustomMinutes} মিনিট পর)`;
+      } else if (stepTimeUnit === 'hours') {
+        defaultTitle = `ফলো-আপ (${stepCustomHours} ঘন্টা পর)`;
+      } else {
+        defaultTitle = `ধাপ #${(editingStepIndex !== null ? editingStepIndex : updatedSteps.length) + 1} (${computedDayOffset} দিন পর)`;
+      }
+    }
+
     if (editingStepIndex !== null) {
       updatedSteps[editingStepIndex] = {
         ...updatedSteps[editingStepIndex],
-        dayOffset: Number(stepFormData.dayOffset),
+        dayOffset: computedDayOffset,
         timeOfDay: stepFormData.timeOfDay,
-        title: stepFormData.title || `ধাপ #${editingStepIndex + 1}`,
+        title: defaultTitle,
         guidelinePrompt: stepFormData.guidelinePrompt,
         isEnabled: stepFormData.isEnabled,
       };
     } else {
       updatedSteps.push({
         stepNumber: updatedSteps.length + 1,
-        dayOffset: Number(stepFormData.dayOffset),
+        dayOffset: computedDayOffset,
         timeOfDay: stepFormData.timeOfDay,
-        title: stepFormData.title || `ধাপ #${updatedSteps.length + 1}`,
+        title: defaultTitle,
         guidelinePrompt: stepFormData.guidelinePrompt,
         isEnabled: stepFormData.isEnabled,
       });
@@ -355,25 +450,25 @@ export default function FollowUpPage() {
   return (
     <DashboardLayout
       title="AI ফলো-আপ অটোমেশন ও শিডিউল"
-      subtitle="১ মাসের মধ্যে যেসব গ্রাহক অর্ডার করেননি তাদের সাথে শিডিউল অনুযায়ী স্বয়ংক্রিয় AI মেসেজ পাঠিয়ে রিকভার করুন।"
+      subtitle="সিন কিন্তু উত্তর না দেওয়া গ্রাহকদের কাছে কাস্টম টাইম ও শিডিউলে স্বয়ংক্রিয় এআই ফলো-আপ বার্তা পাঠান।"
     >
       <div className="space-y-8">
         {/* Page Top Title & Actions */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   AI ফলো-আপ অটোমেশন ও শিডিউল
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold border border-purple-200">
-                    ৩০ দিনের স্মার্ট রিকভারি
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold border border-amber-200">
+                    Seen & Unreplied রিকভারি
                   </span>
                 </h1>
                 <p className="text-sm text-slate-500 mt-0.5">
-                  ১ মাসের মধ্যে যেসব গ্রাহক অর্ডার করেননি, তাদের সাথে শিডিউল অনুযায়ী পার্সোনালাইজড AI মেসেজ দিয়ে ফলো-আপ করুন।
+                  যেসব গ্রাহক মেসেজ সিন করেছেন বা অর্ডার দেননি, তাদের সাথে কাস্টম সময়ে স্বয়ংক্রিয় ফলো-আপ করে সেলস বাড়ান।
                 </p>
               </div>
             </div>
@@ -385,7 +480,7 @@ export default function FollowUpPage() {
               <select
                 value={selectedPageId}
                 onChange={(e) => setSelectedPageId(e.target.value)}
-                className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 cursor-pointer"
+                className="text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-2xs"
               >
                 <option value="">সকল পেজ ও চ্যানেল</option>
                 {pages.map((p) => (
@@ -400,10 +495,10 @@ export default function FollowUpPage() {
             <button
               onClick={handleRunManual}
               disabled={runningManual}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-700 hover:to-indigo-700 text-white text-sm font-semibold shadow-xs transition-all active:scale-95 disabled:opacity-50"
             >
               <Play className={`w-4 h-4 ${runningManual ? 'animate-spin' : ''}`} />
-              {runningManual ? 'ফলো-আপ চলছে...' : 'এখনই চেক ও সেন্ড করুন'}
+              {runningManual ? 'ফলো-আপ চলছে...' : 'এখনই চেক ও রান করুন'}
             </button>
           </div>
         </div>
@@ -468,24 +563,36 @@ export default function FollowUpPage() {
 
         {/* Main Navigation Tabs */}
         <div className="border-b border-slate-200">
-          <nav className="flex space-x-6">
+          <nav className="flex space-x-6 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => setActiveTab('rules')}
+              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+                activeTab === 'rules'
+                  ? 'border-amber-600 text-amber-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Zap className="w-4 h-4 text-amber-600" />
+              অটোমেটেড ফলো-আপ পলিসি ও সেটিংস (Seen / Unreplied)
+            </button>
+
             <button
               onClick={() => setActiveTab('schedule')}
-              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
+              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeTab === 'schedule'
-                  ? 'border-purple-600 text-purple-600'
+                  ? 'border-indigo-600 text-indigo-700'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               <Calendar className="w-4 h-4" />
-              ফলো-আপ শিডিউল ও সেটিংস ({steps.length} টি ধাপ)
+              মাল্টি-স্টেপ শিডিউল বিল্ডার ({steps.length} টি ধাপ)
             </button>
 
             <button
               onClick={() => setActiveTab('pipeline')}
-              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
+              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeTab === 'pipeline'
-                  ? 'border-purple-600 text-purple-600'
+                  ? 'border-indigo-600 text-indigo-700'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -495,9 +602,9 @@ export default function FollowUpPage() {
 
             <button
               onClick={() => setActiveTab('logs')}
-              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
+              className={`pb-4 px-1 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
                 activeTab === 'logs'
-                  ? 'border-purple-600 text-purple-600'
+                  ? 'border-indigo-600 text-indigo-700'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -507,20 +614,399 @@ export default function FollowUpPage() {
           </nav>
         </div>
 
-        {/* TAB 1: SCHEDULE BUILDER */}
+        {/* TAB 1: AUTOMATED FOLLOW-UP RULES & SETTINGS (SEEN BUT UNREPLIED) */}
+        {activeTab === 'rules' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                    <MessageSquareReply className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      অটোমেটেড ফলো-আপ পলিসি (Seen কিন্তু Reply দেয়নি)
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+                        ১০০% অটোমেশন
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      যেসব গ্রাহক মেসেজ সিন করেছেন কিন্তু অর্ডার বা রিপ্লাই দেননি, তাদের কাছে নির্দিষ্ট সময় পর স্বয়ংক্রিয় মেসেজ পাঠানো হবে।
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold text-slate-700">
+                    {pageSettings.followUpEnabled ? 'ফলো-আপ সক্রিয়' : 'ফলো-আপ নিষ্ক্রিয়'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={pageSettings.followUpEnabled}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setPageSettings({ ...pageSettings, followUpEnabled: val });
+                        handleSavePageSettings({ followUpEnabled: val });
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {pageSettings.followUpEnabled ? (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* 1. Target Audience: Seen Only vs Unseen */}
+                  <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-3">
+                    <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      ১. ফলো-আপের টার্গেট অডিয়েন্স ফিল্টার:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPageSettings({ ...pageSettings, followUpOnlySeen: true });
+                        }}
+                        className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 ${
+                          pageSettings.followUpOnlySeen
+                            ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <Eye className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">শুধুমাত্র সিন (Seen) করলে পাঠাবে</div>
+                          <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+                            গ্রাহক মেসেজ ওপেন করে পড়েছে (Seen) নিশ্চিত হওয়ার পর আপনার নির্ধারিত সময় পার হলে ফলো-আপ যাবে।
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPageSettings({ ...pageSettings, followUpOnlySeen: false });
+                        }}
+                        className={`p-3.5 rounded-xl border text-left transition-all flex items-start gap-3 ${
+                          !pageSettings.followUpOnlySeen
+                            ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <MessageSquareReply className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">সিন না করলেও পাঠাবে (ম্যাক্সিমাম রিকভারি)</div>
+                          <div className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
+                            গ্রাহক মেসেজ সিন করুক বা না করুক, নির্ধারিত অপেক্ষা সময় পার হলেই স্বয়ংক্রিয় ফলো-আপ পাঠানো হবে।
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Flexible Custom Wait Time */}
+                  <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                          ২. কতক্ষণ পর ফলো-আপ পাঠানো হবে? (Custom Time)
+                        </label>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          ১ মিনিট থেকে শুরু করে ইচ্ছামতো যেকোনো মিনিট বা ঘন্টা নির্ধারণ করুন।
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-600 text-white shadow-xs">
+                        {pageSettings.followUpWaitMinutes >= 60 && pageSettings.followUpWaitMinutes % 60 === 0
+                          ? `${pageSettings.followUpWaitMinutes / 60} ঘন্টা পর`
+                          : `${pageSettings.followUpWaitMinutes} মিনিট পর`}
+                      </span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                      {[
+                        { mins: 1, label: '১ মিনিট', sub: 'তাৎক্ষণিক টেস্ট' },
+                        { mins: 5, label: '৫ মিনিট', sub: 'খুব দ্রুত' },
+                        { mins: 15, label: '১৫ মিনিট', sub: 'দ্রুত' },
+                        { mins: 30, label: '৩০ মিনিট', sub: 'স্ট্যান্ডার্ড' },
+                        { mins: 60, label: '১ ঘন্টা', sub: 'স্বাভাবিক' },
+                        { mins: 120, label: '২ ঘন্টা', sub: 'ধীরেসুস্থে' },
+                      ].map((p) => {
+                        const isSel = (pageSettings.followUpWaitMinutes ?? 30) === p.mins;
+                        return (
+                          <button
+                            key={p.mins}
+                            type="button"
+                            onClick={() => setPageSettings({ ...pageSettings, followUpWaitMinutes: p.mins })}
+                            className={`p-2 rounded-xl border text-center transition-all ${
+                              isSel
+                                ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+                                : 'bg-white border-slate-200 text-slate-700 hover:border-amber-400 hover:bg-amber-50/50'
+                            }`}
+                          >
+                            <div className="text-xs font-bold">{p.label}</div>
+                            <div className={`text-[9px] ${isSel ? 'text-amber-100' : 'text-slate-400'}`}>
+                              {p.sub}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Input & Range Slider */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-slate-700">
+                          ইচ্ছামতো কাস্টম মিনিট টাইপ করুন:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10080"
+                            value={pageSettings.followUpWaitMinutes}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              setPageSettings({
+                                ...pageSettings,
+                                followUpWaitMinutes: isNaN(val) ? 1 : Math.max(1, val),
+                              });
+                            }}
+                            className="w-24 px-3 py-1.5 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg text-amber-900 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          />
+                          <span className="text-xs font-semibold text-slate-600">মিনিট</span>
+                        </div>
+                      </div>
+
+                      <input
+                        type="range"
+                        min="1"
+                        max="180"
+                        step="1"
+                        value={Math.min(180, pageSettings.followUpWaitMinutes || 1)}
+                        onChange={(e) =>
+                          setPageSettings({
+                            ...pageSettings,
+                            followUpWaitMinutes: parseInt(e.target.value, 10),
+                          })
+                        }
+                        className="w-full accent-amber-600 cursor-pointer"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
+                        <span>১ মিনিট (টেস্ট)</span>
+                        <span>১৫ মিনিট</span>
+                        <span>৩০ মিনিট</span>
+                        <span>১ ঘন্টা (৬০ মি)</span>
+                        <span>৩ ঘন্টা (১৮০ মি)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Frequency & Recurrence */}
+                  <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        ৩. পুনরাবৃত্তি ও শিডিউল (Frequency)
+                      </label>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                        {pageSettings.followUpFrequency === 'DAILY'
+                          ? 'প্রতিদিন (Daily)'
+                          : pageSettings.followUpFrequency === 'CUSTOM_INTERVAL'
+                          ? `প্রতি ${pageSettings.followUpIntervalHours || 24} ঘন্টা পর পর`
+                          : '১ বার মাত্র (One-off)'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPageSettings({ ...pageSettings, followUpFrequency: 'ONCE', followUpMaxCount: 1 })}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          pageSettings.followUpFrequency === 'ONCE'
+                            ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <RotateCcw className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="text-xs font-bold text-slate-900">১ বার মাত্র (One-off)</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 leading-tight">
+                          গ্রাহকের কাছে শুধুমাত্র ১ বারই ফলো-আপ পাঠানো হবে।
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPageSettings({ ...pageSettings, followUpFrequency: 'DAILY', followUpMaxCount: Math.max(3, pageSettings.followUpMaxCount) })}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          pageSettings.followUpFrequency === 'DAILY'
+                            ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="text-xs font-bold text-slate-900">প্রতিদিন (Daily)</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 leading-tight">
+                          গ্রাহক কোনো রিপ্লাই না দিলে প্রতি ২৪ ঘন্টা পর পর নতুন ফলো-আপ বার্তা পাঠাবে।
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPageSettings({ ...pageSettings, followUpFrequency: 'CUSTOM_INTERVAL', followUpMaxCount: Math.max(3, pageSettings.followUpMaxCount) })}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          pageSettings.followUpFrequency === 'CUSTOM_INTERVAL'
+                            ? 'bg-amber-50/90 border-amber-500 ring-1 ring-amber-500 text-amber-950 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Repeat className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="text-xs font-bold text-slate-900">কাস্টম ঘন্টা পর পর</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 leading-tight">
+                          আপনার নির্ধারিত নির্দিষ্ট ঘন্টা (যেমন ৬, ১২, ২৪ বা ৪৮ ঘন্টা) পর পর ফলো-আপ যাবে।
+                        </div>
+                      </button>
+                    </div>
+
+                    {pageSettings.followUpFrequency === 'CUSTOM_INTERVAL' && (
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-slate-700">পরবর্তী মেসেজ পাঠানোর বিরতি:</span>
+                        <div className="flex items-center gap-2">
+                          {[6, 12, 24, 48, 72].map((h) => (
+                            <button
+                              key={h}
+                              type="button"
+                              onClick={() => setPageSettings({ ...pageSettings, followUpIntervalHours: h })}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                                pageSettings.followUpIntervalHours === h
+                                  ? 'bg-amber-600 text-white border-amber-600'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {h} ঘন্টা
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Max Count Limit */}
+                  <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        ৪. সর্বোচ্চ কয়বার ফলো-আপ পাঠানো হবে?
+                      </label>
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-600 text-white">
+                        {pageSettings.followUpFrequency === 'ONCE'
+                          ? '১ বার'
+                          : pageSettings.followUpMaxCount >= 999
+                          ? 'আনলিমিটেড (রিপ্লাই পর্যন্ত)'
+                          : `${pageSettings.followUpMaxCount} বার`}
+                      </span>
+                    </div>
+
+                    {pageSettings.followUpFrequency !== 'ONCE' && (
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        {[
+                          { count: 1, label: '১ বার', sub: 'শুধুমাত্র ১ বার' },
+                          { count: 2, label: '২ বার', sub: 'মডারেট' },
+                          { count: 3, label: '৩ বার', sub: 'সুপারিশকৃত' },
+                          { count: 5, label: '৫ বার', sub: 'সর্বোচ্চ চেষ্টা' },
+                          { count: 999, label: 'আনলিমিটেড', sub: 'রিপ্লাই পর্যন্ত' },
+                        ].map((c) => {
+                          const isSel = pageSettings.followUpMaxCount === c.count;
+                          return (
+                            <button
+                              key={c.count}
+                              type="button"
+                              onClick={() => setPageSettings({ ...pageSettings, followUpMaxCount: c.count })}
+                              className={`p-2.5 rounded-xl border text-center transition-all ${
+                                isSel
+                                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-amber-50/60'
+                              }`}
+                            >
+                              <div className="text-xs font-bold">{c.label}</div>
+                              <div className={`text-[9px] ${isSel ? 'text-amber-100' : 'text-slate-400'}`}>
+                                {c.sub}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 5. Custom Follow-up Message Template */}
+                  <div className="bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        ৫. কাস্টম ফলো-আপ মেসেজ টেমপ্লেট (ঐচ্ছিক)
+                      </label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        প্লেসহোল্ডার: &#123;name&#125;
+                      </span>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder="যেমন: আসসালামু আলাইকুম {name}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন ছিল কি? স্টক সীমিত, কোনো হেল্প লাগলে জানান... (খালি রাখলে AI স্বয়ংক্রিয়ভাবে পার্সোনালাইজড মেসেজ দেবে)"
+                      value={pageSettings.followUpMessage}
+                      onChange={(e) => setPageSettings({ ...pageSettings, followUpMessage: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+                    />
+                    <p className="text-[11px] text-slate-500">
+                      💡 খালি রাখলে আমাদের AI সিস্টেম স্বয়ংক্রিয়ভাবে কাস্টমারের আগের চ্যাট বিশ্লেষণ করে ইউনিক ও প্রফেশনাল মেসেজ তৈরি করবে।
+                    </p>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      disabled={savingSettings}
+                      onClick={() => handleSavePageSettings()}
+                      className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-xs flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <Check className="w-4 h-4" />
+                      {savingSettings ? 'সংরক্ষণ হচ্ছে...' : 'পলিসি ও সেটিংস সংরক্ষণ করুন'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                  <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+                  <h4 className="text-sm font-bold text-slate-700">স্বয়ংক্রিয় ফলো-আপ বর্তমানে নিষ্ক্রিয় রয়েছে</h4>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    উপরে ডানপাশের সুইচটি চালু করে সিন করা কাস্টমারদের জন্য স্বয়ংক্রিয় ফলো-আপ কনফিগার করুন।
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: SCHEDULE BUILDER */}
         {activeTab === 'schedule' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    কাস্টমাইজেবল ফলো-আপ শিডিউল
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
-                      সম্পূর্ণ ডাইনামিক
+                    কাস্টমাইজেবল মাল্টি-স্টেপ শিডিউল বিল্ডার
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                      ডাইনামিক স্টেপস
                     </span>
                   </h2>
                   <p className="text-sm text-slate-500 mt-0.5">
-                    ১ মাসের মধ্যে কবে, কখন এবং কয়টি ফলো-আপ যাবে তা ইচ্ছামতো যোগ, এডিট, রিমুভ ও চালু/বন্ধ করুন।
+                    গ্রাহকের কাছে কবে, কখন এবং কয়টি ফলো-আপ পাঠানো হবে তা ইচ্ছামতো কাস্টম টাইমসহ সাজিয়ে নিন।
                   </p>
                 </div>
 
@@ -530,12 +1016,12 @@ export default function FollowUpPage() {
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    ডিফল্ট শিডিউলে রিসেট
+                    ডিফল্ট ৫-ধাপে রিসেট
                   </button>
 
                   <button
                     onClick={openAddStepModal}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all"
                   >
                     <Plus className="w-4 h-4" />
                     নতুন ফলো-আপ ধাপ যোগ করুন
@@ -546,7 +1032,7 @@ export default function FollowUpPage() {
               {/* Steps Cards List */}
               {loading ? (
                 <div className="py-12 text-center text-slate-400">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-purple-600" />
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                   শিডিউল লোড হচ্ছে...
                 </div>
               ) : steps.length === 0 ? (
@@ -558,19 +1044,19 @@ export default function FollowUpPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   {steps.map((step, idx) => (
                     <div
                       key={step.id || idx}
-                      className={`p-5 rounded-xl border transition-all ${
+                      className={`p-5 rounded-2xl border transition-all ${
                         step.isEnabled
-                          ? 'bg-white border-slate-200/90 shadow-xs hover:border-purple-300'
+                          ? 'bg-white border-slate-200/90 shadow-2xs hover:border-indigo-300'
                           : 'bg-slate-50/70 border-slate-200 opacity-60'
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-700 font-bold shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
                             #{step.stepNumber}
                           </div>
                           <div>
@@ -579,14 +1065,14 @@ export default function FollowUpPage() {
                               <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
                                 {step.dayOffset} দিন পর
                               </span>
-                              <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold border border-purple-200 flex items-center gap-1">
+                              <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {formatTimeDisplay(step.timeOfDay)}
                               </span>
                             </div>
 
                             <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1.5">
-                              <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                               <span className="font-semibold text-slate-700">AI নির্দেশিকা:</span>
                               {step.guidelinePrompt || 'স্বাভাবিক ও আন্তরিক ভঙ্গিতে ফলো-আপ করুন।'}
                             </p>
@@ -602,13 +1088,13 @@ export default function FollowUpPage() {
                               onChange={() => handleToggleStep(idx)}
                               className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                           </label>
 
                           {/* Edit */}
                           <button
                             onClick={() => openEditStepModal(idx)}
-                            className="p-2 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+                            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                             title="এডিট করুন"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -631,8 +1117,8 @@ export default function FollowUpPage() {
             </div>
 
             {/* Smart Information Callout */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100 flex items-start gap-4">
-              <Sparkles className="w-6 h-6 text-purple-600 shrink-0 mt-0.5" />
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-100 flex items-start gap-4">
+              <Sparkles className="w-6 h-6 text-indigo-600 shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-sm font-bold text-slate-900">AI মেমরি ও নন-রিপিটিশন সুরক্ষা (Zero Repetition Guarantee)</h4>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">

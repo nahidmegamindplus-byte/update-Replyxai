@@ -96,13 +96,33 @@ export async function GET(req: NextRequest) {
       }),
       prisma.page.findMany({
         where: { userId },
-        select: { id: true, pageName: true, channel: true, followUpEnabled: true },
+        select: {
+          id: true,
+          pageName: true,
+          channel: true,
+          followUpEnabled: true,
+          followUpWaitMinutes: true,
+          followUpOnlySeen: true,
+          followUpFrequency: true,
+          followUpIntervalHours: true,
+          followUpMaxCount: true,
+          followUpMessage: true,
+        },
       }),
     ]);
+
+    // Find specific page settings if pageId provided, or first page
+    let activePageSettings = null;
+    if (pageId) {
+      activePageSettings = pages.find((p) => p.id === pageId) || null;
+    } else if (pages.length > 0) {
+      activePageSettings = pages[0];
+    }
 
     return NextResponse.json({
       success: true,
       steps,
+      pageSettings: activePageSettings,
       metrics: {
         totalConversations,
         inProgressCount,
@@ -137,7 +157,47 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, pageId } = body;
 
-    // 1. Trigger Automation Run
+    // 1. Update Page-Level Follow-Up Settings (Seen/Unreplied automation rules)
+    if (action === 'UPDATE_PAGE_SETTINGS') {
+      const {
+        followUpEnabled,
+        followUpWaitMinutes,
+        followUpOnlySeen,
+        followUpFrequency,
+        followUpIntervalHours,
+        followUpMaxCount,
+        followUpMessage,
+      } = body;
+
+      const updateData: any = {};
+      if (typeof followUpEnabled === 'boolean') updateData.followUpEnabled = followUpEnabled;
+      if (typeof followUpWaitMinutes === 'number') updateData.followUpWaitMinutes = followUpWaitMinutes;
+      if (typeof followUpOnlySeen === 'boolean') updateData.followUpOnlySeen = followUpOnlySeen;
+      if (followUpFrequency) updateData.followUpFrequency = followUpFrequency;
+      if (typeof followUpIntervalHours === 'number') updateData.followUpIntervalHours = followUpIntervalHours;
+      if (typeof followUpMaxCount === 'number') updateData.followUpMaxCount = followUpMaxCount;
+      if (typeof followUpMessage === 'string') updateData.followUpMessage = followUpMessage;
+
+      if (pageId) {
+        await prisma.page.updateMany({
+          where: { id: pageId, userId },
+          data: updateData,
+        });
+      } else {
+        // Apply to all user pages if no specific pageId
+        await prisma.page.updateMany({
+          where: { userId },
+          data: updateData,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'ফলো-আপ সেটিংস সফলভাবে সংরক্ষণ করা হয়েছে।',
+      });
+    }
+
+    // 2. Trigger Automation Run
     if (action === 'TRIGGER') {
       startFollowUpWorker();
       const summary = await runFollowUpAutomation(pageId || undefined);
@@ -146,12 +206,12 @@ export async function POST(req: NextRequest) {
         message:
           summary.sentCount > 0
             ? `সফলভাবে ${summary.sentCount} টি ফলো-আপ বার্তা পাঠানো হয়েছে।`
-            : `চেক সম্পন্ন: বর্তমান সময়ে কোনো নতুন ফলো-আপ বার্তা পাঠানোর প্রয়োজন নেই।`,
+            : `চেক সম্পন্ন: বর্তমান সময়ে কোনো নতুন ফলো-আপ বার্তা পাঠানোর প্রয়োজন নেই। নির্ধারিত সময় পার হলে স্বয়ংক্রিয়ভাবে পাঠানো হবে।`,
         summary,
       });
     }
 
-    // 2. Update Conversation Status (Pause / Resume / Reset)
+    // 3. Update Conversation Status (Pause / Resume / Reset)
     if (action === 'UPDATE_CONVERSATION_STATUS') {
       const { conversationId, status } = body;
       if (!conversationId || !status) {
@@ -166,7 +226,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'গ্রাহকের ফলো-আপ স্ট্যাটাস আপডেট হয়েছে।' });
     }
 
-    // 3. Save / Upsert All Schedule Steps (Custom Schedule Builder)
+    // 4. Save / Upsert All Schedule Steps (Custom Schedule Builder)
     if (action === 'SAVE_STEPS' || Array.isArray(body.steps)) {
       const stepsList = (body.steps || []) as Array<{
         id?: string;
@@ -210,7 +270,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 4. Add Single Step
+    // 5. Add Single Step
     if (action === 'ADD_STEP') {
       const { dayOffset, timeOfDay, title, guidelinePrompt, isEnabled } = body;
       const count = await prisma.followUpScheduleStep.count({

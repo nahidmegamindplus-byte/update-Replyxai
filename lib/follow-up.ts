@@ -344,10 +344,9 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
           continue;
         }
 
-        // 2. Check if customer replied after our last follow-up / outgoing message
+        // 2. Check if customer replied after our last outgoing message or follow-up
         const latestMsg = conv.messages[0];
         if (latestMsg && latestMsg.direction === 'INCOMING') {
-          // If customer sent the last message, update status to CUSTOMER_REPLIED
           if (conv.currentFollowUpStep > 0 || conv.followUpSentCount > 0) {
             await prisma.conversation.update({
               where: { id: conv.id },
@@ -355,11 +354,30 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             });
             continue;
           }
-          // If customer just messaged and no follow-up sent yet, wait for normal bot reply first
+          // If customer just messaged and no reply has been sent yet, wait for normal bot reply first
           continue;
         }
 
-        // 3. Determine next target step
+        // 3. Check Max Follow-up Count constraint
+        const pageMaxCount = page.followUpMaxCount ?? 5;
+        if (pageMaxCount < 999 && conv.followUpSentCount >= pageMaxCount) {
+          await prisma.conversation.update({
+            where: { id: conv.id },
+            data: { followUpStatus: 'COMPLETED' },
+          });
+          continue;
+        }
+
+        // If frequency is 'ONCE' and already sent 1 follow-up
+        if (page.followUpFrequency === 'ONCE' && conv.followUpSentCount >= 1) {
+          await prisma.conversation.update({
+            where: { id: conv.id },
+            data: { followUpStatus: 'COMPLETED' },
+          });
+          continue;
+        }
+
+        // 4. Determine next target step
         const currentStepIndex = conv.currentFollowUpStep || 0;
         if (currentStepIndex >= scheduleSteps.length) {
           await prisma.conversation.update({
@@ -370,50 +388,116 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         }
 
         const targetStep = scheduleSteps[currentStepIndex];
-        const stepDayOffset = targetStep.dayOffset;
 
-        // Calculate time elapsed since the original customer interaction / conversation start
-        // or last non-follow-up outgoing message
-        const conversationBaseTime = conv.createdAt ? new Date(conv.createdAt).getTime() : Date.now();
-        const requiredDelayMs = stepDayOffset * 24 * 60 * 60 * 1000;
-        const targetDueTime = conversationBaseTime + requiredDelayMs;
-
-        // Condition A: Has the required day offset passed?
-        if (Date.now() < targetDueTime) {
-          continue;
-        }
-
-        // Condition B: Prevent multiple follow-ups on the same day (minimum 18 hours gap from last follow-up)
-        if (conv.lastFollowUpSentAt) {
-          const lastSentTime = new Date(conv.lastFollowUpSentAt).getTime();
-          const minGapMs = 18 * 60 * 60 * 1000;
-          if (Date.now() - lastSentTime < minGapMs) {
+        // 5. Target Audience Filter: Seen vs Unseen
+        // If followUpOnlySeen is true, customer must have seen the message
+        if (page.followUpOnlySeen) {
+          if (!conv.lastSeenAt) {
+            // Customer hasn't seen the message yet, skip until seen
+            continue;
+          }
+          // Ensure lastSeenAt is after or near the last outgoing message
+          const lastOutgoing = conv.messages.find((m) => m.direction === 'OUTGOING');
+          if (lastOutgoing && new Date(conv.lastSeenAt).getTime() < new Date(lastOutgoing.createdAt).getTime() - 10000) {
+            // Seen watermark is older than the last outgoing reply
             continue;
           }
         }
 
-        // 4. Generate AI follow-up message with non-repetition memory
-        const previousFollowUpTexts = (conv.followUpLogs || [])
-          .map((l) => l.messageText)
-          .filter((t) => typeof t === 'string' && t.trim().length > 0);
+        // 6. Flexible Custom Time Calculation
+        const nowMs = Date.now();
+        let isDue = false;
 
-        const historyForAI = [...conv.messages].reverse().map((m) => ({
-          direction: m.direction,
-          text: m.messageText || '',
-        }));
+        if (currentStepIndex === 0) {
+          // STEP 1: Calculate wait time from lastSeenAt (if seen-only) or last outgoing message / conversation base
+          const referenceTime = (page.followUpOnlySeen && conv.lastSeenAt)
+            ? new Date(conv.lastSeenAt).getTime()
+            : (conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : new Date(conv.createdAt).getTime());
 
-        const { text: followUpText, model: aiModelUsed } = await generateAiFollowUpMessage({
-          conversationId: conv.id,
-          customerName: conv.customerName,
-          step: targetStep,
-          conversationHistory: historyForAI,
-          previousFollowUps: previousFollowUpTexts,
-          pageName: page.pageName,
-          replyLanguage: page.replyLanguage || 'বাংলা',
-          businessInstructions: page.aiInstructions || '',
-        });
+          // Use page.followUpWaitMinutes if targetStep is 1 day or default, or convert step dayOffset
+          let stepDelayMinutes = page.followUpWaitMinutes ?? 30;
+          if (targetStep.dayOffset > 1) {
+            stepDelayMinutes = targetStep.dayOffset * 24 * 60;
+          } else if (targetStep.dayOffset === 1 && (page.followUpWaitMinutes ?? 30) < 1440) {
+            stepDelayMinutes = page.followUpWaitMinutes ?? 30;
+          }
 
-        // 5. Send message via Social Channel
+          const requiredDelayMs = stepDelayMinutes * 60 * 1000;
+          if (nowMs - referenceTime >= requiredDelayMs) {
+            isDue = true;
+          }
+        } else {
+          // STEP 2+: Calculate wait time from last follow-up sent time
+          if (!conv.lastFollowUpSentAt) {
+            isDue = true;
+          } else {
+            const lastSentTime = new Date(conv.lastFollowUpSentAt).getTime();
+            let intervalHours = page.followUpIntervalHours ?? 24;
+
+            if (page.followUpFrequency === 'DAILY') {
+              intervalHours = 24;
+            } else if (page.followUpFrequency === 'CUSTOM_INTERVAL') {
+              intervalHours = page.followUpIntervalHours || 24;
+            } else {
+              // Difference between current step dayOffset and previous step dayOffset
+              const prevStep = scheduleSteps[currentStepIndex - 1];
+              const diffDays = Math.max(1, targetStep.dayOffset - (prevStep ? prevStep.dayOffset : 0));
+              intervalHours = diffDays * 24;
+            }
+
+            const requiredIntervalMs = Math.max(1, intervalHours) * 60 * 60 * 1000;
+            if (nowMs - lastSentTime >= requiredIntervalMs) {
+              isDue = true;
+            }
+          }
+        }
+
+        if (!isDue) {
+          continue;
+        }
+
+        // 7. Generate Message Text (Custom Template or AI Generated)
+        let followUpText = '';
+        let aiModelUsed = 'CUSTOM_TEMPLATE';
+
+        if (page.followUpMessage && page.followUpMessage.trim().length > 0) {
+          // Use user-defined template with placeholder replacement
+          const customerFirstName = conv.customerName?.split(' ')[0] || 'গ্রাহক';
+          followUpText = page.followUpMessage
+            .replace(/{name}/gi, customerFirstName)
+            .replace(/{customer_name}/gi, customerFirstName)
+            .replace(/{page_name}/gi, page.pageName);
+        } else {
+          // Generate AI follow-up message with non-repetition memory
+          const previousFollowUpTexts = (conv.followUpLogs || [])
+            .map((l) => l.messageText)
+            .filter((t) => typeof t === 'string' && t.trim().length > 0);
+
+          const historyForAI = [...conv.messages].reverse().map((m) => ({
+            direction: m.direction,
+            text: m.messageText || '',
+          }));
+
+          const aiResult = await generateAiFollowUpMessage({
+            conversationId: conv.id,
+            customerName: conv.customerName,
+            step: targetStep,
+            conversationHistory: historyForAI,
+            previousFollowUps: previousFollowUpTexts,
+            pageName: page.pageName,
+            replyLanguage: page.replyLanguage || 'বাংলা',
+            businessInstructions: page.aiInstructions || '',
+          });
+
+          followUpText = aiResult.text;
+          aiModelUsed = aiResult.model;
+        }
+
+        if (!followUpText || followUpText.trim().length === 0) {
+          continue;
+        }
+
+        // 8. Send message via Social Channel
         const sendRes = await sendChannelMessage({
           channel,
           recipientId: conv.senderPsid,
@@ -426,15 +510,17 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         if (sendRes.success) {
           sentCount++;
 
-          const isLastStep = currentStepIndex + 1 >= scheduleSteps.length;
+          const isLastStep = currentStepIndex + 1 >= scheduleSteps.length || (page.followUpFrequency === 'ONCE');
           const nextStatus = isLastStep ? 'COMPLETED' : 'IN_PROGRESS';
           const nextStepNumber = currentStepIndex + 1;
 
           // Next due date calculation
           let nextDueAt: Date | null = null;
-          if (!isLastStep && scheduleSteps[nextStepNumber]) {
-            const nextStepObj = scheduleSteps[nextStepNumber];
-            nextDueAt = new Date(conversationBaseTime + nextStepObj.dayOffset * 24 * 60 * 60 * 1000);
+          if (!isLastStep) {
+            const nextIntervalHours = page.followUpFrequency === 'CUSTOM_INTERVAL'
+              ? (page.followUpIntervalHours || 24)
+              : 24;
+            nextDueAt = new Date(Date.now() + nextIntervalHours * 60 * 60 * 1000);
           }
 
           // Record in FollowUpLog
@@ -576,3 +662,4 @@ export function startFollowUpWorker(intervalMs = 60000) {
     globalForFollowUp.followUpWorkerInterval.unref();
   }
 }
+
