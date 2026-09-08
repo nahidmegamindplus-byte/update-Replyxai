@@ -174,6 +174,76 @@ export default function FollowUpPage() {
   const [sendingOneClickConvId, setSendingOneClickConvId] = useState<string | null>(null);
   const [advanceStepOption, setAdvanceStepOption] = useState(true);
 
+  // Bulk Multi-Select & Send State
+  const [selectedConvIds, setSelectedConvIds] = useState<string[]>([]);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'AI' | 'CUSTOM'>('AI');
+  const [bulkCustomText, setBulkCustomText] = useState('');
+  const [bulkAiPrompt, setBulkAiPrompt] = useState('');
+  const [sendingBulk, setSendingBulk] = useState(false);
+  const [bulkAdvanceStep, setBulkAdvanceStep] = useState(true);
+
+  const handleToggleSelectConv = (id: string) => {
+    setSelectedConvIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllFiltered = (list: ConversationItem[]) => {
+    const allIds = list.map((c) => c.id);
+    const areAllSelected = allIds.length > 0 && allIds.every((id) => selectedConvIds.includes(id));
+    if (areAllSelected) {
+      setSelectedConvIds([]);
+    } else {
+      setSelectedConvIds(allIds);
+    }
+  };
+
+  const handleOpenBulkModal = (mode: 'AI' | 'CUSTOM') => {
+    if (selectedConvIds.length === 0) {
+      toast.error('অনুগ্রহ করে অন্তত ১ জন গ্রাহক সিলেক্ট করুন');
+      return;
+    }
+    setBulkMode(mode);
+    setBulkModalOpen(true);
+  };
+
+  const handleSendBulkFollowUp = async () => {
+    if (selectedConvIds.length === 0) return;
+    if (bulkMode === 'CUSTOM' && !bulkCustomText.trim()) {
+      toast.error('অনুগ্রহ করে মেসেজের বিষয়বস্তু লিখুন');
+      return;
+    }
+    try {
+      setSendingBulk(true);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SEND_BULK',
+          conversationIds: selectedConvIds,
+          messageText: bulkMode === 'CUSTOM' ? bulkCustomText.trim() : undefined,
+          generateWithAi: bulkMode === 'AI',
+          customInstruction: bulkAiPrompt || undefined,
+          advanceStep: bulkAdvanceStep,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'বাল্ক ফলো-আপ বার্তা সফলভাবে পাঠানো হয়েছে!');
+        setSelectedConvIds([]);
+        setBulkModalOpen(false);
+        fetchFollowUpData(selectedPageId || undefined);
+      } else {
+        toast.error(data.error || 'বাল্ক মেসেজ পাঠানো ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      toast.error('সার্ভার কানেকশন এরর');
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
   // 1-Click Smart AI Follow-up (Direct Send with Context Analysis)
   const handleOneClickAiFollowUp = async (conv: ConversationItem) => {
     try {
@@ -1389,6 +1459,57 @@ export default function FollowUpPage() {
               </div>
             </div>
 
+            {/* Floating Bulk Action Bar when 1 or more users selected */}
+            {selectedConvIds.length > 0 && (
+              <div className="p-4 bg-gradient-to-r from-indigo-900 to-purple-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center font-bold text-amber-300 text-sm">
+                    {selectedConvIds.length}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      {selectedConvIds.length} জন গ্রাহক নির্বাচিত হয়েছেন
+                    </h4>
+                    <p className="text-[11px] text-indigo-200">
+                      নির্বাচিত সবার কাছে একসাথে ১-ক্লিক AI অথবা কাস্টম ফলো-আপ পাঠান।
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Bulk AI Send Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenBulkModal('AI')}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-slate-950" />
+                    ⚡ ১-ক্লিক AI বাল্ক সেন্ড
+                  </button>
+
+                  {/* Bulk Custom Send Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenBulkModal('CUSTOM')}
+                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all flex items-center gap-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    কাস্টম মেসেজ
+                  </button>
+
+                  {/* Deselect / Clear */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConvIds([])}
+                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-indigo-200 text-xs transition-colors"
+                  >
+                    সিলেকশন ক্লিয়ার
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Conversation Items Table / Cards */}
             {loading ? (
               <div className="py-12 text-center text-slate-400">
@@ -1406,6 +1527,18 @@ export default function FollowUpPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
                     <tr>
+                      <th className="py-3 px-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            filteredConversations.length > 0 &&
+                            filteredConversations.every((c) => selectedConvIds.includes(c.id))
+                          }
+                          onChange={() => handleSelectAllFiltered(filteredConversations)}
+                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                          title="সবাইকে সিলেক্ট / আনসিলেক্ট করুন"
+                        />
+                      </th>
                       <th className="py-3 px-4">গ্রাহক ও চ্যানেল</th>
                       <th className="py-3 px-4">বর্তমান ধাপ</th>
                       <th className="py-3 px-4">স্ট্যাটাস</th>
@@ -1414,68 +1547,85 @@ export default function FollowUpPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredConversations.map((conv) => (
-                      <tr key={conv.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-slate-900">{conv.customerName || conv.senderPsid}</div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                            {conv.channel} {conv.page ? `• ${conv.page.pageName}` : ''}
-                          </div>
-                        </td>
+                    {filteredConversations.map((conv) => {
+                      const isSelected = selectedConvIds.includes(conv.id);
+                      return (
+                        <tr
+                          key={conv.id}
+                          className={`transition-colors ${
+                            isSelected ? 'bg-indigo-50/60' : 'hover:bg-slate-50/60'
+                          }`}
+                        >
+                          <td className="py-3 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectConv(conv.id)}
+                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
 
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                            ধাপ #{conv.currentFollowUpStep + 1}
-                          </span>
-                        </td>
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-slate-900">{conv.customerName || conv.senderPsid}</div>
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                              {conv.channel} {conv.page ? `• ${conv.page.pageName}` : ''}
+                            </div>
+                          </td>
 
-                        <td className="py-3 px-4">{getStatusBadge(conv.followUpStatus)}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                              ধাপ #{conv.currentFollowUpStep + 1}
+                            </span>
+                          </td>
 
-                        <td className="py-3 px-4 max-w-xs truncate text-slate-600">
-                          {conv.lastMessage || 'কোনো মেসেজ নেই'}
-                        </td>
+                          <td className="py-3 px-4">{getStatusBadge(conv.followUpStatus)}</td>
 
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            {/* 1-Click Smart AI Follow-up */}
-                            <button
-                              onClick={() => handleOneClickAiFollowUp(conv)}
-                              disabled={sendingOneClickConvId === conv.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors disabled:opacity-50"
-                              title="পূর্ববর্তী চ্যাট হিস্ট্রি বিশ্লেষণ করে ১-ক্লিকে AI ফলো-আপ পাঠান"
-                            >
-                              {sendingOneClickConvId === conv.id ? (
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-700" />
-                              ) : (
-                                <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                              )}
-                              <span>{sendingOneClickConvId === conv.id ? 'পাঠাচ্ছে...' : '১-ক্লিক AI'}</span>
-                            </button>
+                          <td className="py-3 px-4 max-w-xs truncate text-slate-600">
+                            {conv.lastMessage || 'কোনো মেসেজ নেই'}
+                          </td>
 
-                            {/* Custom Manual Follow-up Modal */}
-                            <button
-                              onClick={() => openManualSendModal(conv)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
-                              title="ম্যানুয়াল মেসেজ লিখুন বা AI ড্রাফট এডিট করে পাঠান"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              কাস্টম
-                            </button>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              {/* 1-Click Smart AI Follow-up */}
+                              <button
+                                onClick={() => handleOneClickAiFollowUp(conv)}
+                                disabled={sendingOneClickConvId === conv.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors disabled:opacity-50"
+                                title="পূর্ববর্তী চ্যাট হিস্ট্রি বিশ্লেষণ করে ১-ক্লিকে AI ফলো-আপ পাঠান"
+                              >
+                                {sendingOneClickConvId === conv.id ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-700" />
+                                ) : (
+                                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                                )}
+                                <span>{sendingOneClickConvId === conv.id ? 'পাঠাচ্ছে...' : '১-ক্লিক AI'}</span>
+                              </button>
 
-                            {/* Memory History */}
-                            <button
-                              onClick={() => setHistoryModalConv(conv)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                              title="আগের ফলো-আপ মেমরি রেকর্ড"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              হিস্ট্রি ({conv.followUpLogs?.length || 0})
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {/* Custom Manual Follow-up Modal */}
+                              <button
+                                onClick={() => openManualSendModal(conv)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
+                                title="ম্যানুয়াল মেসেজ লিখুন বা AI ড্রাফট এডিট করে পাঠান"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                কাস্টম
+                              </button>
+
+                              {/* Memory History */}
+                              <button
+                                onClick={() => setHistoryModalConv(conv)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                                title="আগের ফলো-আপ মেমরি রেকর্ড"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                হিস্ট্রি ({conv.followUpLogs?.length || 0})
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2126,6 +2276,175 @@ export default function FollowUpPage() {
                   <>
                     <Send className="w-4 h-4" />
                     ফলো-আপ মেসেজ পাঠান
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK MULTI-CUSTOMER FOLLOW-UP MODAL */}
+      {bulkModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <button
+              onClick={() => setBulkModalOpen(false)}
+              className="absolute top-5 right-5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
+                বাল্ক ফলো-আপ বার্তা পাঠান
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                <span>নির্বাচিত মোট: <strong className="text-indigo-600 font-bold">{selectedConvIds.length} জন গ্রাহক</strong></span>
+                <span>•</span>
+                <span>সবাইকে একসাথে মেসেজ পাঠানো হবে</span>
+              </p>
+            </div>
+
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-4">
+              <button
+                type="button"
+                onClick={() => setBulkMode('AI')}
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  bulkMode === 'AI'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                ⚡ স্মার্ট AI পার্সোনালাইজড
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBulkMode('CUSTOM')}
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  bulkMode === 'CUSTOM'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Send className="w-3.5 h-3.5" />
+                ✉️ কমন কাস্টম মেসেজ
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 flex-1 pr-1">
+              {/* Mode A: Smart AI Personalized Mode */}
+              {bulkMode === 'AI' ? (
+                <div className="bg-amber-50/80 p-4 rounded-xl border border-amber-200/80 space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-950">AI স্মার্ট পার্সোনালাইজেশন ইঞ্জিন</h4>
+                      <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
+                        নির্বাচিত প্রতিজন গ্রাহকের <strong>আগের চ্যাট হিস্ট্রি, পছন্দের প্রোডাক্ট এবং পূর্বের ফলো-আপ রেকর্ড</strong> আলাদা আলাদা বিশ্লেষণ করে স্বয়ংক্রিয়ভাবে ইউনিক মেসেজ তৈরি ও পাঠানো হবে।
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-950 mb-1">
+                      AI-এর জন্য বিশেষ নির্দেশনা (ঐচ্ছিক):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="যেমন: ক্যাশ অন ডেলিভারি এবং দ্রুত ডেলিভারির সুবিধা মনে করিয়ে দিয়ে বিনম্রভাবে জানতে চান..."
+                      value={bulkAiPrompt}
+                      onChange={(e) => setBulkAiPrompt(e.target.value)}
+                      className="w-full text-xs bg-white border border-amber-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Mode B: Custom Template Mode */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800">
+                      সবার কাছে পাঠানোর জন্য মেসেজ লিখুন:
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      ভেরিয়েবল: &#123;name&#125;, &#123;page_name&#125;
+                    </span>
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="যেমন: আসসালামু আলাইকুম {name}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন থাকলে আমাদের জানাতে পারেন..."
+                    value={bulkCustomText}
+                    onChange={(e) => setBulkCustomText(e.target.value)}
+                    className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed"
+                  />
+
+                  {/* Quick Snippet Chips */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      { label: '🛍️ অর্ডার কনফার্মেশন', text: 'আসসালামু আলাইকুম {name}! আপনার পছন্দের প্রোডাক্টটি কি আমরা কনফার্ম করে দেব? যেকোনো প্রয়োজনে আমাদের জানাতে পারেন।' },
+                      { label: '🚚 COD সুবিধা', text: 'প্রিয় {name}, পণ্যটি হাতে পেয়ে মূল্য পরিশোধের (ক্যাশ অন ডেলিভারি) সুবিধা রয়েছে। ডেলিভারির জন্য আপনার ঠিকানা ও মোবাইল নম্বরটি জানাবেন কি?' },
+                      { label: '⚡ স্টক সীমিত', text: 'হ্যালো {name}! পণ্যটির স্টক দ্রুত শেষ হয়ে যাচ্ছে। আপনার জন্য একটি ইউনিট কি সংরক্ষণ করে রাখব?' },
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setBulkCustomText(chip.text)}
+                        className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 transition-colors border border-slate-200"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Advance step option */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="bulkAdvanceStep"
+                  checked={bulkAdvanceStep}
+                  onChange={(e) => setBulkAdvanceStep(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="bulkAdvanceStep" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                  মেসেজ পাঠানোর পর প্রতিটি গ্রাহকের ফলো-আপ ধাপ ১ ধাপ এগিয়ে নিন (Advance step count)
+                </label>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-2">
+              <button
+                type="button"
+                onClick={() => setBulkModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                বাতিল
+              </button>
+
+              <button
+                type="button"
+                disabled={sendingBulk || (bulkMode === 'CUSTOM' && !bulkCustomText.trim())}
+                onClick={handleSendBulkFollowUp}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {sendingBulk ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    {selectedConvIds.length} জনকে পাঠানো হচ্ছে...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    সবার কাছে পাঠান ({selectedConvIds.length} জন)
                   </>
                 )}
               </button>

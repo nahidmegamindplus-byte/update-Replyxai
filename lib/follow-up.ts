@@ -958,3 +958,75 @@ export async function sendManualFollowUp(params: {
   }
 }
 
+/**
+ * Send bulk follow-up messages to multiple conversations (Selected users)
+ * Supports:
+ * 1. AI Personalized for each user (analyzes each user's separate chat history)
+ * 2. Custom unified template with placeholder replacement ({name}, {page_name})
+ */
+export async function sendBulkFollowUp(params: {
+  conversationIds: string[];
+  userId: string;
+  messageText?: string;
+  generateWithAi?: boolean;
+  customInstruction?: string;
+  advanceStep?: boolean;
+}): Promise<{
+  success: boolean;
+  total: number;
+  sentCount: number;
+  failedCount: number;
+  results: Array<{ conversationId: string; customerName: string; status: string; error?: string }>;
+}> {
+  const { conversationIds, userId, messageText, generateWithAi, customInstruction, advanceStep } = params;
+  const results: Array<{ conversationId: string; customerName: string; status: string; error?: string }> = [];
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (const convId of conversationIds) {
+    try {
+      const res = await sendManualFollowUp({
+        conversationId: convId,
+        userId,
+        messageText,
+        generateWithAi,
+        customInstruction,
+        advanceStep: advanceStep !== false,
+      });
+
+      if (res.success) {
+        sentCount++;
+        results.push({
+          conversationId: convId,
+          customerName: res.customerName || 'Customer',
+          status: 'SENT',
+        });
+      } else {
+        failedCount++;
+        results.push({
+          conversationId: convId,
+          customerName: res.customerName || 'Customer',
+          status: 'FAILED',
+          error: res.error,
+        });
+      }
+    } catch (err: any) {
+      failedCount++;
+      results.push({
+        conversationId: convId,
+        customerName: 'Customer',
+        status: 'FAILED',
+        error: err?.message || 'Error sending message',
+      });
+    }
+  }
+
+  return {
+    success: true,
+    total: conversationIds.length,
+    sentCount,
+    failedCount,
+    results,
+  };
+}
+

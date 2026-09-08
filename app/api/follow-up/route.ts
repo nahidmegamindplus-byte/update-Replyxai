@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { ensureDatabaseReady } from '@/lib/db-init';
-import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker, generateManualFollowUpDraft, sendManualFollowUp } from '@/lib/follow-up';
+import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker, generateManualFollowUpDraft, sendManualFollowUp, sendBulkFollowUp } from '@/lib/follow-up';
 
 export async function GET(req: NextRequest) {
   try {
@@ -353,6 +353,29 @@ export async function POST(req: NextRequest) {
         success: true,
         message: `সফলভাবে ${sendResult.customerName || 'গ্রাহক'}-কে ফলো-আপ বার্তা পাঠানো হয়েছে! (${sendResult.channel})`,
         ...sendResult,
+      });
+    }
+
+    // 8. Send Bulk Follow-up (Multi-Select Users)
+    if (action === 'SEND_BULK') {
+      const { conversationIds, messageText, generateWithAi, customInstruction, advanceStep } = body;
+      if (!Array.isArray(conversationIds) || conversationIds.length === 0) {
+        return NextResponse.json({ success: false, error: 'অন্তত ১ জন গ্রাহক নির্বাচন করতে হবে।' }, { status: 400 });
+      }
+
+      const bulkResult = await sendBulkFollowUp({
+        conversationIds,
+        userId,
+        messageText,
+        generateWithAi: Boolean(generateWithAi),
+        customInstruction,
+        advanceStep: advanceStep !== false,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `সফলভাবে ${bulkResult.sentCount} জন গ্রাহকের কাছে ফলো-আপ বার্তা পাঠানো হয়েছে${bulkResult.failedCount > 0 ? ` (${bulkResult.failedCount} টি ব্যর্থ)` : ''}!`,
+        ...bulkResult,
       });
     }
 
