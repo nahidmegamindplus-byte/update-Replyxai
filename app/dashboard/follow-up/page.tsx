@@ -573,7 +573,7 @@ export default function FollowUpPage() {
               }`}
             >
               <Zap className="w-4 h-4 text-amber-600" />
-              অটোমেটেড ফলো-আপ পলিসি ও সেটিংস (Seen / Unreplied)
+              অটোমেটেড ফলো-আপ মেসেজ (Seen কিন্তু Reply দেয়নি)
             </button>
 
             <button
@@ -625,7 +625,7 @@ export default function FollowUpPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      অটোমেটেড ফলো-আপ পলিসি (Seen কিন্তু Reply দেয়নি)
+                      অটোমেটেড ফলো-আপ মেসেজ (Seen কিন্তু Reply দেয়নি)
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
                         ১০০% অটোমেশন
                       </span>
