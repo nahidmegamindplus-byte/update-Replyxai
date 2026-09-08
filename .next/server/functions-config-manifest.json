@@ -1,1 +1,1 @@
-{"version":1,"functions":{"/api/admin/packages":{},"/api/health":{},"/api/packages":{},"/api/payment-methods":{},"/api/reports":{},"/api/settings/whatsapp":{},"/api/products":{}}}
+{"version":1,"functions":{"/api/admin/packages":{},"/api/health":{},"/api/packages":{},"/api/payment-methods":{},"/api/products":{},"/api/reports":{},"/api/settings/whatsapp":{}}}

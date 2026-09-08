@@ -37,30 +37,10 @@ interface ScheduleStep {
   id?: string;
   stepNumber: number;
   dayOffset: number;
-  delayMinutes?: number;
   timeOfDay: string;
   title: string;
   guidelinePrompt?: string | null;
   isEnabled: boolean;
-}
-
-// Calculate total minutes for any step (starting from 1 minute to days)
-export function getStepTotalMinutes(step: Partial<ScheduleStep>): number {
-  if (typeof step.delayMinutes === 'number' && step.delayMinutes > 0) {
-    return step.delayMinutes;
-  }
-  if (step.timeOfDay && step.timeOfDay.endsWith('m')) {
-    const m = parseInt(step.timeOfDay.replace('m', ''), 10);
-    if (!isNaN(m) && m > 0) return m;
-  }
-  if (step.timeOfDay && step.timeOfDay.endsWith('h')) {
-    const h = parseInt(step.timeOfDay.replace('h', ''), 10);
-    if (!isNaN(h) && h > 0) return h * 60;
-  }
-  if (step.dayOffset && step.dayOffset > 0) {
-    return step.dayOffset * 1440;
-  }
-  return 30;
 }
 
 interface FollowUpLogItem {
@@ -165,183 +145,6 @@ export default function FollowUpPage() {
   // History Modal
   const [historyModalConv, setHistoryModalConv] = useState<ConversationItem | null>(null);
 
-  // Manual Follow-up Modal & 1-Click State
-  const [manualModalConv, setManualModalConv] = useState<ConversationItem | null>(null);
-  const [manualMsgText, setManualMsgText] = useState('');
-  const [manualAiPrompt, setManualAiPrompt] = useState('');
-  const [generatingDraft, setGeneratingDraft] = useState(false);
-  const [sendingManual, setSendingManual] = useState(false);
-  const [sendingOneClickConvId, setSendingOneClickConvId] = useState<string | null>(null);
-  const [advanceStepOption, setAdvanceStepOption] = useState(true);
-
-  // Bulk Multi-Select & Send State
-  const [selectedConvIds, setSelectedConvIds] = useState<string[]>([]);
-  const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [bulkMode, setBulkMode] = useState<'AI' | 'CUSTOM'>('AI');
-  const [bulkCustomText, setBulkCustomText] = useState('');
-  const [bulkAiPrompt, setBulkAiPrompt] = useState('');
-  const [sendingBulk, setSendingBulk] = useState(false);
-  const [bulkAdvanceStep, setBulkAdvanceStep] = useState(true);
-
-  const handleToggleSelectConv = (id: string) => {
-    setSelectedConvIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAllFiltered = (list: ConversationItem[]) => {
-    const allIds = list.map((c) => c.id);
-    const areAllSelected = allIds.length > 0 && allIds.every((id) => selectedConvIds.includes(id));
-    if (areAllSelected) {
-      setSelectedConvIds([]);
-    } else {
-      setSelectedConvIds(allIds);
-    }
-  };
-
-  const handleOpenBulkModal = (mode: 'AI' | 'CUSTOM') => {
-    if (selectedConvIds.length === 0) {
-      toast.error('অনুগ্রহ করে অন্তত ১ জন গ্রাহক সিলেক্ট করুন');
-      return;
-    }
-    setBulkMode(mode);
-    setBulkModalOpen(true);
-  };
-
-  const handleSendBulkFollowUp = async () => {
-    if (selectedConvIds.length === 0) return;
-    if (bulkMode === 'CUSTOM' && !bulkCustomText.trim()) {
-      toast.error('অনুগ্রহ করে মেসেজের বিষয়বস্তু লিখুন');
-      return;
-    }
-    try {
-      setSendingBulk(true);
-      const res = await fetch('/api/follow-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'SEND_BULK',
-          conversationIds: selectedConvIds,
-          messageText: bulkMode === 'CUSTOM' ? bulkCustomText.trim() : undefined,
-          generateWithAi: bulkMode === 'AI',
-          customInstruction: bulkAiPrompt || undefined,
-          advanceStep: bulkAdvanceStep,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || 'বাল্ক ফলো-আপ বার্তা সফলভাবে পাঠানো হয়েছে!');
-        setSelectedConvIds([]);
-        setBulkModalOpen(false);
-        fetchFollowUpData(selectedPageId || undefined);
-      } else {
-        toast.error(data.error || 'বাল্ক মেসেজ পাঠানো ব্যর্থ হয়েছে');
-      }
-    } catch (e) {
-      toast.error('সার্ভার কানেকশন এরর');
-    } finally {
-      setSendingBulk(false);
-    }
-  };
-
-  // 1-Click Smart AI Follow-up (Direct Send with Context Analysis)
-  const handleOneClickAiFollowUp = async (conv: ConversationItem) => {
-    try {
-      setSendingOneClickConvId(conv.id);
-      const res = await fetch('/api/follow-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'SEND_MANUAL',
-          conversationId: conv.id,
-          generateWithAi: true,
-          advanceStep: true,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || 'গ্রাহককে সফলভাবে AI ফলো-আপ বার্তা পাঠানো হয়েছে!');
-        fetchFollowUpData(selectedPageId || undefined);
-      } else {
-        toast.error(data.error || 'ফলো-আপ পাঠানো সম্ভব হয়নি');
-      }
-    } catch (e) {
-      toast.error('সার্ভার এরর');
-    } finally {
-      setSendingOneClickConvId(null);
-    }
-  };
-
-  // Open Manual Custom Send Modal
-  const openManualSendModal = (conv: ConversationItem) => {
-    setManualModalConv(conv);
-    setManualMsgText('');
-    setManualAiPrompt('');
-    setAdvanceStepOption(true);
-  };
-
-  // Generate Context-Aware AI Draft
-  const handleGenerateAiDraft = async () => {
-    if (!manualModalConv) return;
-    try {
-      setGeneratingDraft(true);
-      const res = await fetch('/api/follow-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'GENERATE_DRAFT',
-          conversationId: manualModalConv.id,
-          customInstruction: manualAiPrompt || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.draftText) {
-        setManualMsgText(data.draftText);
-        toast.success('AI ফলো-আপ ড্রাফট সফলভাবে তৈরি হয়েছে!');
-      } else {
-        toast.error(data.error || 'AI ড্রাফট তৈরি করা যায়নি');
-      }
-    } catch (e) {
-      toast.error('AI সার্ভার এরর');
-    } finally {
-      setGeneratingDraft(false);
-    }
-  };
-
-  // Send Custom Message from Modal
-  const handleSendManualFromModal = async () => {
-    if (!manualModalConv || !manualMsgText.trim()) {
-      toast.error('অনুগ্রহ করে মেসেজের বিষয়বস্তু লিখুন');
-      return;
-    }
-    try {
-      setSendingManual(true);
-      const res = await fetch('/api/follow-up', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'SEND_MANUAL',
-          conversationId: manualModalConv.id,
-          messageText: manualMsgText.trim(),
-          generateWithAi: false,
-          advanceStep: advanceStepOption,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(data.message || 'ফলো-আপ বার্তা সফলভাবে পাঠানো হয়েছে!');
-        setManualModalConv(null);
-        fetchFollowUpData(selectedPageId || undefined);
-      } else {
-        toast.error(data.error || 'মেসেজ পাঠানো ব্যর্থ হয়েছে');
-      }
-    } catch (e) {
-      toast.error('সার্ভার কানেকশন ত্রুটি');
-    } finally {
-      setSendingManual(false);
-    }
-  };
-
   const fetchFollowUpData = async (pageId?: string) => {
     try {
       setLoading(true);
@@ -433,40 +236,69 @@ export default function FollowUpPage() {
     }
   };
 
-  // Open Step Modal (supports optional instant preset e.g. 1 minute)
-  const openAddStepModal = (presetUnit: 'minutes' | 'hours' | 'days' = 'minutes', presetValue: number = 1) => {
-    const nextStepNum = steps.length + 1;
-    let suggestedUnit: 'minutes' | 'hours' | 'days' = presetUnit;
-    let suggestedMinutes = presetUnit === 'minutes' ? presetValue : 1;
-    let suggestedHours = presetUnit === 'hours' ? presetValue : 2;
-    let suggestedDays = presetUnit === 'days' ? presetValue : 1;
-
-    setEditingStepIndex(null);
-    setStepTimeUnit(suggestedUnit);
-    setStepCustomMinutes(suggestedMinutes);
-    setStepCustomHours(suggestedHours);
-
-    let defaultTitle = '';
-    let defaultPrompt = '';
-
-    if (suggestedUnit === 'minutes') {
-      defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedMinutes} মিনিট পর)`;
-      if (suggestedMinutes === 1) {
-        defaultPrompt = 'পছন্দের পণ্য নিয়ে কোনো প্রশ্ন আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সাহায্য লাগবে কিনা দ্রুত ও আন্তরিকভাবে জানতে চান।';
-      }
-    } else if (suggestedUnit === 'hours') {
-      defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedHours} ঘণ্টা পর)`;
-      defaultPrompt = 'পণ্যের কোয়ালিটি ও ক্যাশ অন ডেলিভারি (COD) সুবিধার কথা মনে করিয়ে দিন।';
-    } else {
-      defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedDays} দিন পর)`;
-      defaultPrompt = 'পণ্যটি পছন্দের তালিকায় আছে কিনা এবং কোনো ডিসকাউন্ট বা স্টক তথ্য জানতে চান কিনা জানতে চান।';
+  // Helper: compute total minutes of a step for precise sorting
+  const getStepTotalMinutes = (step: ScheduleStep): number => {
+    if (step.timeOfDay?.startsWith('MIN:')) {
+      const mins = parseInt(step.timeOfDay.replace('MIN:', ''), 10);
+      return isNaN(mins) || mins <= 0 ? 1 : mins;
     }
+    if (step.timeOfDay?.startsWith('HR:')) {
+      const hrs = parseInt(step.timeOfDay.replace('HR:', ''), 10);
+      return isNaN(hrs) || hrs <= 0 ? 60 : hrs * 60;
+    }
+    if (step.dayOffset === 0 && step.timeOfDay?.includes(':')) {
+      const [h, m] = step.timeOfDay.split(':').map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        return Math.max(1, h * 60 + m);
+      }
+    }
+    return Math.max(1, step.dayOffset || 1) * 24 * 60;
+  };
 
+  // Helper: format step timing for badges and UI
+  const formatStepTimingDisplay = (step: ScheduleStep) => {
+    if (step.timeOfDay?.startsWith('MIN:')) {
+      const mins = parseInt(step.timeOfDay.replace('MIN:', ''), 10) || 1;
+      return {
+        badge: `${mins} মিনিট পর`,
+        timeText: 'তাৎক্ষণিক/মিনিট শিডিউল',
+        isMinute: true,
+      };
+    }
+    if (step.timeOfDay?.startsWith('HR:')) {
+      const hrs = parseInt(step.timeOfDay.replace('HR:', ''), 10) || 1;
+      return {
+        badge: `${hrs} ঘণ্টা পর`,
+        timeText: 'ঘণ্টা ভিত্তিক শিডিউল',
+        isHour: true,
+      };
+    }
+    if (step.dayOffset === 0) {
+      return {
+        badge: 'একই দিনে',
+        timeText: formatTimeDisplay(step.timeOfDay),
+        isDay: true,
+      };
+    }
+    return {
+      badge: `${step.dayOffset} দিন পর`,
+      timeText: formatTimeDisplay(step.timeOfDay),
+      isDay: true,
+    };
+  };
+
+  // Open Step Modal
+  const openAddStepModal = () => {
+    const nextStepNum = steps.length + 1;
+    setEditingStepIndex(null);
+    setStepTimeUnit('minutes');
+    setStepCustomMinutes(1);
+    setStepCustomHours(1);
     setStepFormData({
-      dayOffset: suggestedDays,
-      timeOfDay: suggestedUnit === 'minutes' ? `${suggestedMinutes}m` : suggestedUnit === 'hours' ? `${suggestedHours}h` : '10:00',
-      title: defaultTitle,
-      guidelinePrompt: defaultPrompt,
+      dayOffset: 0,
+      timeOfDay: 'MIN:1',
+      title: `${nextStepNum}ম ফলো-আপ (১ মিনিট পর)`,
+      guidelinePrompt: '',
       isEnabled: true,
     });
     setModalOpen(true);
@@ -475,46 +307,38 @@ export default function FollowUpPage() {
   const openEditStepModal = (index: number) => {
     const target = steps[index];
     setEditingStepIndex(index);
-
-    const totalMins = getStepTotalMinutes(target);
-    if (totalMins < 60 || (target.timeOfDay && target.timeOfDay.endsWith('m'))) {
+    if (target.timeOfDay?.startsWith('MIN:')) {
+      const mins = parseInt(target.timeOfDay.replace('MIN:', ''), 10) || 1;
       setStepTimeUnit('minutes');
-      const m = target.delayMinutes || (target.timeOfDay?.endsWith('m') ? parseInt(target.timeOfDay) : 0) || totalMins || 1;
-      setStepCustomMinutes(m);
-      setStepCustomHours(1);
+      setStepCustomMinutes(mins);
       setStepFormData({
         dayOffset: 0,
-        timeOfDay: `${m}m`,
+        timeOfDay: target.timeOfDay,
         title: target.title,
         guidelinePrompt: target.guidelinePrompt || '',
         isEnabled: target.isEnabled,
       });
-    } else if (totalMins < 1440 || (target.timeOfDay && target.timeOfDay.endsWith('h'))) {
+    } else if (target.timeOfDay?.startsWith('HR:')) {
+      const hrs = parseInt(target.timeOfDay.replace('HR:', ''), 10) || 1;
       setStepTimeUnit('hours');
-      const h = Math.round(totalMins / 60) || (target.timeOfDay?.endsWith('h') ? parseInt(target.timeOfDay) : 0) || 1;
-      setStepCustomHours(h);
-      setStepCustomMinutes(30);
+      setStepCustomHours(hrs);
       setStepFormData({
-        dayOffset: Math.floor(h / 24),
-        timeOfDay: `${h}h`,
+        dayOffset: 0,
+        timeOfDay: target.timeOfDay,
         title: target.title,
         guidelinePrompt: target.guidelinePrompt || '',
         isEnabled: target.isEnabled,
       });
     } else {
       setStepTimeUnit('days');
-      const d = target.dayOffset || Math.round(totalMins / 1440) || 1;
-      setStepCustomMinutes(30);
-      setStepCustomHours(2);
       setStepFormData({
-        dayOffset: d,
-        timeOfDay: target.timeOfDay && !target.timeOfDay.includes('m') && !target.timeOfDay.includes('h') ? target.timeOfDay : '10:00',
+        dayOffset: target.dayOffset || 1,
+        timeOfDay: target.timeOfDay || '10:00',
         title: target.title,
         guidelinePrompt: target.guidelinePrompt || '',
         isEnabled: target.isEnabled,
       });
     }
-
     setModalOpen(true);
   };
 
@@ -523,60 +347,53 @@ export default function FollowUpPage() {
     e.preventDefault();
     const updatedSteps = [...steps];
 
-    let computedDayOffset = 0;
-    let computedDelayMinutes = 30;
+    let computedDayOffset = 1;
     let computedTimeOfDay = '10:00';
-    let autoTitle = stepFormData.title.trim();
-
-    const stepIdx = editingStepIndex !== null ? editingStepIndex : updatedSteps.length;
-    const stepNumber = stepIdx + 1;
+    let defaultTitle = stepFormData.title?.trim();
 
     if (stepTimeUnit === 'minutes') {
-      const mins = Math.max(1, Number(stepCustomMinutes) || 1);
-      computedDelayMinutes = mins;
+      const mins = Math.max(1, stepCustomMinutes || 1);
       computedDayOffset = 0;
-      computedTimeOfDay = `${mins}m`;
-      if (!autoTitle || autoTitle.includes('ফলো-আপ')) {
-        autoTitle = `${stepNumber}ম ফলো-আপ (${mins} মিনিট পর)`;
+      computedTimeOfDay = `MIN:${mins}`;
+      if (!defaultTitle) {
+        defaultTitle = `ফলো-আপ (${mins} মিনিট পর)`;
       }
     } else if (stepTimeUnit === 'hours') {
-      const hrs = Math.max(1, Number(stepCustomHours) || 1);
-      computedDelayMinutes = hrs * 60;
-      computedDayOffset = Math.floor(hrs / 24);
-      computedTimeOfDay = `${hrs}h`;
-      if (!autoTitle || autoTitle.includes('ফলো-আপ')) {
-        autoTitle = `${stepNumber}ম ফলো-আপ (${hrs} ঘন্টা পর)`;
+      const hrs = Math.max(1, stepCustomHours || 1);
+      computedDayOffset = 0;
+      computedTimeOfDay = `HR:${hrs}`;
+      if (!defaultTitle) {
+        defaultTitle = `ফলো-আপ (${hrs} ঘণ্টা পর)`;
       }
     } else {
-      const days = Math.max(1, Number(stepFormData.dayOffset) || 1);
-      computedDelayMinutes = days * 1440;
-      computedDayOffset = days;
+      computedDayOffset = Math.max(1, Number(stepFormData.dayOffset) || 1);
       computedTimeOfDay = stepFormData.timeOfDay || '10:00';
-      if (!autoTitle || autoTitle.includes('ফলো-আপ')) {
-        autoTitle = `${stepNumber}ম ফলো-আপ (${days} দিন পর - ${formatTimeDisplay(computedTimeOfDay)})`;
+      if (!defaultTitle) {
+        defaultTitle = `ধাপ #${(editingStepIndex !== null ? editingStepIndex : updatedSteps.length) + 1} (${computedDayOffset} দিন পর)`;
       }
     }
 
     const stepPayload: ScheduleStep = {
-      stepNumber,
+      stepNumber: (editingStepIndex !== null ? editingStepIndex : updatedSteps.length) + 1,
       dayOffset: computedDayOffset,
-      delayMinutes: computedDelayMinutes,
       timeOfDay: computedTimeOfDay,
-      title: autoTitle,
-      guidelinePrompt: stepFormData.guidelinePrompt || '',
+      title: defaultTitle,
+      guidelinePrompt: stepFormData.guidelinePrompt,
       isEnabled: stepFormData.isEnabled,
     };
 
     if (editingStepIndex !== null) {
-      stepPayload.id = updatedSteps[editingStepIndex].id;
-      updatedSteps[editingStepIndex] = stepPayload;
+      updatedSteps[editingStepIndex] = {
+        ...updatedSteps[editingStepIndex],
+        ...stepPayload,
+      };
     } else {
       updatedSteps.push(stepPayload);
     }
 
     // Sort by total minutes
     updatedSteps.sort((a, b) => getStepTotalMinutes(a) - getStepTotalMinutes(b));
-    // Re-index stepNumbers sequentially
+    // Re-index stepNumbers
     const finalSteps = updatedSteps.map((s, idx) => ({ ...s, stepNumber: idx + 1 }));
 
     setSteps(finalSteps);
@@ -1273,49 +1090,21 @@ export default function FollowUpPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  {/* Quick 1-Minute Add Button */}
-                  <button
-                    onClick={() => openAddStepModal('minutes', 1)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs transition-all active:scale-95"
-                    title="১ মিনিট পরের দ্রুত ফলো-আপ ধাপ যোগ করুন"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                    + ১ মিনিট ধাপ
-                  </button>
-
-                  {/* Quick 5-Minute Add Button */}
-                  <button
-                    onClick={() => openAddStepModal('minutes', 5)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    + ৫ মিনিট
-                  </button>
-
-                  {/* Quick 1-Hour Add Button */}
-                  <button
-                    onClick={() => openAddStepModal('hours', 1)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    + ১ ঘণ্টা
-                  </button>
-
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleResetToDefault}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    ডিফল্ট ৫-ধাপ
+                    ডিফল্ট ৫-ধাপে রিসেট
                   </button>
 
                   <button
-                    onClick={() => openAddStepModal('minutes', 1)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all active:scale-95"
+                    onClick={openAddStepModal}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all"
                   >
                     <Plus className="w-4 h-4" />
-                    নতুন ধাপ যোগ করুন
+                    নতুন ফলো-আপ ধাপ যোগ করুন
                   </button>
                 </div>
               </div>
@@ -1336,93 +1125,88 @@ export default function FollowUpPage() {
                 </div>
               ) : (
                 <div className="space-y-3.5">
-                  {steps.map((step, idx) => {
-                    const totalMins = getStepTotalMinutes(step);
-                    const isMinutes = totalMins < 60 || (step.timeOfDay && step.timeOfDay.endsWith('m'));
-                    const isHours = (totalMins >= 60 && totalMins < 1440) || (step.timeOfDay && step.timeOfDay.endsWith('h'));
-
-                    return (
-                      <div
-                        key={step.id || idx}
-                        className={`p-5 rounded-2xl border transition-all ${
-                          step.isEnabled
-                            ? 'bg-white border-slate-200/90 shadow-2xs hover:border-indigo-300'
-                            : 'bg-slate-50/70 border-slate-200 opacity-60'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
-                              #{step.stepNumber}
-                            </div>
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-base font-bold text-slate-900">{step.title}</h3>
-                                {isMinutes ? (
-                                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-bold border border-amber-200 flex items-center gap-1">
-                                    <Zap className="w-3 h-3 text-amber-600 fill-amber-600" />
-                                    {totalMins} মিনিট পর
-                                  </span>
-                                ) : isHours ? (
-                                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200 flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {Math.round(totalMins / 60)} ঘণ্টা পর
-                                  </span>
-                                ) : (
-                                  <>
-                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                                      {step.dayOffset || Math.round(totalMins / 1440)} দিন পর
-                                    </span>
-                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 flex items-center gap-1">
-                                      <Clock className="w-3 h-3" />
-                                      {formatTimeDisplay(step.timeOfDay)}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-
-                              <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                <span className="font-semibold text-slate-700">AI নির্দেশিকা:</span>
-                                {step.guidelinePrompt || 'স্বাভাবিক ও আন্তরিক ভঙ্গিতে ফলো-আপ করুন।'}
-                              </p>
-                            </div>
+                  {steps.map((step, idx) => (
+                    <div
+                      key={step.id || idx}
+                      className={`p-5 rounded-2xl border transition-all ${
+                        step.isEnabled
+                          ? 'bg-white border-slate-200/90 shadow-2xs hover:border-indigo-300'
+                          : 'bg-slate-50/70 border-slate-200 opacity-60'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+                            #{step.stepNumber}
                           </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-base font-bold text-slate-900">{step.title}</h3>
+                              {(() => {
+                                const timing = formatStepTimingDisplay(step);
+                                return (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1 shadow-2xs ${
+                                      timing.isMinute
+                                        ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                        : timing.isHour
+                                        ? 'bg-indigo-50 text-indigo-900 border-indigo-300'
+                                        : 'bg-purple-50 text-purple-900 border-purple-300'
+                                    }`}>
+                                      <Clock className="w-3 h-3 text-amber-600" />
+                                      {timing.badge}
+                                    </span>
+                                    {timing.isDay && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                                        {timing.timeText}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
 
-                          <div className="flex items-center gap-3 shrink-0">
-                            {/* Toggle active */}
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={step.isEnabled}
-                                onChange={() => handleToggleStep(idx)}
-                                className="sr-only peer"
-                              />
-                              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                            </label>
-
-                            {/* Edit */}
-                            <button
-                              onClick={() => openEditStepModal(idx)}
-                              className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                              title="এডিট করুন"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              onClick={() => handleDeleteStep(idx)}
-                              className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                              title="মুছে ফেলুন"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <p className="text-xs text-slate-600 mt-1.5 flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <span className="font-semibold text-slate-700">AI নির্দেশিকা:</span>
+                              {step.guidelinePrompt || 'স্বাভাবিক ও আন্তরিক ভঙ্গিতে ফলো-আপ করুন।'}
+                            </p>
                           </div>
                         </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          {/* Toggle active */}
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={step.isEnabled}
+                              onChange={() => handleToggleStep(idx)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                          </label>
+
+                          {/* Edit */}
+                          <button
+                            onClick={() => openEditStepModal(idx)}
+                            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            title="এডিট করুন"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => handleDeleteStep(idx)}
+                            className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="মুছে ফেলুন"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1440,7 +1224,7 @@ export default function FollowUpPage() {
           </div>
         )}
 
-        {/* TAB 3: LIVE PIPELINE */}
+        {/* TAB 2: LIVE PIPELINE */}
         {activeTab === 'pipeline' && (
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1459,189 +1243,83 @@ export default function FollowUpPage() {
                   { key: 'CUSTOMER_REPLIED', label: 'রিপ্লাই করেছে' },
                   { key: 'ORDER_PLACED', label: 'অর্ডার সম্পন্ন' },
                   { key: 'COMPLETED', label: 'সমাপ্ত' },
-                ].map((st) => (
+                ].map((tab) => (
                   <button
-                    key={st.key}
-                    onClick={() => setStatusFilter(st.key)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap ${
-                      statusFilter === st.key
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    key={tab.key}
+                    onClick={() => setStatusFilter(tab.key)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                      statusFilter === tab.key
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    {st.label}
+                    {tab.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Floating Bulk Action Bar when 1 or more users selected */}
-            {selectedConvIds.length > 0 && (
-              <div className="p-4 bg-gradient-to-r from-indigo-900 to-purple-900 text-white rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fadeIn">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center font-bold text-amber-300 text-sm">
-                    {selectedConvIds.length}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      {selectedConvIds.length} জন গ্রাহক নির্বাচিত হয়েছেন
-                    </h4>
-                    <p className="text-[11px] text-indigo-200">
-                      নির্বাচিত সবার কাছে একসাথে ১-ক্লিক AI অথবা কাস্টম ফলো-আপ পাঠান।
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Bulk AI Send Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenBulkModal('AI')}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5 fill-slate-950" />
-                    ⚡ ১-ক্লিক AI বাল্ক সেন্ড
-                  </button>
-
-                  {/* Bulk Custom Send Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenBulkModal('CUSTOM')}
-                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all flex items-center gap-1.5"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    কাস্টম মেসেজ
-                  </button>
-
-                  {/* Deselect / Clear */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedConvIds([])}
-                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-indigo-200 text-xs transition-colors"
-                  >
-                    সিলেকশন ক্লিয়ার
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Conversation Items Table / Cards */}
-            {loading ? (
+            {/* Pipeline Table */}
+            {filteredConversations.length === 0 ? (
               <div className="py-12 text-center text-slate-400">
-                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                পাইপলাইন লোড হচ্ছে...
-              </div>
-            ) : filteredConversations.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                <Layers className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-slate-700">কোনো গ্রাহক পাওয়া যায়নি</p>
-                <p className="text-xs text-slate-500 mt-1">নির্বাচিত ফিল্টারে এই মুহূর্তে কোনো কনভার্সেশন নেই।</p>
+                <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700">এই ক্যাটাগরিতে কোনো গ্রাহক নেই</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
-                    <tr>
-                      <th className="py-3 px-3 w-10 text-center">
-                        <input
-                          type="checkbox"
-                          checked={
-                            filteredConversations.length > 0 &&
-                            filteredConversations.every((c) => selectedConvIds.includes(c.id))
-                          }
-                          onChange={() => handleSelectAllFiltered(filteredConversations)}
-                          className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                          title="সবাইকে সিলেক্ট / আনসিলেক্ট করুন"
-                        />
-                      </th>
-                      <th className="py-3 px-4">গ্রাহক ও চ্যানেল</th>
-                      <th className="py-3 px-4">বর্তমান ধাপ</th>
-                      <th className="py-3 px-4">স্ট্যাটাস</th>
-                      <th className="py-3 px-4">সর্বশেষ বার্তা</th>
-                      <th className="py-3 px-4 text-right">অ্যাকশন ও ফলো-আপ</th>
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/50 text-slate-600 font-semibold text-xs">
+                      <th className="py-3.5 px-4 rounded-l-xl">গ্রাহক ও চ্যানেল</th>
+                      <th className="py-3.5 px-4">বর্তমান ধাপ</th>
+                      <th className="py-3.5 px-4">স্ট্যাটাস</th>
+                      <th className="py-3.5 px-4">সর্বশেষ ফলো-আপ</th>
+                      <th className="py-3.5 px-4 rounded-r-xl text-right">মেসেজ হিস্ট্রি</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredConversations.map((conv) => {
-                      const isSelected = selectedConvIds.includes(conv.id);
-                      return (
-                        <tr
-                          key={conv.id}
-                          className={`transition-colors ${
-                            isSelected ? 'bg-indigo-50/60' : 'hover:bg-slate-50/60'
-                          }`}
-                        >
-                          <td className="py-3 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleSelectConv(conv.id)}
-                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                            />
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900">{conv.customerName || conv.senderPsid}</div>
-                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                              {conv.channel} {conv.page ? `• ${conv.page.pageName}` : ''}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1 font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
-                              ধাপ #{conv.currentFollowUpStep + 1}
+                    {filteredConversations.map((c) => (
+                      <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-slate-900">{c.customerName || c.senderPsid}</div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
+                              {c.channel}
                             </span>
-                          </td>
+                            {c.page?.pageName && <span>• {c.page.pageName}</span>}
+                          </div>
+                        </td>
 
-                          <td className="py-3 px-4">{getStatusBadge(conv.followUpStatus)}</td>
+                        <td className="py-4 px-4">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                            ধাপ #{c.currentFollowUpStep} / {steps.length || 5}
+                          </span>
+                        </td>
 
-                          <td className="py-3 px-4 max-w-xs truncate text-slate-600">
-                            {conv.lastMessage || 'কোনো মেসেজ নেই'}
-                          </td>
+                        <td className="py-4 px-4">{getStatusBadge(c.followUpStatus)}</td>
 
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                              {/* 1-Click Smart AI Follow-up */}
-                              <button
-                                onClick={() => handleOneClickAiFollowUp(conv)}
-                                disabled={sendingOneClickConvId === conv.id}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors disabled:opacity-50"
-                                title="পূর্ববর্তী চ্যাট হিস্ট্রি বিশ্লেষণ করে ১-ক্লিকে AI ফলো-আপ পাঠান"
-                              >
-                                {sendingOneClickConvId === conv.id ? (
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-700" />
-                                ) : (
-                                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
-                                )}
-                                <span>{sendingOneClickConvId === conv.id ? 'পাঠাচ্ছে...' : '১-ক্লিক AI'}</span>
-                              </button>
+                        <td className="py-4 px-4 text-xs text-slate-500">
+                          {c.lastFollowUpSentAt
+                            ? new Date(c.lastFollowUpSentAt).toLocaleString('bn-BD', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'এখনো পাঠানো হয়নি'}
+                        </td>
 
-                              {/* Custom Manual Follow-up Modal */}
-                              <button
-                                onClick={() => openManualSendModal(conv)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
-                                title="ম্যানুয়াল মেসেজ লিখুন বা AI ড্রাফট এডিট করে পাঠান"
-                              >
-                                <Send className="w-3.5 h-3.5" />
-                                কাস্টম
-                              </button>
-
-                              {/* Memory History */}
-                              <button
-                                onClick={() => setHistoryModalConv(conv)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                                title="আগের ফলো-আপ মেমরি রেকর্ড"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                হিস্ট্রি ({conv.followUpLogs?.length || 0})
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        <td className="py-4 px-4 text-right">
+                          <button
+                            onClick={() => setHistoryModalConv(c)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            মেসেজ দেখুন
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1649,35 +1327,29 @@ export default function FollowUpPage() {
           </div>
         )}
 
-        {/* TAB 4: AUDIT LOGS */}
+        {/* TAB 3: AUDIT LOGS */}
         {activeTab === 'logs' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">ফলো-আপ মেসেজ অডিট লগ</h2>
+              <h2 className="text-lg font-bold text-slate-900">ফলো-আপ মেসেজ হিস্ট্রি ও অডিট লগ</h2>
               <p className="text-sm text-slate-500 mt-0.5">
-                সিস্টেম থেকে স্বয়ংক্রিয়ভাবে পাঠানো সমস্ত ফলো-আপ বার্তার বিস্তারিত ইতিহাস।
+                প্রতিটি স্বয়ংক্রিয় ফলো-আপ মেসেজের বিস্তারিত লগ এবং AI মডেল ট্র্যাকিং।
               </p>
             </div>
 
-            {loading ? (
+            {recentLogs.length === 0 ? (
               <div className="py-12 text-center text-slate-400">
-                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                লগ লোড হচ্ছে...
-              </div>
-            ) : recentLogs.length === 0 ? (
-              <div className="py-12 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                <Send className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-slate-700">কোনো ফলো-আপ মেসেজ পাঠানো হয়নি</p>
-                <p className="text-xs text-slate-500 mt-1">ফলো-আপ পাঠানো শুরু হলে এখানে সব লগ প্রদর্শিত হবে।</p>
+                <Send className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700">কোনো ফলো-আপ লগ পাওয়া যায়নি</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {recentLogs.map((log) => (
-                  <div key={log.id} className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
+                  <div key={log.id} className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/30 hover:bg-slate-50 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 text-sm">{log.customerName || log.senderPsid}</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                        <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold border border-purple-200">
                           ধাপ #{log.stepNumber} ({log.dayOffset} দিন পর)
                         </span>
                         <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
@@ -1712,7 +1384,7 @@ export default function FollowUpPage() {
       {/* STEP ADD / EDIT MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95">
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-5 right-5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -1720,245 +1392,213 @@ export default function FollowUpPage() {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-lg font-bold text-slate-900 mb-1">
               {editingStepIndex !== null ? 'ফলো-আপ ধাপ সম্পাদনা করুন' : 'নতুন ফলো-আপ ধাপ যুক্ত করুন'}
             </h3>
             <p className="text-xs text-slate-500 mb-5">
-              ১ মিনিট থেকে শুরু করে যেকোনো মিনিট, ঘণ্টা বা দিন নির্ধারণ করে গ্রাহককে স্বয়ংক্রিয় ফলো-আপ পাঠান।
+              ১ মিনিট থেকে শুরু করে ইচ্ছামতো যেকোনো মিনিট, ঘণ্টা বা দিন পর ফলো-আপ শিডিউল নির্ধারণ করুন।
             </p>
 
             <form onSubmit={handleSaveStepModal} className="space-y-4">
-              {/* Unit Selection Tabs */}
+              {/* Unit Selector: Minutes vs Hours vs Days */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  ধাপের টাইমিং ইউনিট নির্ধারণ করুন
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                  সময় নির্ধারণের একক (Time Unit):
                 </label>
-                <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl">
                   <button
                     type="button"
                     onClick={() => {
                       setStepTimeUnit('minutes');
-                      const m = stepCustomMinutes || 1;
-                      const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
                       setStepFormData({
                         ...stepFormData,
-                        title: `${nextStepNum}ম ফলো-আপ (${m} মিনিট পর)`,
+                        title: stepFormData.title.includes('ফলো-আপ') ? `ফলো-আপ (${stepCustomMinutes || 1} মিনিট পর)` : stepFormData.title,
                       });
                     }}
-                    className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       stepTimeUnit === 'minutes'
-                        ? 'bg-amber-500 text-white shadow-xs'
+                        ? 'bg-white text-amber-700 shadow-xs ring-1 ring-amber-300'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Zap className="w-3.5 h-3.5" />
-                    মিনিট (Minutes)
+                    <Clock className="w-3.5 h-3.5" />
+                    মিনিট ভিত্তিক
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       setStepTimeUnit('hours');
-                      const h = stepCustomHours || 2;
-                      const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
                       setStepFormData({
                         ...stepFormData,
-                        title: `${nextStepNum}ম ফলো-আপ (${h} ঘণ্টা পর)`,
+                        title: stepFormData.title.includes('ফলো-আপ') ? `ফলো-আপ (${stepCustomHours || 1} ঘণ্টা পর)` : stepFormData.title,
                       });
                     }}
-                    className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       stepTimeUnit === 'hours'
-                        ? 'bg-purple-600 text-white shadow-xs'
+                        ? 'bg-white text-indigo-700 shadow-xs ring-1 ring-indigo-300'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     <Clock className="w-3.5 h-3.5" />
-                    ঘণ্টা (Hours)
+                    ঘণ্টা ভিত্তিক
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       setStepTimeUnit('days');
-                      const d = stepFormData.dayOffset || 1;
-                      const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
                       setStepFormData({
                         ...stepFormData,
-                        title: `${nextStepNum}ম ফলো-আপ (${d} দিন পর)`,
+                        title: stepFormData.title.includes('ফলো-আপ') ? `ফলো-আপ (${stepFormData.dayOffset || 1} দিন পর)` : stepFormData.title,
                       });
                     }}
-                    className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                       stepTimeUnit === 'days'
-                        ? 'bg-indigo-600 text-white shadow-xs'
+                        ? 'bg-white text-purple-700 shadow-xs ring-1 ring-purple-300'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    দিন (Days)
+                    দিন ভিত্তিক
                   </button>
                 </div>
               </div>
 
-              {/* Minute Mode */}
+              {/* 1. MINUTES CONFIGURATION */}
               {stepTimeUnit === 'minutes' && (
-                <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-200/80 space-y-3 animate-fadeIn">
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-xl space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-amber-950">
-                      কত মিনিট পর মেসেজ যাবে? (১ মিনিট থেকে শুরু)
-                    </label>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-600 text-white">
-                      {stepCustomMinutes} মিনিট পর
+                    <span className="text-xs font-bold text-amber-950">কত মিনিট পর মেসেজ যাবে?</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-600 text-white">
+                      {stepCustomMinutes || 1} মিনিট পর
                     </span>
                   </div>
 
-                  {/* Preset Buttons for Minutes */}
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {/* Quick Minute Presets */}
+                  <div className="grid grid-cols-5 gap-1.5">
                     {[
-                      { m: 1, label: '⚡ ১ মিনিট', desc: 'ইনস্ট্যান্ট টেস্ট' },
-                      { m: 5, label: '৫ মিনিট', desc: 'খুব দ্রুত' },
-                      { m: 10, label: '১০ মিনিট', desc: 'দ্রুত' },
-                      { m: 15, label: '১৫ মিনিট', desc: 'স্ট্যান্ডার্ড' },
-                      { m: 30, label: '৩০ মিনিট', desc: 'আধা ঘন্টা' },
-                      { m: 45, label: '৪৫ মিনিট', desc: 'পঁয়তাল্লিশ' },
+                      { m: 1, label: '১ মিনিট' },
+                      { m: 5, label: '৫ মিনিট' },
+                      { m: 15, label: '১৫ মিনিট' },
+                      { m: 30, label: '৩০ মিনিট' },
+                      { m: 45, label: '৪৫ মিনিট' },
                     ].map((item) => (
                       <button
                         key={item.m}
                         type="button"
                         onClick={() => {
                           setStepCustomMinutes(item.m);
-                          const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
-                          setStepFormData((prev) => ({
-                            ...prev,
-                            title: `${nextStepNum}ম ফলো-আপ (${item.m} মিনিট পর)`,
-                            guidelinePrompt:
-                              !prev.guidelinePrompt || prev.guidelinePrompt.includes('ফলো-আপ')
-                                ? item.m === 1
-                                  ? 'পছন্দের পণ্য নিয়ে কোনো প্রশ্ন আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সাহায্য লাগবে কিনা দ্রুত ও আন্তরিকভাবে জানতে চান।'
-                                  : prev.guidelinePrompt
-                                : prev.guidelinePrompt,
-                          }));
+                          setStepFormData({
+                            ...stepFormData,
+                            title: `ফলো-আপ (${item.m} মিনিট পর)`,
+                          });
                         }}
-                        className={`p-2 rounded-lg border text-center transition-all ${
-                          stepCustomMinutes === item.m
-                            ? 'bg-amber-600 border-amber-600 text-white shadow-xs scale-105 font-bold'
-                            : item.m === 1
-                            ? 'bg-amber-100/70 border-amber-300 text-amber-950 font-bold hover:bg-amber-200/80'
-                            : 'bg-white border-amber-200 text-amber-900 hover:bg-amber-100/60'
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all text-center ${
+                          (stepCustomMinutes || 1) === item.m
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-amber-200 hover:bg-amber-100/60'
                         }`}
                       >
-                        <div className="text-xs font-bold">{item.label}</div>
-                        <div className={`text-[9px] ${stepCustomMinutes === item.m ? 'text-amber-100' : 'text-amber-700/70'}`}>
-                          {item.desc}
-                        </div>
+                        {item.label}
                       </button>
                     ))}
                   </div>
 
                   {/* Custom Minute Input */}
-                  <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-amber-200">
-                    <span className="text-xs font-semibold text-slate-700">কাস্টম মিনিট লিখুন:</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        max="1440"
-                        required
-                        value={stepCustomMinutes}
-                        onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                          setStepCustomMinutes(val);
-                          const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
-                          setStepFormData({
-                            ...stepFormData,
-                            title: `${nextStepNum}ম ফলো-আপ (${val} মিনিট পর)`,
-                          });
-                        }}
-                        className="w-20 text-xs font-bold text-center bg-amber-50/50 border border-amber-300 rounded-md py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      />
-                      <span className="text-xs font-semibold text-slate-600">মিনিট</span>
-                    </div>
+                  <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-amber-200">
+                    <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-[11px] text-slate-700 font-medium">কাস্টম মিনিট লিখুন:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="1440"
+                      value={stepCustomMinutes}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 1;
+                        setStepCustomMinutes(val);
+                        setStepFormData({
+                          ...stepFormData,
+                          title: `ফলো-আপ (${val} মিনিট পর)`,
+                        });
+                      }}
+                      className="w-20 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-amber-950 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-600">মিনিট পর</span>
                   </div>
                 </div>
               )}
 
-              {/* Hour Mode */}
+              {/* 2. HOURS CONFIGURATION */}
               {stepTimeUnit === 'hours' && (
-                <div className="bg-purple-50/70 p-4 rounded-xl border border-purple-200/80 space-y-3 animate-fadeIn">
+                <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-purple-950">
-                      কত ঘণ্টা পর মেসেজ যাবে?
-                    </label>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-purple-600 text-white">
-                      {stepCustomHours} ঘণ্টা পর
+                    <span className="text-xs font-bold text-indigo-950">কত ঘণ্টা পর মেসেজ যাবে?</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-600 text-white">
+                      {stepCustomHours || 1} ঘণ্টা পর
                     </span>
                   </div>
 
-                  {/* Preset Buttons for Hours */}
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {/* Quick Hour Presets */}
+                  <div className="grid grid-cols-5 gap-1.5">
                     {[
                       { h: 1, label: '১ ঘণ্টা' },
                       { h: 2, label: '২ ঘণ্টা' },
-                      { h: 3, label: '৩ ঘণ্টা' },
+                      { h: 4, label: '৪ ঘণ্টা' },
                       { h: 6, label: '৬ ঘণ্টা' },
                       { h: 12, label: '১২ ঘণ্টা' },
-                      { h: 24, label: '২৪ ঘণ্টা' },
                     ].map((item) => (
                       <button
                         key={item.h}
                         type="button"
                         onClick={() => {
                           setStepCustomHours(item.h);
-                          const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
                           setStepFormData({
                             ...stepFormData,
-                            title: `${nextStepNum}ম ফলো-আপ (${item.h} ঘণ্টা পর)`,
+                            title: `ফলো-আপ (${item.h} ঘণ্টা পর)`,
                           });
                         }}
-                        className={`p-2 rounded-lg border text-center transition-all ${
-                          stepCustomHours === item.h
-                            ? 'bg-purple-600 border-purple-600 text-white shadow-xs'
-                            : 'bg-white border-purple-200 text-purple-900 hover:bg-purple-100/60'
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold border transition-all text-center ${
+                          (stepCustomHours || 1) === item.h
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-white text-slate-700 border-indigo-200 hover:bg-indigo-100/60'
                         }`}
                       >
-                        <div className="text-xs font-bold">{item.label}</div>
+                        {item.label}
                       </button>
                     ))}
                   </div>
 
                   {/* Custom Hour Input */}
-                  <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-purple-200">
-                    <span className="text-xs font-semibold text-slate-700">কাস্টম ঘণ্টা লিখুন:</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        max="72"
-                        required
-                        value={stepCustomHours}
-                        onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-                          setStepCustomHours(val);
-                          const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
-                          setStepFormData({
-                            ...stepFormData,
-                            title: `${nextStepNum}ম ফলো-আপ (${val} ঘণ্টা পর)`,
-                          });
-                        }}
-                        className="w-20 text-xs font-bold text-center bg-purple-50/50 border border-purple-300 rounded-md py-1 text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                      />
-                      <span className="text-xs font-semibold text-slate-600">ঘণ্টা</span>
-                    </div>
+                  <div className="flex items-center gap-2 bg-white p-2.5 rounded-lg border border-indigo-200">
+                    <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-[11px] text-slate-700 font-medium">কাস্টম ঘণ্টা লিখুন:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="720"
+                      value={stepCustomHours}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 1;
+                        setStepCustomHours(val);
+                        setStepFormData({
+                          ...stepFormData,
+                          title: `ফলো-আপ (${val} ঘণ্টা পর)`,
+                        });
+                      }}
+                      className="w-20 text-xs font-bold text-center bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-indigo-950 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs font-semibold text-slate-600">ঘণ্টা পর</span>
                   </div>
                 </div>
               )}
 
-              {/* Day Mode */}
+              {/* 3. DAYS CONFIGURATION */}
               {stepTimeUnit === 'days' && (
-                <div className="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200/80 space-y-3 animate-fadeIn">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl space-y-3 animate-fadeIn">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-indigo-950 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
                         কয় দিন পর? (Day Offset)
                       </label>
                       <input
@@ -1966,57 +1606,32 @@ export default function FollowUpPage() {
                         min="1"
                         max="60"
                         required
-                        value={stepFormData.dayOffset}
+                        value={stepFormData.dayOffset || 1}
                         onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                          const val = parseInt(e.target.value, 10) || 1;
                           setStepFormData({
                             ...stepFormData,
                             dayOffset: val,
-                            title: `${(editingStepIndex !== null ? editingStepIndex : steps.length) + 1}ম ফলো-আপ (${val} দিন পর)`,
+                            title: `ফলো-আপ (${val} দিন পর)`,
                           });
                         }}
-                        className="w-full text-sm font-semibold bg-white border border-indigo-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full text-sm font-bold bg-white border border-purple-200 rounded-xl px-3.5 py-2 text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                         placeholder="যেমন: 3"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-indigo-950 mb-1">
+                      <label className="block text-xs font-bold text-slate-800 mb-1">
                         কখন পাঠাবে? (Time of Day)
                       </label>
                       <input
                         type="time"
                         required
-                        value={stepFormData.timeOfDay.includes(':') ? stepFormData.timeOfDay : '10:00'}
+                        value={stepFormData.timeOfDay.startsWith('MIN:') || stepFormData.timeOfDay.startsWith('HR:') ? '10:00' : stepFormData.timeOfDay}
                         onChange={(e) => setStepFormData({ ...stepFormData, timeOfDay: e.target.value })}
-                        className="w-full text-sm font-semibold bg-white border border-indigo-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        className="w-full text-sm font-bold bg-white border border-purple-200 rounded-xl px-3.5 py-2 text-purple-950 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                       />
                     </div>
-                  </div>
-
-                  {/* Day Presets */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[1, 2, 3, 5, 7, 15, 25].map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => {
-                          const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
-                          setStepFormData({
-                            ...stepFormData,
-                            dayOffset: d,
-                            title: `${nextStepNum}ম ফলো-আপ (${d} দিন পর)`,
-                          });
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
-                          stepFormData.dayOffset === d
-                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                            : 'bg-white border-indigo-200 text-indigo-900 hover:bg-indigo-100/60'
-                        }`}
-                      >
-                        {d} দিন পর
-                      </button>
-                    ))}
                   </div>
                 </div>
               )}
@@ -2030,7 +1645,7 @@ export default function FollowUpPage() {
                   required
                   value={stepFormData.title}
                   onChange={(e) => setStepFormData({ ...stepFormData, title: e.target.value })}
-                  className="w-full text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   placeholder="যেমন: ১ম ফলো-আপ (১ মিনিট পর)"
                 />
               </div>
@@ -2043,7 +1658,7 @@ export default function FollowUpPage() {
                   rows={3}
                   value={stepFormData.guidelinePrompt}
                   onChange={(e) => setStepFormData({ ...stepFormData, guidelinePrompt: e.target.value })}
-                  className="w-full text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   placeholder="যেমন: ক্যাশ অন ডেলিভারি এবং দ্রুত ডেলিভারির সুবিধা মনে করিয়ে দিয়ে নম্রভাবে জানতে চান..."
                 />
               </div>
@@ -2054,10 +1669,10 @@ export default function FollowUpPage() {
                   id="isEnabledCheckbox"
                   checked={stepFormData.isEnabled}
                   onChange={(e) => setStepFormData({ ...stepFormData, isEnabled: e.target.checked })}
-                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500"
                 />
                 <label htmlFor="isEnabledCheckbox" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                  এই ধাপটি সক্রিয় রাখুন (Enable this step)
+                  এই ধাপটি সক্রিয় রাখুন
                 </label>
               </div>
 
@@ -2065,17 +1680,16 @@ export default function FollowUpPage() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={savingSteps}
-                  className="px-5 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-700 hover:to-indigo-700 text-white shadow-sm transition-all disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" />
-                  {savingSteps ? 'সংরক্ষণ হচ্ছে...' : 'ধাপ সংরক্ষণ করুন'}
+                  {savingSteps ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
                 </button>
               </div>
             </form>
@@ -2139,338 +1753,6 @@ export default function FollowUpPage() {
                 className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
               >
                 বন্ধ করুন
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MANUAL CUSTOM / AI FOLLOW-UP MODAL */}
-      {manualModalConv && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <button
-              onClick={() => setManualModalConv(null)}
-              className="absolute top-5 right-5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Send className="w-5 h-5 text-indigo-600" />
-                ম্যানুয়াল ফলো-আপ মেসেজ পাঠান
-              </h3>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <span className="text-sm font-bold text-slate-900">
-                  {manualModalConv.customerName || manualModalConv.senderPsid}
-                </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
-                  {manualModalConv.channel} {manualModalConv.page ? `• ${manualModalConv.page.pageName}` : ''}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold border border-amber-200">
-                  ধাপ #{manualModalConv.currentFollowUpStep + 1}
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-y-auto space-y-4 flex-1 pr-1">
-              {/* Context display */}
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                <div className="text-slate-400 font-semibold mb-1">সর্বশেষ চ্যাট প্রসঙ্গ:</div>
-                <div className="text-slate-800 font-medium italic truncate">
-                  &ldquo;{manualModalConv.lastMessage || 'কোনো পূর্ববর্তী বার্তা নেই'}&rdquo;
-                </div>
-              </div>
-
-              {/* AI Draft Generator Block */}
-              <div className="p-4 bg-gradient-to-br from-amber-50/90 to-indigo-50/90 rounded-xl border border-amber-200/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                    AI দিয়ে স্মার্ট ড্রাফট তৈরি করুন (১-ক্লিক):
-                  </label>
-                  <button
-                    type="button"
-                    disabled={generatingDraft}
-                    onClick={handleGenerateAiDraft}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {generatingDraft ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        AI লিখছে...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5" />
-                        ড্রাফট তৈরি করুন
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="বিশেষ কোনো নির্দেশনা (ঐচ্ছিক, যেমন: COD সুবিধা বা ৫% ডিসকাউন্ট মনে করিয়ে দিন)"
-                  value={manualAiPrompt}
-                  onChange={(e) => setManualAiPrompt(e.target.value)}
-                  className="w-full text-xs bg-white border border-amber-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-              </div>
-
-              {/* Message Editor */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-800">
-                    ফলো-আপ মেসেজের বিষয়বস্তু:
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    প্লেসহোল্ডার: &#123;name&#125;, &#123;page_name&#125;
-                  </span>
-                </div>
-
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="এখানে সরাসরি আপনার ফলো-আপ মেসেজটি লিখুন অথবা উপরের AI বাটনে ক্লিক করে স্বয়ংক্রিয় মেসেজ বানিয়ে নিন..."
-                  value={manualMsgText}
-                  onChange={(e) => setManualMsgText(e.target.value)}
-                  className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed"
-                />
-
-                {/* Quick Snippet Chips */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[
-                    { label: '🛍️ অর্ডার কনফার্মেশন', text: 'আসসালামু আলাইকুম {name}! আপনার পছন্দের প্রোডাক্টটি কি আমরা কনফার্ম করে দেব? যেকোনো প্রয়োজনে আমাদের জানাতে পারেন।' },
-                    { label: '🚚 COD সুবিধা', text: 'প্রিয় {name}, পণ্যটি হাতে পেয়ে মূল্য পরিশোধের (ক্যাশ অন ডেলিভারি) সুবিধা রয়েছে। ডেলিভারির জন্য আপনার ঠিকানা ও মোবাইল নম্বরটি জানাবেন কি?' },
-                    { label: '⚡ স্টক সীমিত', text: 'হ্যালো {name}! পণ্যটির স্টক দ্রুত শেষ হয়ে যাচ্ছে। আপনার জন্য একটি ইউনিট কি সংরক্ষণ করে রাখব?' },
-                    { label: '🎁 স্পেশাল অফার', text: 'আসসালামু আলাইকুম {name}, আজ অর্ডার কনফার্ম করলে পাচ্ছেন আকর্ষণীয় বিশেষ অফার! বিস্তারিত জানতে মেসেজ দিন।' },
-                  ].map((chip, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setManualMsgText(chip.text)}
-                      className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 transition-colors border border-slate-200"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Options */}
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="advanceStepOption"
-                  checked={advanceStepOption}
-                  onChange={(e) => setAdvanceStepOption(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                />
-                <label htmlFor="advanceStepOption" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                  মেসেজ পাঠানোর পর ফলো-আপ ধাপ ১ ধাপ এগিয়ে নিন (Advance step count)
-                </label>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-2">
-              <button
-                type="button"
-                onClick={() => setManualModalConv(null)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                বাতিল
-              </button>
-
-              <button
-                type="button"
-                disabled={sendingManual || !manualMsgText.trim()}
-                onClick={handleSendManualFromModal}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {sendingManual ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    পাঠানো হচ্ছে...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    ফলো-আপ মেসেজ পাঠান
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* BULK MULTI-CUSTOMER FOLLOW-UP MODAL */}
-      {bulkModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <button
-              onClick={() => setBulkModalOpen(false)}
-              className="absolute top-5 right-5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
-                বাল্ক ফলো-আপ বার্তা পাঠান
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                <span>নির্বাচিত মোট: <strong className="text-indigo-600 font-bold">{selectedConvIds.length} জন গ্রাহক</strong></span>
-                <span>•</span>
-                <span>সবাইকে একসাথে মেসেজ পাঠানো হবে</span>
-              </p>
-            </div>
-
-            {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-4">
-              <button
-                type="button"
-                onClick={() => setBulkMode('AI')}
-                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  bulkMode === 'AI'
-                    ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                ⚡ স্মার্ট AI পার্সোনালাইজড
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setBulkMode('CUSTOM')}
-                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  bulkMode === 'CUSTOM'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Send className="w-3.5 h-3.5" />
-                ✉️ কমন কাস্টম মেসেজ
-              </button>
-            </div>
-
-            <div className="overflow-y-auto space-y-4 flex-1 pr-1">
-              {/* Mode A: Smart AI Personalized Mode */}
-              {bulkMode === 'AI' ? (
-                <div className="bg-amber-50/80 p-4 rounded-xl border border-amber-200/80 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <Sparkles className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-amber-950">AI স্মার্ট পার্সোনালাইজেশন ইঞ্জিন</h4>
-                      <p className="text-[11px] text-amber-900/80 mt-0.5 leading-relaxed">
-                        নির্বাচিত প্রতিজন গ্রাহকের <strong>আগের চ্যাট হিস্ট্রি, পছন্দের প্রোডাক্ট এবং পূর্বের ফলো-আপ রেকর্ড</strong> আলাদা আলাদা বিশ্লেষণ করে স্বয়ংক্রিয়ভাবে ইউনিক মেসেজ তৈরি ও পাঠানো হবে।
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-amber-950 mb-1">
-                      AI-এর জন্য বিশেষ নির্দেশনা (ঐচ্ছিক):
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="যেমন: ক্যাশ অন ডেলিভারি এবং দ্রুত ডেলিভারির সুবিধা মনে করিয়ে দিয়ে বিনম্রভাবে জানতে চান..."
-                      value={bulkAiPrompt}
-                      onChange={(e) => setBulkAiPrompt(e.target.value)}
-                      className="w-full text-xs bg-white border border-amber-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Mode B: Custom Template Mode */
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-800">
-                      সবার কাছে পাঠানোর জন্য মেসেজ লিখুন:
-                    </label>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ভেরিয়েবল: &#123;name&#125;, &#123;page_name&#125;
-                    </span>
-                  </div>
-
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="যেমন: আসসালামু আলাইকুম {name}! আপনার পছন্দের পণ্যটি নিয়ে কোনো প্রশ্ন থাকলে আমাদের জানাতে পারেন..."
-                    value={bulkCustomText}
-                    onChange={(e) => setBulkCustomText(e.target.value)}
-                    className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed"
-                  />
-
-                  {/* Quick Snippet Chips */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {[
-                      { label: '🛍️ অর্ডার কনফার্মেশন', text: 'আসসালামু আলাইকুম {name}! আপনার পছন্দের প্রোডাক্টটি কি আমরা কনফার্ম করে দেব? যেকোনো প্রয়োজনে আমাদের জানাতে পারেন।' },
-                      { label: '🚚 COD সুবিধা', text: 'প্রিয় {name}, পণ্যটি হাতে পেয়ে মূল্য পরিশোধের (ক্যাশ অন ডেলিভারি) সুবিধা রয়েছে। ডেলিভারির জন্য আপনার ঠিকানা ও মোবাইল নম্বরটি জানাবেন কি?' },
-                      { label: '⚡ স্টক সীমিত', text: 'হ্যালো {name}! পণ্যটির স্টক দ্রুত শেষ হয়ে যাচ্ছে। আপনার জন্য একটি ইউনিট কি সংরক্ষণ করে রাখব?' },
-                    ].map((chip, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setBulkCustomText(chip.text)}
-                        className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 transition-colors border border-slate-200"
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Advance step option */}
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="bulkAdvanceStep"
-                  checked={bulkAdvanceStep}
-                  onChange={(e) => setBulkAdvanceStep(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                />
-                <label htmlFor="bulkAdvanceStep" className="text-xs font-semibold text-slate-700 cursor-pointer">
-                  মেসেজ পাঠানোর পর প্রতিটি গ্রাহকের ফলো-আপ ধাপ ১ ধাপ এগিয়ে নিন (Advance step count)
-                </label>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-2">
-              <button
-                type="button"
-                onClick={() => setBulkModalOpen(false)}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                বাতিল
-              </button>
-
-              <button
-                type="button"
-                disabled={sendingBulk || (bulkMode === 'CUSTOM' && !bulkCustomText.trim())}
-                onClick={handleSendBulkFollowUp}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-              >
-                {sendingBulk ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    {selectedConvIds.length} জনকে পাঠানো হচ্ছে...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    সবার কাছে পাঠান ({selectedConvIds.length} জন)
-                  </>
-                )}
               </button>
             </div>
           </div>

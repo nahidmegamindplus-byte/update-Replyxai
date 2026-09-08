@@ -291,7 +291,6 @@ export async function ensureDatabaseReady() {
         "pageId" TEXT,
         "stepNumber" INTEGER NOT NULL DEFAULT 1,
         "dayOffset" INTEGER NOT NULL DEFAULT 1,
-        "delayMinutes" INTEGER DEFAULT 0,
         "timeOfDay" TEXT NOT NULL DEFAULT '10:00',
         "title" TEXT NOT NULL,
         "guidelinePrompt" TEXT,
@@ -412,15 +411,6 @@ export async function ensureDatabaseReady() {
         await prisma.$executeRawUnsafe(
           `UPDATE "Page" SET "connectionStatus" = 'PENDING' WHERE "connectionStatus" IS NULL;`
         );
-      } catch (_) {}
-
-      // Ensure delayMinutes exists in FollowUpScheduleStep
-      try {
-        const stepColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("FollowUpScheduleStep");`)) as Array<{ name: string }>;
-        const existingStepCols = new Set(stepColumnsRaw.map((c) => c.name));
-        if (!existingStepCols.has('delayMinutes')) {
-          await prisma.$executeRawUnsafe(`ALTER TABLE "FollowUpScheduleStep" ADD COLUMN "delayMinutes" INTEGER DEFAULT 0;`);
-        }
       } catch (_) {}
     } catch (migrationErr) {
       console.warn('Migration pre-check warning:', migrationErr);

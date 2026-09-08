@@ -138,12 +138,25 @@ export async function POST(req: NextRequest) {
       const created = [];
       for (let i = 0; i < stepsList.length; i++) {
         const item = stepsList[i];
+        const dayOffsetVal = item.dayOffset !== undefined && item.dayOffset !== null && !isNaN(Number(item.dayOffset)) ? Number(item.dayOffset) : 1;
+        const timeOfDayVal = item.timeOfDay || '10:00';
+        let defaultTitle = item.title;
+        if (!defaultTitle) {
+          if (timeOfDayVal.startsWith('MIN:')) {
+            defaultTitle = `ধাপ #${i + 1} (${timeOfDayVal.replace('MIN:', '')} মিনিট পর)`;
+          } else if (timeOfDayVal.startsWith('HR:')) {
+            defaultTitle = `ধাপ #${i + 1} (${timeOfDayVal.replace('HR:', '')} ঘন্টা পর)`;
+          } else {
+            defaultTitle = `ধাপ #${i + 1} (${dayOffsetVal} দিন পর)`;
+          }
+        }
+
         const step = await prisma.followUpScheduleStep.create({
           data: {
             stepNumber: i + 1,
-            dayOffset: Number(item.dayOffset) || 1,
-            timeOfDay: item.timeOfDay || '10:00',
-            title: item.title || `ধাপ #${i + 1} (${item.dayOffset} দিন পর)`,
+            dayOffset: dayOffsetVal,
+            timeOfDay: timeOfDayVal,
+            title: defaultTitle,
             guidelinePrompt: item.guidelinePrompt || null,
             isEnabled: item.isEnabled !== false,
             isGlobalDefault: true,

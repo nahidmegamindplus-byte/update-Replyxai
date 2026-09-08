@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { ensureDatabaseReady } from '@/lib/db-init';
-import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker, generateManualFollowUpDraft, sendManualFollowUp, sendBulkFollowUp } from '@/lib/follow-up';
+import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker } from '@/lib/follow-up';
 
 export async function GET(req: NextRequest) {
   try {
@@ -232,7 +232,6 @@ export async function POST(req: NextRequest) {
         id?: string;
         stepNumber: number;
         dayOffset: number;
-        delayMinutes?: number;
         timeOfDay: string;
         title: string;
         guidelinePrompt?: string;
@@ -248,15 +247,27 @@ export async function POST(req: NextRequest) {
       const created = [];
       for (let i = 0; i < stepsList.length; i++) {
         const item = stepsList[i];
+        const dayOffsetVal = item.dayOffset !== undefined && item.dayOffset !== null && !isNaN(Number(item.dayOffset)) ? Number(item.dayOffset) : 1;
+        const timeOfDayVal = item.timeOfDay || '10:00';
+        let defaultTitle = item.title;
+        if (!defaultTitle) {
+          if (timeOfDayVal.startsWith('MIN:')) {
+            defaultTitle = `ধাপ #${i + 1} (${timeOfDayVal.replace('MIN:', '')} মিনিট পর)`;
+          } else if (timeOfDayVal.startsWith('HR:')) {
+            defaultTitle = `ধাপ #${i + 1} (${timeOfDayVal.replace('HR:', '')} ঘন্টা পর)`;
+          } else {
+            defaultTitle = `ধাপ #${i + 1} (${dayOffsetVal} দিন পর)`;
+          }
+        }
+
         const step = await prisma.followUpScheduleStep.create({
           data: {
             userId,
             pageId: pageId || null,
             stepNumber: i + 1,
-            dayOffset: Number(item.dayOffset) || 0,
-            delayMinutes: typeof item.delayMinutes === 'number' ? item.delayMinutes : ((Number(item.dayOffset) || 1) * 1440),
-            timeOfDay: item.timeOfDay || '10:00',
-            title: item.title || `ধাপ #${i + 1}`,
+            dayOffset: dayOffsetVal,
+            timeOfDay: timeOfDayVal,
+            title: defaultTitle,
             guidelinePrompt: item.guidelinePrompt || null,
             isEnabled: item.isEnabled !== false,
             isGlobalDefault: false,
@@ -279,14 +290,27 @@ export async function POST(req: NextRequest) {
         where: pageId ? { pageId, userId } : { userId, pageId: null },
       });
 
+      const dayOffsetVal = dayOffset !== undefined && dayOffset !== null && !isNaN(Number(dayOffset)) ? Number(dayOffset) : 1;
+      const timeOfDayVal = timeOfDay || '10:00';
+      let defaultTitle = title;
+      if (!defaultTitle) {
+        if (timeOfDayVal.startsWith('MIN:')) {
+          defaultTitle = `${count + 1}ম ফলো-আপ (${timeOfDayVal.replace('MIN:', '')} মিনিট পর)`;
+        } else if (timeOfDayVal.startsWith('HR:')) {
+          defaultTitle = `${count + 1}ম ফলো-আপ (${timeOfDayVal.replace('HR:', '')} ঘন্টা পর)`;
+        } else {
+          defaultTitle = `${count + 1}ম ফলো-আপ (${dayOffsetVal} দিন পর)`;
+        }
+      }
+
       const newStep = await prisma.followUpScheduleStep.create({
         data: {
           userId,
           pageId: pageId || null,
           stepNumber: count + 1,
-          dayOffset: Number(dayOffset) || 1,
-          timeOfDay: timeOfDay || '10:00',
-          title: title || `${count + 1}ম ফলো-আপ (${dayOffset} দিন পর)`,
+          dayOffset: dayOffsetVal,
+          timeOfDay: timeOfDayVal,
+          title: defaultTitle,
           guidelinePrompt: guidelinePrompt || null,
           isEnabled: isEnabled !== false,
           isGlobalDefault: false,
@@ -297,85 +321,6 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'নতুন ফলো-আপ ধাপ যুক্ত হয়েছে।',
         step: newStep,
-      });
-    }
-
-    // 6. Generate Context-Aware AI Follow-up Draft
-    if (action === 'GENERATE_DRAFT') {
-      const { conversationId, customInstruction } = body;
-      if (!conversationId) {
-        return NextResponse.json({ success: false, error: 'Conversation ID প্রয়োজন।' }, { status: 400 });
-      }
-
-      const draftResult = await generateManualFollowUpDraft({
-        conversationId,
-        userId,
-        customInstruction,
-      });
-
-      if (!draftResult.success) {
-        return NextResponse.json(
-          { success: false, error: draftResult.error || 'AI ড্রাফট তৈরি করতে সমস্যা হয়েছে।' },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        ...draftResult,
-      });
-    }
-
-    // 7. Send Manual Follow-up (1-Click AI or Custom Text)
-    if (action === 'SEND_MANUAL') {
-      const { conversationId, messageText, generateWithAi, customInstruction, advanceStep } = body;
-      if (!conversationId) {
-        return NextResponse.json({ success: false, error: 'Conversation ID প্রয়োজন।' }, { status: 400 });
-      }
-
-      const sendResult = await sendManualFollowUp({
-        conversationId,
-        userId,
-        messageText,
-        generateWithAi: Boolean(generateWithAi),
-        customInstruction,
-        advanceStep: advanceStep !== false,
-      });
-
-      if (!sendResult.success) {
-        return NextResponse.json(
-          { success: false, error: sendResult.error || 'ফলো-আপ বার্তা পাঠানো ব্যর্থ হয়েছে।' },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `সফলভাবে ${sendResult.customerName || 'গ্রাহক'}-কে ফলো-আপ বার্তা পাঠানো হয়েছে! (${sendResult.channel})`,
-        ...sendResult,
-      });
-    }
-
-    // 8. Send Bulk Follow-up (Multi-Select Users)
-    if (action === 'SEND_BULK') {
-      const { conversationIds, messageText, generateWithAi, customInstruction, advanceStep } = body;
-      if (!Array.isArray(conversationIds) || conversationIds.length === 0) {
-        return NextResponse.json({ success: false, error: 'অন্তত ১ জন গ্রাহক নির্বাচন করতে হবে।' }, { status: 400 });
-      }
-
-      const bulkResult = await sendBulkFollowUp({
-        conversationIds,
-        userId,
-        messageText,
-        generateWithAi: Boolean(generateWithAi),
-        customInstruction,
-        advanceStep: advanceStep !== false,
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: `সফলভাবে ${bulkResult.sentCount} জন গ্রাহকের কাছে ফলো-আপ বার্তা পাঠানো হয়েছে${bulkResult.failedCount > 0 ? ` (${bulkResult.failedCount} টি ব্যর্থ)` : ''}!`,
-        ...bulkResult,
       });
     }
 

@@ -17,30 +17,11 @@ export interface ScheduleStepItem {
   id?: string;
   stepNumber: number;
   dayOffset: number;
-  delayMinutes?: number | null;
-  timeOfDay: string; // "10:00", "16:00", "20:00" or relative "1m", "5m", "15m", "30m", "1h", "2h"
+  timeOfDay: string; // "10:00", "16:00", "20:00"
   title: string;
   guidelinePrompt?: string | null;
   isEnabled: boolean;
   isGlobalDefault?: boolean;
-}
-
-export function getStepTotalMinutes(step: ScheduleStepItem, defaultWaitMinutes = 30): number {
-  if (typeof step.delayMinutes === 'number' && step.delayMinutes > 0) {
-    return step.delayMinutes;
-  }
-  if (step.timeOfDay && step.timeOfDay.endsWith('m')) {
-    const m = parseInt(step.timeOfDay.replace('m', ''), 10);
-    if (!isNaN(m) && m > 0) return m;
-  }
-  if (step.timeOfDay && step.timeOfDay.endsWith('h')) {
-    const h = parseInt(step.timeOfDay.replace('h', ''), 10);
-    if (!isNaN(h) && h > 0) return h * 60;
-  }
-  if (step.dayOffset > 0) {
-    return step.dayOffset * 24 * 60;
-  }
-  return Math.max(1, defaultWaitMinutes);
 }
 
 export const DEFAULT_SCHEDULE_STEPS: ScheduleStepItem[] = [
@@ -280,6 +261,28 @@ Please craft the Step #${step.stepNumber} follow-up message now:`;
 }
 
 /**
+ * Compute the total minutes delay for a schedule step.
+ * Supports "MIN:1", "MIN:15", "HR:2", and day offsets.
+ */
+export function getStepTotalMinutes(step: { dayOffset: number; timeOfDay: string }): number {
+  if (step.timeOfDay?.startsWith('MIN:')) {
+    const mins = parseInt(step.timeOfDay.replace('MIN:', ''), 10);
+    return isNaN(mins) || mins <= 0 ? 1 : mins;
+  }
+  if (step.timeOfDay?.startsWith('HR:')) {
+    const hrs = parseInt(step.timeOfDay.replace('HR:', ''), 10);
+    return isNaN(hrs) || hrs <= 0 ? 60 : hrs * 60;
+  }
+  if (step.dayOffset === 0 && step.timeOfDay?.includes(':')) {
+    const [h, m] = step.timeOfDay.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+      return Math.max(1, h * 60 + m);
+    }
+  }
+  return Math.max(1, step.dayOffset || 1) * 24 * 60;
+}
+
+/**
  * Check active pages with followUpEnabled and dispatch multi-step automated follow-up messages.
  */
 export async function runFollowUpAutomation(targetPageId?: string): Promise<{
@@ -433,8 +436,14 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             ? new Date(conv.lastSeenAt).getTime()
             : (conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : new Date(conv.createdAt).getTime());
 
-          const stepDelayMinutes = getStepTotalMinutes(targetStep, page.followUpWaitMinutes ?? 30);
-          const requiredDelayMs = stepDelayMinutes * 60 * 1000;
+          let stepDelayMinutes = getStepTotalMinutes(targetStep);
+
+          // If step is generic default 1-day step, fallback to page.followUpWaitMinutes if smaller
+          if (targetStep.dayOffset === 1 && !targetStep.timeOfDay?.startsWith('MIN:') && !targetStep.timeOfDay?.startsWith('HR:') && (page.followUpWaitMinutes ?? 30) < 1440) {
+            stepDelayMinutes = page.followUpWaitMinutes ?? 30;
+          }
+
+          const requiredDelayMs = Math.max(1, stepDelayMinutes) * 60 * 1000;
           if (nowMs - referenceTime >= requiredDelayMs) {
             isDue = true;
           }
@@ -444,18 +453,18 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             isDue = true;
           } else {
             const lastSentTime = new Date(conv.lastFollowUpSentAt).getTime();
-            let intervalMinutes = 24 * 60;
+            const prevStep = scheduleSteps[currentStepIndex - 1];
+            const currMins = getStepTotalMinutes(targetStep);
+            const prevMins = prevStep ? getStepTotalMinutes(prevStep) : 0;
 
-            if (page.followUpFrequency === 'DAILY') {
-              intervalMinutes = 24 * 60;
-            } else if (page.followUpFrequency === 'CUSTOM_INTERVAL') {
-              intervalMinutes = (page.followUpIntervalHours || 24) * 60;
-            } else {
-              // Difference between current step delay minutes and previous step delay minutes
-              const prevStep = scheduleSteps[currentStepIndex - 1];
-              const prevTotalMins = prevStep ? getStepTotalMinutes(prevStep, 30) : 0;
-              const currTotalMins = getStepTotalMinutes(targetStep, 60);
-              intervalMinutes = Math.max(1, currTotalMins - prevTotalMins);
+            let intervalMinutes = currMins > prevMins ? (currMins - prevMins) : currMins;
+
+            if (page.followUpFrequency === 'DAILY' && !targetStep.timeOfDay?.startsWith('MIN:')) {
+              intervalMinutes = Math.max(intervalMinutes, 24 * 60);
+            } else if (page.followUpFrequency === 'CUSTOM_INTERVAL' && !targetStep.timeOfDay?.startsWith('MIN:')) {
+              if (page.followUpIntervalHours && targetStep.dayOffset > 0) {
+                intervalMinutes = Math.max(intervalMinutes, page.followUpIntervalHours * 60);
+              }
             }
 
             const requiredIntervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
@@ -674,359 +683,5 @@ export function startFollowUpWorker(intervalMs = 60000) {
   if (globalForFollowUp.followUpWorkerInterval && typeof globalForFollowUp.followUpWorkerInterval.unref === 'function') {
     globalForFollowUp.followUpWorkerInterval.unref();
   }
-}
-
-/**
- * Generate a personalized, context-aware follow-up draft using AI based on past chat history & previous follow-up logs
- */
-export async function generateManualFollowUpDraft(params: {
-  conversationId: string;
-  userId?: string;
-  customInstruction?: string;
-}): Promise<{
-  success: boolean;
-  draftText?: string;
-  model?: string;
-  customerName?: string;
-  channel?: string;
-  pageName?: string;
-  error?: string;
-}> {
-  try {
-    await ensureDatabaseReady();
-    const conv = await prisma.conversation.findUnique({
-      where: { id: params.conversationId },
-      include: {
-        page: true,
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 20,
-        },
-        followUpLogs: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-      },
-    });
-
-    if (!conv || !conv.page) {
-      return { success: false, error: 'কথোপকথন বা পেজ পাওয়া যায়নি।' };
-    }
-
-    if (params.userId && conv.userId !== params.userId) {
-      return { success: false, error: 'অনুমোদিত নয়।' };
-    }
-
-    const previousFollowUps = (conv.followUpLogs || [])
-      .map((l) => l.messageText)
-      .filter((t) => typeof t === 'string' && t.trim().length > 0);
-
-    const historyForAI = conv.messages.map((m) => ({
-      direction: m.direction,
-      text: m.messageText || '',
-    }));
-
-    const scheduleSteps = await getActiveScheduleSteps(conv.page.userId, conv.page.id);
-    const currentStepIdx = Math.min(conv.currentFollowUpStep || 0, Math.max(0, scheduleSteps.length - 1));
-    const targetStep = scheduleSteps[currentStepIdx] || DEFAULT_SCHEDULE_STEPS[0];
-
-    // If custom instruction provided, append it to guideline
-    const activeStep: ScheduleStepItem = {
-      ...targetStep,
-      guidelinePrompt: params.customInstruction
-        ? `${targetStep.guidelinePrompt || ''}\nব্যবহারকারীর বিশেষ নির্দেশনা: ${params.customInstruction}`.trim()
-        : targetStep.guidelinePrompt,
-    };
-
-    const aiRes = await generateAiFollowUpMessage({
-      conversationId: conv.id,
-      customerName: conv.customerName,
-      step: activeStep,
-      conversationHistory: historyForAI,
-      previousFollowUps,
-      pageName: conv.page.pageName,
-      replyLanguage: conv.page.replyLanguage || 'বাংলা',
-      businessInstructions: conv.page.aiInstructions || '',
-    });
-
-    return {
-      success: true,
-      draftText: aiRes.text,
-      model: aiRes.model,
-      customerName: conv.customerName || conv.senderPsid,
-      channel: conv.channel || conv.page.channel,
-      pageName: conv.page.pageName,
-    };
-  } catch (error: any) {
-    serverLogger.error('Error generating manual follow-up draft:', error);
-    return { success: false, error: error?.message || 'AI ড্রাফট তৈরি ব্যর্থ হয়েছে।' };
-  }
-}
-
-/**
- * Send a manual follow-up message (1-Click AI or custom written) directly to a customer
- */
-export async function sendManualFollowUp(params: {
-  conversationId: string;
-  userId?: string;
-  messageText?: string;
-  generateWithAi?: boolean;
-  customInstruction?: string;
-  advanceStep?: boolean;
-}): Promise<{
-  success: boolean;
-  messageText?: string;
-  channel?: string;
-  customerName?: string;
-  stepNumber?: number;
-  error?: string;
-}> {
-  try {
-    await ensureDatabaseReady();
-    const conv = await prisma.conversation.findUnique({
-      where: { id: params.conversationId },
-      include: {
-        page: true,
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          take: 20,
-        },
-        followUpLogs: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-      },
-    });
-
-    if (!conv || !conv.page) {
-      return { success: false, error: 'কথোপকথন বা পেজ পাওয়া যায়নি।' };
-    }
-
-    if (params.userId && conv.userId !== params.userId) {
-      return { success: false, error: 'অনুমোদিত নয়।' };
-    }
-
-    const page = conv.page;
-    const pageAccessToken = decrypt(page.pageAccessTokenEncrypted);
-    const channel = (conv.channel || page.channel || 'FACEBOOK') as SocialChannel;
-    const customerName = conv.customerName || conv.senderPsid;
-
-    let finalMessageText = (params.messageText || '').trim();
-    let aiModelUsed = 'MANUAL_CUSTOM';
-
-    // If 1-Click AI generate or text is empty with generateWithAi
-    if (params.generateWithAi || !finalMessageText) {
-      const draftResult = await generateManualFollowUpDraft({
-        conversationId: conv.id,
-        userId: params.userId,
-        customInstruction: params.customInstruction,
-      });
-
-      if (!draftResult.success || !draftResult.draftText) {
-        return { success: false, error: draftResult.error || 'AI মেসেজ তৈরি করতে সমস্যা হয়েছে।' };
-      }
-
-      finalMessageText = draftResult.draftText;
-      aiModelUsed = draftResult.model || 'Smart AI';
-    } else {
-      // Replace dynamic placeholders if any
-      const customerFirstName = conv.customerName?.split(' ')[0] || 'গ্রাহক';
-      finalMessageText = finalMessageText
-        .replace(/{name}/gi, customerFirstName)
-        .replace(/{customer_name}/gi, customerFirstName)
-        .replace(/{page_name}/gi, page.pageName);
-    }
-
-    if (!finalMessageText) {
-      return { success: false, error: 'মেসেজের বিষয়বস্তু খালি হতে পারে না।' };
-    }
-
-    let extraConfig = {};
-    if (page.extraConfig) {
-      try {
-        extraConfig = JSON.parse(page.extraConfig);
-      } catch (_) {}
-    }
-
-    // Send via channel API
-    if (pageAccessToken) {
-      const sendRes = await sendChannelMessage({
-        channel,
-        recipientId: conv.senderPsid,
-        text: finalMessageText,
-        accessToken: pageAccessToken,
-        channelIdentifier: page.channelIdentifier || page.facebookPageId,
-        extraConfig,
-      });
-
-      if (!sendRes.success) {
-        // Log failed attempt
-        await prisma.followUpLog.create({
-          data: {
-            userId: page.userId,
-            pageId: page.id,
-            conversationId: conv.id,
-            stepNumber: (conv.currentFollowUpStep || 0) + 1,
-            dayOffset: 0,
-            scheduledTime: 'MANUAL',
-            messageText: finalMessageText,
-            channel,
-            customerName: conv.customerName,
-            senderPsid: conv.senderPsid,
-            status: `FAILED: ${(sendRes as any).error || 'API Error'}`,
-            aiModel: aiModelUsed,
-          },
-        });
-
-        return {
-          success: false,
-          error: `${channel}-এ মেসেজ পাঠানো ব্যর্থ হয়েছে: ${(sendRes as any).error || 'চ্যানেল সংযোগ ত্রুটি'}`,
-        };
-      }
-    }
-
-    const currentStepNum = (conv.currentFollowUpStep || 0) + 1;
-    const shouldAdvance = params.advanceStep !== false;
-    const nextStepNum = shouldAdvance ? currentStepNum : conv.currentFollowUpStep;
-
-    // Record in FollowUpLog
-    await prisma.followUpLog.create({
-      data: {
-        userId: page.userId,
-        pageId: page.id,
-        conversationId: conv.id,
-        stepNumber: currentStepNum,
-        dayOffset: 0,
-        scheduledTime: 'MANUAL',
-        messageText: finalMessageText,
-        channel,
-        customerName: conv.customerName,
-        senderPsid: conv.senderPsid,
-        status: 'SENT',
-        aiModel: aiModelUsed,
-      },
-    });
-
-    // Record in Message table
-    await prisma.message.create({
-      data: {
-        conversationId: conv.id,
-        userId: page.userId,
-        pageId: page.id,
-        senderPsid: conv.senderPsid,
-        direction: 'OUTGOING',
-        messageType: 'TEXT',
-        messageText: finalMessageText,
-        aiGenerated: params.generateWithAi ? true : false,
-        aiModel: aiModelUsed,
-      },
-    });
-
-    // Update Conversation state
-    await prisma.conversation.update({
-      where: { id: conv.id },
-      data: {
-        currentFollowUpStep: nextStepNum,
-        followUpStatus: 'IN_PROGRESS',
-        lastFollowUpSentAt: new Date(),
-        lastMessage: finalMessageText,
-        lastMessageAt: new Date(),
-        followUpSentCount: { increment: 1 },
-      },
-    });
-
-    await logActivity({
-      userId: page.userId,
-      pageId: page.id,
-      action: 'FOLLOW_UP_SENT',
-      description: `ম্যানুয়াল ফলো-আপ পাঠানো হয়েছে (${customerName}, ${channel})`,
-    });
-
-    return {
-      success: true,
-      messageText: finalMessageText,
-      channel,
-      customerName,
-      stepNumber: currentStepNum,
-    };
-  } catch (error: any) {
-    serverLogger.error('Error sending manual follow-up:', error);
-    return {
-      success: false,
-      error: error?.message || 'ম্যানুয়াল ফলো-আপ পাঠাতে ত্রুটি হয়েছে।',
-    };
-  }
-}
-
-/**
- * Send bulk follow-up messages to multiple conversations (Selected users)
- * Supports:
- * 1. AI Personalized for each user (analyzes each user's separate chat history)
- * 2. Custom unified template with placeholder replacement ({name}, {page_name})
- */
-export async function sendBulkFollowUp(params: {
-  conversationIds: string[];
-  userId: string;
-  messageText?: string;
-  generateWithAi?: boolean;
-  customInstruction?: string;
-  advanceStep?: boolean;
-}): Promise<{
-  success: boolean;
-  total: number;
-  sentCount: number;
-  failedCount: number;
-  results: Array<{ conversationId: string; customerName: string; status: string; error?: string }>;
-}> {
-  const { conversationIds, userId, messageText, generateWithAi, customInstruction, advanceStep } = params;
-  const results: Array<{ conversationId: string; customerName: string; status: string; error?: string }> = [];
-  let sentCount = 0;
-  let failedCount = 0;
-
-  for (const convId of conversationIds) {
-    try {
-      const res = await sendManualFollowUp({
-        conversationId: convId,
-        userId,
-        messageText,
-        generateWithAi,
-        customInstruction,
-        advanceStep: advanceStep !== false,
-      });
-
-      if (res.success) {
-        sentCount++;
-        results.push({
-          conversationId: convId,
-          customerName: res.customerName || 'Customer',
-          status: 'SENT',
-        });
-      } else {
-        failedCount++;
-        results.push({
-          conversationId: convId,
-          customerName: res.customerName || 'Customer',
-          status: 'FAILED',
-          error: res.error,
-        });
-      }
-    } catch (err: any) {
-      failedCount++;
-      results.push({
-        conversationId: convId,
-        customerName: 'Customer',
-        status: 'FAILED',
-        error: err?.message || 'Error sending message',
-      });
-    }
-  }
-
-  return {
-    success: true,
-    total: conversationIds.length,
-    sentCount,
-    failedCount,
-    results,
-  };
 }
 
