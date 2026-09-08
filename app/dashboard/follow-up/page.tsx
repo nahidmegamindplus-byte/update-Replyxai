@@ -433,32 +433,13 @@ export default function FollowUpPage() {
     }
   };
 
-  // Open Step Modal
-  const openAddStepModal = () => {
+  // Open Step Modal (supports optional instant preset e.g. 1 minute)
+  const openAddStepModal = (presetUnit: 'minutes' | 'hours' | 'days' = 'minutes', presetValue: number = 1) => {
     const nextStepNum = steps.length + 1;
-    let suggestedUnit: 'minutes' | 'hours' | 'days' = 'minutes';
-    let suggestedMinutes = 1;
-    let suggestedHours = 2;
-    let suggestedDays = 1;
-
-    if (steps.length > 0) {
-      const lastStep = steps[steps.length - 1];
-      const lastTotalMins = getStepTotalMinutes(lastStep);
-      if (lastTotalMins < 60) {
-        suggestedUnit = 'minutes';
-        suggestedMinutes = lastTotalMins < 5 ? 5 : lastTotalMins < 15 ? 15 : lastTotalMins < 30 ? 30 : 45;
-      } else if (lastTotalMins < 1440) {
-        suggestedUnit = 'hours';
-        suggestedHours = Math.round(lastTotalMins / 60) < 2 ? 2 : Math.round(lastTotalMins / 60) < 6 ? 6 : 12;
-      } else {
-        suggestedUnit = 'days';
-        suggestedDays = Math.round(lastTotalMins / 1440) < 3 ? 3 : Math.round(lastTotalMins / 1440) < 7 ? 7 : 15;
-      }
-    } else {
-      // First step: start at 1 minute (Instant test / fast follow-up)
-      suggestedUnit = 'minutes';
-      suggestedMinutes = 1;
-    }
+    let suggestedUnit: 'minutes' | 'hours' | 'days' = presetUnit;
+    let suggestedMinutes = presetUnit === 'minutes' ? presetValue : 1;
+    let suggestedHours = presetUnit === 'hours' ? presetValue : 2;
+    let suggestedDays = presetUnit === 'days' ? presetValue : 1;
 
     setEditingStepIndex(null);
     setStepTimeUnit(suggestedUnit);
@@ -466,19 +447,26 @@ export default function FollowUpPage() {
     setStepCustomHours(suggestedHours);
 
     let defaultTitle = '';
+    let defaultPrompt = '';
+
     if (suggestedUnit === 'minutes') {
       defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedMinutes} মিনিট পর)`;
+      if (suggestedMinutes === 1) {
+        defaultPrompt = 'পছন্দের পণ্য নিয়ে কোনো প্রশ্ন আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সাহায্য লাগবে কিনা দ্রুত ও আন্তরিকভাবে জানতে চান।';
+      }
     } else if (suggestedUnit === 'hours') {
-      defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedHours} ঘন্টা পর)`;
+      defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedHours} ঘণ্টা পর)`;
+      defaultPrompt = 'পণ্যের কোয়ালিটি ও ক্যাশ অন ডেলিভারি (COD) সুবিধার কথা মনে করিয়ে দিন।';
     } else {
       defaultTitle = `${nextStepNum}ম ফলো-আপ (${suggestedDays} দিন পর)`;
+      defaultPrompt = 'পণ্যটি পছন্দের তালিকায় আছে কিনা এবং কোনো ডিসকাউন্ট বা স্টক তথ্য জানতে চান কিনা জানতে চান।';
     }
 
     setStepFormData({
       dayOffset: suggestedDays,
-      timeOfDay: '10:00',
+      timeOfDay: suggestedUnit === 'minutes' ? `${suggestedMinutes}m` : suggestedUnit === 'hours' ? `${suggestedHours}h` : '10:00',
       title: defaultTitle,
-      guidelinePrompt: '',
+      guidelinePrompt: defaultPrompt,
       isEnabled: true,
     });
     setModalOpen(true);
@@ -1285,21 +1273,49 @@ export default function FollowUpPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Quick 1-Minute Add Button */}
+                  <button
+                    onClick={() => openAddStepModal('minutes', 1)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs transition-all active:scale-95"
+                    title="১ মিনিট পরের দ্রুত ফলো-আপ ধাপ যোগ করুন"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                    + ১ মিনিট ধাপ
+                  </button>
+
+                  {/* Quick 5-Minute Add Button */}
+                  <button
+                    onClick={() => openAddStepModal('minutes', 5)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    + ৫ মিনিট
+                  </button>
+
+                  {/* Quick 1-Hour Add Button */}
+                  <button
+                    onClick={() => openAddStepModal('hours', 1)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    + ১ ঘণ্টা
+                  </button>
+
                   <button
                     onClick={handleResetToDefault}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    ডিফল্ট ৫-ধাপে রিসেট
+                    ডিফল্ট ৫-ধাপ
                   </button>
 
                   <button
-                    onClick={openAddStepModal}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all"
+                    onClick={() => openAddStepModal('minutes', 1)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all active:scale-95"
                   >
                     <Plus className="w-4 h-4" />
-                    নতুন ফলো-আপ ধাপ যোগ করুন
+                    নতুন ধাপ যোগ করুন
                   </button>
                 </div>
               </div>
@@ -1799,7 +1815,7 @@ export default function FollowUpPage() {
                   {/* Preset Buttons for Minutes */}
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                     {[
-                      { m: 1, label: '১ মিনিট', desc: 'টেস্টিং' },
+                      { m: 1, label: '⚡ ১ মিনিট', desc: 'ইনস্ট্যান্ট টেস্ট' },
                       { m: 5, label: '৫ মিনিট', desc: 'খুব দ্রুত' },
                       { m: 10, label: '১০ মিনিট', desc: 'দ্রুত' },
                       { m: 15, label: '১৫ মিনিট', desc: 'স্ট্যান্ডার্ড' },
@@ -1812,14 +1828,22 @@ export default function FollowUpPage() {
                         onClick={() => {
                           setStepCustomMinutes(item.m);
                           const nextStepNum = (editingStepIndex !== null ? editingStepIndex : steps.length) + 1;
-                          setStepFormData({
-                            ...stepFormData,
+                          setStepFormData((prev) => ({
+                            ...prev,
                             title: `${nextStepNum}ম ফলো-আপ (${item.m} মিনিট পর)`,
-                          });
+                            guidelinePrompt:
+                              !prev.guidelinePrompt || prev.guidelinePrompt.includes('ফলো-আপ')
+                                ? item.m === 1
+                                  ? 'পছন্দের পণ্য নিয়ে কোনো প্রশ্ন আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সাহায্য লাগবে কিনা দ্রুত ও আন্তরিকভাবে জানতে চান।'
+                                  : prev.guidelinePrompt
+                                : prev.guidelinePrompt,
+                          }));
                         }}
                         className={`p-2 rounded-lg border text-center transition-all ${
                           stepCustomMinutes === item.m
-                            ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+                            ? 'bg-amber-600 border-amber-600 text-white shadow-xs scale-105 font-bold'
+                            : item.m === 1
+                            ? 'bg-amber-100/70 border-amber-300 text-amber-950 font-bold hover:bg-amber-200/80'
                             : 'bg-white border-amber-200 text-amber-900 hover:bg-amber-100/60'
                         }`}
                       >
