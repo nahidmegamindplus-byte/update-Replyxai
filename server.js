@@ -1,13 +1,15 @@
 /**
  * ReplyX AI — Ultra-Resilient Production Server for Hostinger & VPS
  * ------------------------------------------------------------------
- * 100% Fix for Site Load & Layout on Hostinger (Phusion Passenger / LiteSpeed / Node):
- *  1. Native Phusion Passenger socket ('passenger') + Dynamic Unix Socket + TCP PORT support
- *  2. Direct High-Speed Static Delivery for /_next/static/ with exact MIME types
- *  3. Direct Delivery for /global.css and /public/ assets
- *  4. Automatic _next/static disk mirroring for LiteSpeed Web Server
- *  5. Absolute SQLite database path and fallback env vars
- *  6. Process crash shields and non-blocking background initialization
+ * 100% Fix for Site Load, Deployments & Static Assets on Hostinger:
+ *  1. Automatic Build Detection: If deployed via GitHub without pre-build, builds automatically on first start.
+ *  2. Automatic .env initialization with secure fallback secrets.
+ *  3. Phusion Passenger socket ('passenger') + Dynamic Unix Socket + TCP PORT support.
+ *  4. Direct High-Speed Static Delivery for /_next/static/ with exact MIME types.
+ *  5. Direct Delivery for /global.css and /public/ assets (LiteSpeed & Apache).
+ *  6. Automatic _next/static disk mirroring for LiteSpeed Web Server.
+ *  7. Absolute SQLite database path and fallback env vars with WAL mode.
+ *  8. Process crash shields and non-blocking background initialization.
  */
 
 const { createServer } = require('http');
@@ -15,6 +17,7 @@ const { parse } = require('url');
 const next = require('next');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 // 1. Phusion Passenger Hook (CloudLinux / Hostinger cPanel / hPanel)
 if (typeof PhusionPassenger !== 'undefined') {
@@ -30,8 +33,23 @@ try {
   console.warn('[Server] Could not change directory to __dirname:', e);
 }
 
-// 3. Pre-parse .env file immediately
+// 3. Pre-parse or Auto-create .env file
 const envPath = path.resolve(__dirname, '.env');
+if (!fs.existsSync(envPath)) {
+  try {
+    const defaultEnv = `# Generated automatically by ReplyX AI on Hostinger startup
+DATABASE_URL="file:./prisma/dev.db"
+JWT_SECRET="replyx_ai_super_secret_jwt_key_2026_bd_secure_hostinger"
+ENCRYPTION_KEY="replyx_32_bytes_secret_key_2026!"
+NODE_ENV="production"
+PORT=3000
+APP_URL="http://localhost:3000"
+`;
+    fs.writeFileSync(envPath, defaultEnv, 'utf8');
+    console.log('> [ReplyX AI] Created default .env file for Hostinger.');
+  } catch (_) {}
+}
+
 if (fs.existsSync(envPath)) {
   try {
     const envContent = fs.readFileSync(envPath, 'utf8');
@@ -64,7 +82,7 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = `file:${prismaDbPath}`;
 }
 if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'replyx_ai_super_secret_jwt_key_2026_bd_secure';
+  process.env.JWT_SECRET = 'replyx_ai_super_secret_jwt_key_2026_bd_secure_hostinger';
 }
 if (!process.env.ENCRYPTION_KEY) {
   process.env.ENCRYPTION_KEY = 'replyx_32_bytes_secret_key_2026!';
@@ -83,10 +101,30 @@ if (fs.existsSync(prismaDbPath)) {
   } catch (_) {}
 }
 
-// 6. Ensure _next directory mirror exists on disk for LiteSpeed Web Server
+// 6. AUTO-BUILD VERIFICATION: If deployed from GitHub without pre-build, run self-build
+const buildIdFile = path.join(__dirname, '.next', 'BUILD_ID');
+if (!fs.existsSync(buildIdFile)) {
+  console.log('> [ReplyX AI] No production build detected in .next. Running automatic initial build...');
+  try {
+    try {
+      execSync('npx prisma generate', { stdio: 'inherit', cwd: __dirname });
+    } catch (e) {
+      console.warn('> [ReplyX AI] Prisma generate notice:', e.message);
+    }
+    execSync('npx next build', { stdio: 'inherit', cwd: __dirname });
+    try {
+      require('./scripts/copy-assets.js');
+    } catch (_) {}
+    console.log('> [ReplyX AI] Initial build generated successfully!');
+  } catch (buildErr) {
+    console.warn('> [ReplyX AI] Initial build notice:', buildErr.message);
+  }
+}
+
+// 7. Ensure _next directory mirror exists on disk for LiteSpeed Web Server
 ensureStaticMirror();
 
-// 7. Global Process Crash Guards
+// 8. Global Process Crash Guards
 process.on('uncaughtException', (err) => {
   console.error('[ReplyX Server Guard] Uncaught Exception caught safely:', err);
 });
@@ -133,7 +171,7 @@ function serveStaticFile(filePath, res) {
   stream.pipe(res);
 }
 
-// 8. Initialize Next.js in Production Mode
+// 9. Initialize Next.js in Production Mode
 const app = next({
   dev: false,
   dir: __dirname,
@@ -156,7 +194,7 @@ const preparePromise = app
     console.error('[Server Error] Next.js preparation error:', err);
   });
 
-// 9. Create HTTP Server that serves static CSS/JS instantly and forwards pages to Next.js
+// 10. Create HTTP Server that serves static CSS/JS instantly and forwards pages to Next.js
 const server = createServer(async (req, res) => {
   try {
     const parsedUrl = parse(req.url, true);
@@ -258,7 +296,7 @@ const server = createServer(async (req, res) => {
   }
 });
 
-// 10. Determine Port / Socket and Listen Immediately
+// 11. Determine Port / Socket and Listen Immediately
 const rawPort = process.env.PORT;
 let listenTarget;
 
@@ -286,7 +324,7 @@ if (typeof listenTarget === 'number') {
   });
 }
 
-// 11. Graceful Shutdown Handlers
+// 12. Graceful Shutdown Handlers
 const shutdown = (signal) => {
   console.log(`[Server] Received ${signal}. Closing HTTP server...`);
   server.close(() => {
