@@ -256,6 +256,7 @@ export async function POST(req: NextRequest) {
             },
           });
         } else {
+          const isReplyingToFollowUp = (conversation.currentFollowUpStep > 0 || conversation.followUpSentCount > 0);
           conversation = await prisma.conversation.update({
             where: { id: conversation.id },
             data: {
@@ -264,6 +265,8 @@ export async function POST(req: NextRequest) {
               lastMessageAt: new Date(),
               unreadCount: { increment: 1 },
               followUpSentCount: 0, // Reset follow-up cycle since customer replied
+              currentFollowUpStep: 0,
+              ...(isReplyingToFollowUp ? { followUpStatus: 'CUSTOMER_REPLIED' } : {}),
             },
           });
         }

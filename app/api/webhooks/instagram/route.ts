@@ -84,6 +84,32 @@ export async function POST(req: NextRequest) {
 
       for (const event of messagingEvents) {
         const senderId = event.sender?.id;
+
+        // Handle Read / Seen receipts from customer on Instagram
+        if (event.read && senderId) {
+          try {
+            const readPage = await prisma.page.findFirst({
+              where: {
+                OR: [
+                  { facebookPageId: recipientId },
+                  { channelIdentifier: recipientId },
+                ],
+              },
+              select: { id: true },
+            });
+            if (readPage) {
+              await prisma.conversation.updateMany({
+                where: { pageId: readPage.id, senderPsid: senderId },
+                data: { lastSeenAt: new Date() },
+              });
+              serverLogger.info(`Updated Instagram lastSeenAt watermark for customer ${senderId}`);
+            }
+          } catch (readErr) {
+            serverLogger.warn('Error recording Instagram read receipt:', readErr);
+          }
+          continue;
+        }
+
         const message = event.message;
 
         if (!message || message.is_echo || !senderId) continue;

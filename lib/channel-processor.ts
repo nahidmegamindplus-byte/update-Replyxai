@@ -145,6 +145,7 @@ export async function processIncomingChannelMessage(
         },
       });
     } else {
+      const isReplyingToFollowUp = (conversation.currentFollowUpStep > 0 || conversation.followUpSentCount > 0);
       conversation = await prisma.conversation.update({
         where: { id: conversation.id },
         data: {
@@ -153,6 +154,8 @@ export async function processIncomingChannelMessage(
           lastMessageAt: new Date(),
           unreadCount: { increment: 1 },
           followUpSentCount: 0, // Reset follow-up cycle when customer responds
+          currentFollowUpStep: 0,
+          ...(isReplyingToFollowUp ? { followUpStatus: 'CUSTOMER_REPLIED' } : {}),
           ...(senderName && (!conversation.customerName || conversation.customerName.startsWith('Customer ('))
             ? { customerName: senderName }
             : {}),
