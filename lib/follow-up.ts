@@ -17,11 +17,30 @@ export interface ScheduleStepItem {
   id?: string;
   stepNumber: number;
   dayOffset: number;
-  timeOfDay: string; // "10:00", "16:00", "20:00"
+  delayMinutes?: number | null;
+  timeOfDay: string; // "10:00", "16:00", "20:00" or relative "1m", "5m", "15m", "30m", "1h", "2h"
   title: string;
   guidelinePrompt?: string | null;
   isEnabled: boolean;
   isGlobalDefault?: boolean;
+}
+
+export function getStepTotalMinutes(step: ScheduleStepItem, defaultWaitMinutes = 30): number {
+  if (typeof step.delayMinutes === 'number' && step.delayMinutes > 0) {
+    return step.delayMinutes;
+  }
+  if (step.timeOfDay && step.timeOfDay.endsWith('m')) {
+    const m = parseInt(step.timeOfDay.replace('m', ''), 10);
+    if (!isNaN(m) && m > 0) return m;
+  }
+  if (step.timeOfDay && step.timeOfDay.endsWith('h')) {
+    const h = parseInt(step.timeOfDay.replace('h', ''), 10);
+    if (!isNaN(h) && h > 0) return h * 60;
+  }
+  if (step.dayOffset > 0) {
+    return step.dayOffset * 24 * 60;
+  }
+  return Math.max(1, defaultWaitMinutes);
 }
 
 export const DEFAULT_SCHEDULE_STEPS: ScheduleStepItem[] = [
@@ -414,14 +433,7 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             ? new Date(conv.lastSeenAt).getTime()
             : (conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : new Date(conv.createdAt).getTime());
 
-          // Use page.followUpWaitMinutes if targetStep is 1 day or default, or convert step dayOffset
-          let stepDelayMinutes = page.followUpWaitMinutes ?? 30;
-          if (targetStep.dayOffset > 1) {
-            stepDelayMinutes = targetStep.dayOffset * 24 * 60;
-          } else if (targetStep.dayOffset === 1 && (page.followUpWaitMinutes ?? 30) < 1440) {
-            stepDelayMinutes = page.followUpWaitMinutes ?? 30;
-          }
-
+          const stepDelayMinutes = getStepTotalMinutes(targetStep, page.followUpWaitMinutes ?? 30);
           const requiredDelayMs = stepDelayMinutes * 60 * 1000;
           if (nowMs - referenceTime >= requiredDelayMs) {
             isDue = true;
@@ -432,20 +444,21 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
             isDue = true;
           } else {
             const lastSentTime = new Date(conv.lastFollowUpSentAt).getTime();
-            let intervalHours = page.followUpIntervalHours ?? 24;
+            let intervalMinutes = 24 * 60;
 
             if (page.followUpFrequency === 'DAILY') {
-              intervalHours = 24;
+              intervalMinutes = 24 * 60;
             } else if (page.followUpFrequency === 'CUSTOM_INTERVAL') {
-              intervalHours = page.followUpIntervalHours || 24;
+              intervalMinutes = (page.followUpIntervalHours || 24) * 60;
             } else {
-              // Difference between current step dayOffset and previous step dayOffset
+              // Difference between current step delay minutes and previous step delay minutes
               const prevStep = scheduleSteps[currentStepIndex - 1];
-              const diffDays = Math.max(1, targetStep.dayOffset - (prevStep ? prevStep.dayOffset : 0));
-              intervalHours = diffDays * 24;
+              const prevTotalMins = prevStep ? getStepTotalMinutes(prevStep, 30) : 0;
+              const currTotalMins = getStepTotalMinutes(targetStep, 60);
+              intervalMinutes = Math.max(1, currTotalMins - prevTotalMins);
             }
 
-            const requiredIntervalMs = Math.max(1, intervalHours) * 60 * 60 * 1000;
+            const requiredIntervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
             if (nowMs - lastSentTime >= requiredIntervalMs) {
               isDue = true;
             }

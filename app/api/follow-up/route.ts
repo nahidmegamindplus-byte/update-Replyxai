@@ -232,6 +232,7 @@ export async function POST(req: NextRequest) {
         id?: string;
         stepNumber: number;
         dayOffset: number;
+        delayMinutes?: number;
         timeOfDay: string;
         title: string;
         guidelinePrompt?: string;
@@ -252,9 +253,10 @@ export async function POST(req: NextRequest) {
             userId,
             pageId: pageId || null,
             stepNumber: i + 1,
-            dayOffset: Number(item.dayOffset) || 1,
+            dayOffset: Number(item.dayOffset) || 0,
+            delayMinutes: typeof item.delayMinutes === 'number' ? item.delayMinutes : ((Number(item.dayOffset) || 1) * 1440),
             timeOfDay: item.timeOfDay || '10:00',
-            title: item.title || `ধাপ #${i + 1} (${item.dayOffset} দিন পর)`,
+            title: item.title || `ধাপ #${i + 1}`,
             guidelinePrompt: item.guidelinePrompt || null,
             isEnabled: item.isEnabled !== false,
             isGlobalDefault: false,
