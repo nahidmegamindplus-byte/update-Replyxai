@@ -165,6 +165,113 @@ export default function FollowUpPage() {
   // History Modal
   const [historyModalConv, setHistoryModalConv] = useState<ConversationItem | null>(null);
 
+  // Manual Follow-up Modal & 1-Click State
+  const [manualModalConv, setManualModalConv] = useState<ConversationItem | null>(null);
+  const [manualMsgText, setManualMsgText] = useState('');
+  const [manualAiPrompt, setManualAiPrompt] = useState('');
+  const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [sendingManual, setSendingManual] = useState(false);
+  const [sendingOneClickConvId, setSendingOneClickConvId] = useState<string | null>(null);
+  const [advanceStepOption, setAdvanceStepOption] = useState(true);
+
+  // 1-Click Smart AI Follow-up (Direct Send with Context Analysis)
+  const handleOneClickAiFollowUp = async (conv: ConversationItem) => {
+    try {
+      setSendingOneClickConvId(conv.id);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SEND_MANUAL',
+          conversationId: conv.id,
+          generateWithAi: true,
+          advanceStep: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'গ্রাহককে সফলভাবে AI ফলো-আপ বার্তা পাঠানো হয়েছে!');
+        fetchFollowUpData(selectedPageId || undefined);
+      } else {
+        toast.error(data.error || 'ফলো-আপ পাঠানো সম্ভব হয়নি');
+      }
+    } catch (e) {
+      toast.error('সার্ভার এরর');
+    } finally {
+      setSendingOneClickConvId(null);
+    }
+  };
+
+  // Open Manual Custom Send Modal
+  const openManualSendModal = (conv: ConversationItem) => {
+    setManualModalConv(conv);
+    setManualMsgText('');
+    setManualAiPrompt('');
+    setAdvanceStepOption(true);
+  };
+
+  // Generate Context-Aware AI Draft
+  const handleGenerateAiDraft = async () => {
+    if (!manualModalConv) return;
+    try {
+      setGeneratingDraft(true);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'GENERATE_DRAFT',
+          conversationId: manualModalConv.id,
+          customInstruction: manualAiPrompt || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.draftText) {
+        setManualMsgText(data.draftText);
+        toast.success('AI ফলো-আপ ড্রাফট সফলভাবে তৈরি হয়েছে!');
+      } else {
+        toast.error(data.error || 'AI ড্রাফট তৈরি করা যায়নি');
+      }
+    } catch (e) {
+      toast.error('AI সার্ভার এরর');
+    } finally {
+      setGeneratingDraft(false);
+    }
+  };
+
+  // Send Custom Message from Modal
+  const handleSendManualFromModal = async () => {
+    if (!manualModalConv || !manualMsgText.trim()) {
+      toast.error('অনুগ্রহ করে মেসেজের বিষয়বস্তু লিখুন');
+      return;
+    }
+    try {
+      setSendingManual(true);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SEND_MANUAL',
+          conversationId: manualModalConv.id,
+          messageText: manualMsgText.trim(),
+          generateWithAi: false,
+          advanceStep: advanceStepOption,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'ফলো-আপ বার্তা সফলভাবে পাঠানো হয়েছে!');
+        setManualModalConv(null);
+        fetchFollowUpData(selectedPageId || undefined);
+      } else {
+        toast.error(data.error || 'মেসেজ পাঠানো ব্যর্থ হয়েছে');
+      }
+    } catch (e) {
+      toast.error('সার্ভার কানেকশন ত্রুটি');
+    } finally {
+      setSendingManual(false);
+    }
+  };
+
   const fetchFollowUpData = async (pageId?: string) => {
     try {
       setLoading(true);
@@ -1303,7 +1410,7 @@ export default function FollowUpPage() {
                       <th className="py-3 px-4">বর্তমান ধাপ</th>
                       <th className="py-3 px-4">স্ট্যাটাস</th>
                       <th className="py-3 px-4">সর্বশেষ বার্তা</th>
-                      <th className="py-3 px-4 text-right">মেমরি লগ</th>
+                      <th className="py-3 px-4 text-right">অ্যাকশন ও ফলো-আপ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1330,13 +1437,42 @@ export default function FollowUpPage() {
                         </td>
 
                         <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => setHistoryModalConv(conv)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            হিস্ট্রি ({conv.followUpLogs?.length || 0})
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* 1-Click Smart AI Follow-up */}
+                            <button
+                              onClick={() => handleOneClickAiFollowUp(conv)}
+                              disabled={sendingOneClickConvId === conv.id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-colors disabled:opacity-50"
+                              title="পূর্ববর্তী চ্যাট হিস্ট্রি বিশ্লেষণ করে ১-ক্লিকে AI ফলো-আপ পাঠান"
+                            >
+                              {sendingOneClickConvId === conv.id ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-700" />
+                              ) : (
+                                <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-600" />
+                              )}
+                              <span>{sendingOneClickConvId === conv.id ? 'পাঠাচ্ছে...' : '১-ক্লিক AI'}</span>
+                            </button>
+
+                            {/* Custom Manual Follow-up Modal */}
+                            <button
+                              onClick={() => openManualSendModal(conv)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors"
+                              title="ম্যানুয়াল মেসেজ লিখুন বা AI ড্রাফট এডিট করে পাঠান"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              কাস্টম
+                            </button>
+
+                            {/* Memory History */}
+                            <button
+                              onClick={() => setHistoryModalConv(conv)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                              title="আগের ফলো-আপ মেমরি রেকর্ড"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              হিস্ট্রি ({conv.followUpLogs?.length || 0})
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1829,6 +1965,169 @@ export default function FollowUpPage() {
                 className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
               >
                 বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL CUSTOM / AI FOLLOW-UP MODAL */}
+      {manualModalConv && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <button
+              onClick={() => setManualModalConv(null)}
+              className="absolute top-5 right-5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Send className="w-5 h-5 text-indigo-600" />
+                ম্যানুয়াল ফলো-আপ মেসেজ পাঠান
+              </h3>
+              <div className="flex flex-wrap items-center gap-2 mt-1">
+                <span className="text-sm font-bold text-slate-900">
+                  {manualModalConv.customerName || manualModalConv.senderPsid}
+                </span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                  {manualModalConv.channel} {manualModalConv.page ? `• ${manualModalConv.page.pageName}` : ''}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold border border-amber-200">
+                  ধাপ #{manualModalConv.currentFollowUpStep + 1}
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 flex-1 pr-1">
+              {/* Context display */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                <div className="text-slate-400 font-semibold mb-1">সর্বশেষ চ্যাট প্রসঙ্গ:</div>
+                <div className="text-slate-800 font-medium italic truncate">
+                  &ldquo;{manualModalConv.lastMessage || 'কোনো পূর্ববর্তী বার্তা নেই'}&rdquo;
+                </div>
+              </div>
+
+              {/* AI Draft Generator Block */}
+              <div className="p-4 bg-gradient-to-br from-amber-50/90 to-indigo-50/90 rounded-xl border border-amber-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    AI দিয়ে স্মার্ট ড্রাফট তৈরি করুন (১-ক্লিক):
+                  </label>
+                  <button
+                    type="button"
+                    disabled={generatingDraft}
+                    onClick={handleGenerateAiDraft}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {generatingDraft ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        AI লিখছে...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        ড্রাফট তৈরি করুন
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="বিশেষ কোনো নির্দেশনা (ঐচ্ছিক, যেমন: COD সুবিধা বা ৫% ডিসকাউন্ট মনে করিয়ে দিন)"
+                  value={manualAiPrompt}
+                  onChange={(e) => setManualAiPrompt(e.target.value)}
+                  className="w-full text-xs bg-white border border-amber-200 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
+
+              {/* Message Editor */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800">
+                    ফলো-আপ মেসেজের বিষয়বস্তু:
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    প্লেসহোল্ডার: &#123;name&#125;, &#123;page_name&#125;
+                  </span>
+                </div>
+
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="এখানে সরাসরি আপনার ফলো-আপ মেসেজটি লিখুন অথবা উপরের AI বাটনে ক্লিক করে স্বয়ংক্রিয় মেসেজ বানিয়ে নিন..."
+                  value={manualMsgText}
+                  onChange={(e) => setManualMsgText(e.target.value)}
+                  className="w-full text-xs font-medium bg-white border border-slate-300 rounded-xl p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 leading-relaxed"
+                />
+
+                {/* Quick Snippet Chips */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    { label: '🛍️ অর্ডার কনফার্মেশন', text: 'আসসালামু আলাইকুম {name}! আপনার পছন্দের প্রোডাক্টটি কি আমরা কনফার্ম করে দেব? যেকোনো প্রয়োজনে আমাদের জানাতে পারেন।' },
+                    { label: '🚚 COD সুবিধা', text: 'প্রিয় {name}, পণ্যটি হাতে পেয়ে মূল্য পরিশোধের (ক্যাশ অন ডেলিভারি) সুবিধা রয়েছে। ডেলিভারির জন্য আপনার ঠিকানা ও মোবাইল নম্বরটি জানাবেন কি?' },
+                    { label: '⚡ স্টক সীমিত', text: 'হ্যালো {name}! পণ্যটির স্টক দ্রুত শেষ হয়ে যাচ্ছে। আপনার জন্য একটি ইউনিট কি সংরক্ষণ করে রাখব?' },
+                    { label: '🎁 স্পেশাল অফার', text: 'আসসালামু আলাইকুম {name}, আজ অর্ডার কনফার্ম করলে পাচ্ছেন আকর্ষণীয় বিশেষ অফার! বিস্তারিত জানতে মেসেজ দিন।' },
+                  ].map((chip, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setManualMsgText(chip.text)}
+                      className="px-2 py-1 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 transition-colors border border-slate-200"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="advanceStepOption"
+                  checked={advanceStepOption}
+                  onChange={(e) => setAdvanceStepOption(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="advanceStepOption" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                  মেসেজ পাঠানোর পর ফলো-আপ ধাপ ১ ধাপ এগিয়ে নিন (Advance step count)
+                </label>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-2">
+              <button
+                type="button"
+                onClick={() => setManualModalConv(null)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                বাতিল
+              </button>
+
+              <button
+                type="button"
+                disabled={sendingManual || !manualMsgText.trim()}
+                onClick={handleSendManualFromModal}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              >
+                {sendingManual ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    পাঠানো হচ্ছে...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    ফলো-আপ মেসেজ পাঠান
+                  </>
+                )}
               </button>
             </div>
           </div>

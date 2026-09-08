@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { ensureDatabaseReady } from '@/lib/db-init';
-import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker } from '@/lib/follow-up';
+import { DEFAULT_SCHEDULE_STEPS, runFollowUpAutomation, startFollowUpWorker, generateManualFollowUpDraft, sendManualFollowUp } from '@/lib/follow-up';
 
 export async function GET(req: NextRequest) {
   try {
@@ -297,6 +297,62 @@ export async function POST(req: NextRequest) {
         success: true,
         message: 'নতুন ফলো-আপ ধাপ যুক্ত হয়েছে।',
         step: newStep,
+      });
+    }
+
+    // 6. Generate Context-Aware AI Follow-up Draft
+    if (action === 'GENERATE_DRAFT') {
+      const { conversationId, customInstruction } = body;
+      if (!conversationId) {
+        return NextResponse.json({ success: false, error: 'Conversation ID প্রয়োজন।' }, { status: 400 });
+      }
+
+      const draftResult = await generateManualFollowUpDraft({
+        conversationId,
+        userId,
+        customInstruction,
+      });
+
+      if (!draftResult.success) {
+        return NextResponse.json(
+          { success: false, error: draftResult.error || 'AI ড্রাফট তৈরি করতে সমস্যা হয়েছে।' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        ...draftResult,
+      });
+    }
+
+    // 7. Send Manual Follow-up (1-Click AI or Custom Text)
+    if (action === 'SEND_MANUAL') {
+      const { conversationId, messageText, generateWithAi, customInstruction, advanceStep } = body;
+      if (!conversationId) {
+        return NextResponse.json({ success: false, error: 'Conversation ID প্রয়োজন।' }, { status: 400 });
+      }
+
+      const sendResult = await sendManualFollowUp({
+        conversationId,
+        userId,
+        messageText,
+        generateWithAi: Boolean(generateWithAi),
+        customInstruction,
+        advanceStep: advanceStep !== false,
+      });
+
+      if (!sendResult.success) {
+        return NextResponse.json(
+          { success: false, error: sendResult.error || 'ফলো-আপ বার্তা পাঠানো ব্যর্থ হয়েছে।' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `সফলভাবে ${sendResult.customerName || 'গ্রাহক'}-কে ফলো-আপ বার্তা পাঠানো হয়েছে! (${sendResult.channel})`,
+        ...sendResult,
       });
     }
 

@@ -676,3 +676,285 @@ export function startFollowUpWorker(intervalMs = 60000) {
   }
 }
 
+/**
+ * Generate a personalized, context-aware follow-up draft using AI based on past chat history & previous follow-up logs
+ */
+export async function generateManualFollowUpDraft(params: {
+  conversationId: string;
+  userId?: string;
+  customInstruction?: string;
+}): Promise<{
+  success: boolean;
+  draftText?: string;
+  model?: string;
+  customerName?: string;
+  channel?: string;
+  pageName?: string;
+  error?: string;
+}> {
+  try {
+    await ensureDatabaseReady();
+    const conv = await prisma.conversation.findUnique({
+      where: { id: params.conversationId },
+      include: {
+        page: true,
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: 20,
+        },
+        followUpLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!conv || !conv.page) {
+      return { success: false, error: 'কথোপকথন বা পেজ পাওয়া যায়নি।' };
+    }
+
+    if (params.userId && conv.userId !== params.userId) {
+      return { success: false, error: 'অনুমোদিত নয়।' };
+    }
+
+    const previousFollowUps = (conv.followUpLogs || [])
+      .map((l) => l.messageText)
+      .filter((t) => typeof t === 'string' && t.trim().length > 0);
+
+    const historyForAI = conv.messages.map((m) => ({
+      direction: m.direction,
+      text: m.messageText || '',
+    }));
+
+    const scheduleSteps = await getActiveScheduleSteps(conv.page.userId, conv.page.id);
+    const currentStepIdx = Math.min(conv.currentFollowUpStep || 0, Math.max(0, scheduleSteps.length - 1));
+    const targetStep = scheduleSteps[currentStepIdx] || DEFAULT_SCHEDULE_STEPS[0];
+
+    // If custom instruction provided, append it to guideline
+    const activeStep: ScheduleStepItem = {
+      ...targetStep,
+      guidelinePrompt: params.customInstruction
+        ? `${targetStep.guidelinePrompt || ''}\nব্যবহারকারীর বিশেষ নির্দেশনা: ${params.customInstruction}`.trim()
+        : targetStep.guidelinePrompt,
+    };
+
+    const aiRes = await generateAiFollowUpMessage({
+      conversationId: conv.id,
+      customerName: conv.customerName,
+      step: activeStep,
+      conversationHistory: historyForAI,
+      previousFollowUps,
+      pageName: conv.page.pageName,
+      replyLanguage: conv.page.replyLanguage || 'বাংলা',
+      businessInstructions: conv.page.aiInstructions || '',
+    });
+
+    return {
+      success: true,
+      draftText: aiRes.text,
+      model: aiRes.model,
+      customerName: conv.customerName || conv.senderPsid,
+      channel: conv.channel || conv.page.channel,
+      pageName: conv.page.pageName,
+    };
+  } catch (error: any) {
+    serverLogger.error('Error generating manual follow-up draft:', error);
+    return { success: false, error: error?.message || 'AI ড্রাফট তৈরি ব্যর্থ হয়েছে।' };
+  }
+}
+
+/**
+ * Send a manual follow-up message (1-Click AI or custom written) directly to a customer
+ */
+export async function sendManualFollowUp(params: {
+  conversationId: string;
+  userId?: string;
+  messageText?: string;
+  generateWithAi?: boolean;
+  customInstruction?: string;
+  advanceStep?: boolean;
+}): Promise<{
+  success: boolean;
+  messageText?: string;
+  channel?: string;
+  customerName?: string;
+  stepNumber?: number;
+  error?: string;
+}> {
+  try {
+    await ensureDatabaseReady();
+    const conv = await prisma.conversation.findUnique({
+      where: { id: params.conversationId },
+      include: {
+        page: true,
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          take: 20,
+        },
+        followUpLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+
+    if (!conv || !conv.page) {
+      return { success: false, error: 'কথোপকথন বা পেজ পাওয়া যায়নি।' };
+    }
+
+    if (params.userId && conv.userId !== params.userId) {
+      return { success: false, error: 'অনুমোদিত নয়।' };
+    }
+
+    const page = conv.page;
+    const pageAccessToken = decrypt(page.pageAccessTokenEncrypted);
+    const channel = (conv.channel || page.channel || 'FACEBOOK') as SocialChannel;
+    const customerName = conv.customerName || conv.senderPsid;
+
+    let finalMessageText = (params.messageText || '').trim();
+    let aiModelUsed = 'MANUAL_CUSTOM';
+
+    // If 1-Click AI generate or text is empty with generateWithAi
+    if (params.generateWithAi || !finalMessageText) {
+      const draftResult = await generateManualFollowUpDraft({
+        conversationId: conv.id,
+        userId: params.userId,
+        customInstruction: params.customInstruction,
+      });
+
+      if (!draftResult.success || !draftResult.draftText) {
+        return { success: false, error: draftResult.error || 'AI মেসেজ তৈরি করতে সমস্যা হয়েছে।' };
+      }
+
+      finalMessageText = draftResult.draftText;
+      aiModelUsed = draftResult.model || 'Smart AI';
+    } else {
+      // Replace dynamic placeholders if any
+      const customerFirstName = conv.customerName?.split(' ')[0] || 'গ্রাহক';
+      finalMessageText = finalMessageText
+        .replace(/{name}/gi, customerFirstName)
+        .replace(/{customer_name}/gi, customerFirstName)
+        .replace(/{page_name}/gi, page.pageName);
+    }
+
+    if (!finalMessageText) {
+      return { success: false, error: 'মেসেজের বিষয়বস্তু খালি হতে পারে না।' };
+    }
+
+    let extraConfig = {};
+    if (page.extraConfig) {
+      try {
+        extraConfig = JSON.parse(page.extraConfig);
+      } catch (_) {}
+    }
+
+    // Send via channel API
+    if (pageAccessToken) {
+      const sendRes = await sendChannelMessage({
+        channel,
+        recipientId: conv.senderPsid,
+        text: finalMessageText,
+        accessToken: pageAccessToken,
+        channelIdentifier: page.channelIdentifier || page.facebookPageId,
+        extraConfig,
+      });
+
+      if (!sendRes.success) {
+        // Log failed attempt
+        await prisma.followUpLog.create({
+          data: {
+            userId: page.userId,
+            pageId: page.id,
+            conversationId: conv.id,
+            stepNumber: (conv.currentFollowUpStep || 0) + 1,
+            dayOffset: 0,
+            scheduledTime: 'MANUAL',
+            messageText: finalMessageText,
+            channel,
+            customerName: conv.customerName,
+            senderPsid: conv.senderPsid,
+            status: `FAILED: ${(sendRes as any).error || 'API Error'}`,
+            aiModel: aiModelUsed,
+          },
+        });
+
+        return {
+          success: false,
+          error: `${channel}-এ মেসেজ পাঠানো ব্যর্থ হয়েছে: ${(sendRes as any).error || 'চ্যানেল সংযোগ ত্রুটি'}`,
+        };
+      }
+    }
+
+    const currentStepNum = (conv.currentFollowUpStep || 0) + 1;
+    const shouldAdvance = params.advanceStep !== false;
+    const nextStepNum = shouldAdvance ? currentStepNum : conv.currentFollowUpStep;
+
+    // Record in FollowUpLog
+    await prisma.followUpLog.create({
+      data: {
+        userId: page.userId,
+        pageId: page.id,
+        conversationId: conv.id,
+        stepNumber: currentStepNum,
+        dayOffset: 0,
+        scheduledTime: 'MANUAL',
+        messageText: finalMessageText,
+        channel,
+        customerName: conv.customerName,
+        senderPsid: conv.senderPsid,
+        status: 'SENT',
+        aiModel: aiModelUsed,
+      },
+    });
+
+    // Record in Message table
+    await prisma.message.create({
+      data: {
+        conversationId: conv.id,
+        userId: page.userId,
+        pageId: page.id,
+        senderPsid: conv.senderPsid,
+        direction: 'OUTGOING',
+        messageType: 'TEXT',
+        messageText: finalMessageText,
+        aiGenerated: params.generateWithAi ? true : false,
+        aiModel: aiModelUsed,
+      },
+    });
+
+    // Update Conversation state
+    await prisma.conversation.update({
+      where: { id: conv.id },
+      data: {
+        currentFollowUpStep: nextStepNum,
+        followUpStatus: 'IN_PROGRESS',
+        lastFollowUpSentAt: new Date(),
+        lastMessage: finalMessageText,
+        lastMessageAt: new Date(),
+        followUpSentCount: { increment: 1 },
+      },
+    });
+
+    await logActivity({
+      userId: page.userId,
+      pageId: page.id,
+      action: 'FOLLOW_UP_SENT',
+      description: `ম্যানুয়াল ফলো-আপ পাঠানো হয়েছে (${customerName}, ${channel})`,
+    });
+
+    return {
+      success: true,
+      messageText: finalMessageText,
+      channel,
+      customerName,
+      stepNumber: currentStepNum,
+    };
+  } catch (error: any) {
+    serverLogger.error('Error sending manual follow-up:', error);
+    return {
+      success: false,
+      error: error?.message || 'ম্যানুয়াল ফলো-আপ পাঠাতে ত্রুটি হয়েছে।',
+    };
+  }
+}
+

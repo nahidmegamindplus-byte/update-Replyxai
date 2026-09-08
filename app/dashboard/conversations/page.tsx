@@ -33,6 +33,8 @@ import {
   Check,
   Eye,
   MessageSquareReply,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
@@ -66,6 +68,7 @@ export default function ConversationsPage() {
   // Input & Order modal
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderForm, setOrderForm] = useState({
     customerName: '',
@@ -76,6 +79,33 @@ export default function ConversationsPage() {
     price: '',
     notes: '',
   });
+
+  // AI Follow-up Draft Generator
+  const handleGenerateFollowUpDraft = async () => {
+    if (!selectedConv) return;
+    try {
+      setGeneratingFollowUp(true);
+      const res = await fetch('/api/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'GENERATE_DRAFT',
+          conversationId: selectedConv.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.draftText) {
+        setReplyText(data.draftText);
+        toast.success('✨ AI চ্যাট হিস্ট্রি বিশ্লেষণ করে ফলো-আপ ড্রাফট তৈরি করেছে!');
+      } else {
+        toast.error(data.error || 'AI ড্রাফট তৈরি করা যায়নি');
+      }
+    } catch (e) {
+      toast.error('সার্ভার এরর');
+    } finally {
+      setGeneratingFollowUp(false);
+    }
+  };
 
   // Isolated Container Scroll to Bottom helper (No Window Jump)
   const scrollToBottom = useCallback((smooth = false) => {
@@ -603,6 +633,20 @@ export default function ConversationsPage() {
                   </button>
 
                   <button
+                    onClick={handleGenerateFollowUpDraft}
+                    disabled={generatingFollowUp}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-semibold transition-colors shadow-xs disabled:opacity-50"
+                    title="আগের চ্যাট বিশ্লেষণ করে ১-ক্লিকে AI ফলো-আপ ড্রাফট তৈরি করুন"
+                  >
+                    {generatingFollowUp ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-700" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                    )}
+                    <span className="hidden sm:inline">AI ফলো-আপ</span>
+                  </button>
+
+                  <button
                     onClick={() => setShowOrderModal(true)}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition-colors shadow-xs"
                   >
@@ -894,6 +938,21 @@ export default function ConversationsPage() {
                       {selectedConv.channel || selectedConv.page?.channel || 'LIVE'}
                     </span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateFollowUpDraft}
+                    disabled={generatingFollowUp}
+                    className="px-3 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-xs shrink-0"
+                    title="পূর্ববর্তী চ্যাট হিস্ট্রি বিশ্লেষণ করে AI দিয়ে উত্তরের ড্রাফট তৈরি করুন"
+                  >
+                    {generatingFollowUp ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                    )}
+                    <span className="hidden sm:inline">AI ড্রাফট</span>
+                  </button>
+
                   <button
                     type="submit"
                     disabled={sending || !replyText.trim()}
