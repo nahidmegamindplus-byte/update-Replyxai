@@ -44,12 +44,13 @@ export async function GET(req: NextRequest) {
       baseWhere.pageId = pageId;
     }
 
-    // 1. Fetch total counts
+    // 1. Fetch data efficiently
     const [messages, orders, pages, products, allTimeMessagesCount, allTimeIncomingCount, allTimeAiRepliesCount, allTimeConversationsCount, userRecord] = await Promise.all([
       prisma.message.findMany({
         where: baseWhere,
+        orderBy: { createdAt: 'desc' },
+        take: 2000,
         select: {
-          id: true,
           direction: true,
           aiGenerated: true,
           messageType: true,
@@ -58,8 +59,9 @@ export async function GET(req: NextRequest) {
       }),
       prisma.order.findMany({
         where: baseWhere,
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
         select: {
-          id: true,
           status: true,
           totalPrice: true,
           product: true,
@@ -77,6 +79,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.product.findMany({
         where: { userId: auth.user.id },
+        take: 50,
         select: { id: true, name: true, price: true, category: true },
       }),
       prisma.message.count({

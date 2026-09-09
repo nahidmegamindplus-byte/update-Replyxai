@@ -55,7 +55,7 @@ function getDatabaseUrl(): string {
         }
       }
 
-      return `file:${tmpDbPath}`;
+      return `file:${tmpDbPath}?connection_limit=1&busy_timeout=30000`;
     } catch (e) {
       console.warn('Serverless temp db setup fallback:', e);
     }
@@ -93,7 +93,7 @@ function getDatabaseUrl(): string {
       fs.chmodSync(localDb, 0o666);
     } catch (_) {}
   }
-  return `file:${localDb}`;
+  return `file:${localDb}?connection_limit=1&busy_timeout=30000`;
 }
 
 const dbUrl = getDatabaseUrl();

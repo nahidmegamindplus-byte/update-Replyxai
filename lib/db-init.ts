@@ -24,6 +24,12 @@ export async function ensureDatabaseReady() {
       try {
         await prisma.$queryRawUnsafe(`PRAGMA cache_size = -20000;`);
       } catch (_) {}
+      try {
+        await prisma.$queryRawUnsafe(`PRAGMA temp_store = MEMORY;`);
+      } catch (_) {}
+      try {
+        await prisma.$queryRawUnsafe(`PRAGMA mmap_size = 268435456;`);
+      } catch (_) {}
 
       // 1. Unconditionally ensure ALL tables exist using IF NOT EXISTS DDL
       await prisma.$executeRawUnsafe(`
@@ -320,6 +326,38 @@ export async function ensureDatabaseReady() {
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // Performance Indexes for ultra-fast queries and zero table-scans
+    try {
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_user" ON "Conversation"("userId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_page" ON "Conversation"("pageId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_status" ON "Conversation"("followUpStatus");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_due" ON "Conversation"("nextFollowUpDueAt");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_user_status" ON "Conversation"("userId", "followUpStatus");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_user_created" ON "Conversation"("userId", "createdAt");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_last_msg" ON "Conversation"("lastMessageAt");`);
+
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_message_user" ON "Message"("userId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_message_conv" ON "Message"("conversationId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_message_page" ON "Message"("pageId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_message_created" ON "Message"("createdAt");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_message_user_created" ON "Message"("userId", "createdAt");`);
+
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_order_user" ON "Order"("userId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_order_page" ON "Order"("pageId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_order_status" ON "Order"("status");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_order_created" ON "Order"("createdAt");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_order_user_created" ON "Order"("userId", "createdAt");`);
+
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_followuplog_user" ON "FollowUpLog"("userId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_followuplog_page" ON "FollowUpLog"("pageId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_followuplog_conv" ON "FollowUpLog"("conversationId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_followuplog_status" ON "FollowUpLog"("status");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_followuplog_created" ON "FollowUpLog"("createdAt");`);
+
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_step_user_page" ON "FollowUpScheduleStep"("userId", "pageId");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_step_global" ON "FollowUpScheduleStep"("isGlobalDefault");`);
+    } catch (_) {}
 
     // Self-healing migration for multi-channel support with column pre-check
     try {

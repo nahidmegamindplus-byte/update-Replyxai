@@ -40,26 +40,31 @@ export async function GET(req: NextRequest) {
     const [
       totalLogs,
       activePagesCount,
-      inProgressCount,
-      repliedCount,
-      convertedCount,
+      statusGroups,
       recentLogs,
     ] = await Promise.all([
       prisma.followUpLog.count(),
       prisma.page.count({ where: { followUpEnabled: true } }),
-      prisma.conversation.count({
-        where: { createdAt: { gte: thirtyDaysAgo }, followUpStatus: 'IN_PROGRESS' },
-      }),
-      prisma.conversation.count({
-        where: { createdAt: { gte: thirtyDaysAgo }, followUpStatus: 'CUSTOMER_REPLIED' },
-      }),
-      prisma.conversation.count({
-        where: { createdAt: { gte: thirtyDaysAgo }, followUpStatus: 'ORDER_PLACED' },
+      prisma.conversation.groupBy({
+        by: ['followUpStatus'],
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        _count: { _all: true },
       }),
       prisma.followUpLog.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 60,
-        include: {
+        take: 30,
+        select: {
+          id: true,
+          stepNumber: true,
+          dayOffset: true,
+          scheduledTime: true,
+          messageText: true,
+          channel: true,
+          customerName: true,
+          senderPsid: true,
+          status: true,
+          aiModel: true,
+          createdAt: true,
           user: { select: { id: true, fullName: true, email: true } },
           page: { select: { id: true, pageName: true, channel: true } },
           conversation: {
@@ -74,6 +79,16 @@ export async function GET(req: NextRequest) {
         },
       }),
     ]);
+
+    let inProgressCount = 0;
+    let repliedCount = 0;
+    let convertedCount = 0;
+
+    for (const item of statusGroups) {
+      if (item.followUpStatus === 'IN_PROGRESS') inProgressCount = item._count._all;
+      else if (item.followUpStatus === 'CUSTOMER_REPLIED') repliedCount = item._count._all;
+      else if (item.followUpStatus === 'ORDER_PLACED') convertedCount = item._count._all;
+    }
 
     return NextResponse.json({
       success: true,

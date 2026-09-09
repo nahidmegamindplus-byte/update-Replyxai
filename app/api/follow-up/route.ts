@@ -37,37 +37,40 @@ export async function GET(req: NextRequest) {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Funnel & Performance Metrics
+    // Funnel & Performance Metrics via high-speed groupBy
     const convWhere: any = {
       userId,
       createdAt: { gte: thirtyDaysAgo },
     };
     if (pageId) convWhere.pageId = pageId;
 
-    const [
-      totalConversations,
-      inProgressCount,
-      repliedCount,
-      convertedCount,
-      completedCount,
-      totalSentLogs,
-      recentLogs,
-      activeConversations,
-      pages,
-    ] = await Promise.all([
-      prisma.conversation.count({ where: convWhere }),
-      prisma.conversation.count({ where: { ...convWhere, followUpStatus: 'IN_PROGRESS' } }),
-      prisma.conversation.count({ where: { ...convWhere, followUpStatus: 'CUSTOMER_REPLIED' } }),
-      prisma.conversation.count({ where: { ...convWhere, followUpStatus: 'ORDER_PLACED' } }),
-      prisma.conversation.count({ where: { ...convWhere, followUpStatus: 'COMPLETED' } }),
+    const logWhere: any = pageId ? { userId, pageId } : { userId };
+
+    const [statusGroups, totalSentLogs, recentLogs, activeConversations, pages] = await Promise.all([
+      prisma.conversation.groupBy({
+        by: ['followUpStatus'],
+        where: convWhere,
+        _count: { _all: true },
+      }),
       prisma.followUpLog.count({
-        where: pageId ? { userId, pageId } : { userId },
+        where: logWhere,
       }),
       prisma.followUpLog.findMany({
-        where: pageId ? { userId, pageId } : { userId },
+        where: logWhere,
         orderBy: { createdAt: 'desc' },
-        take: 50,
-        include: {
+        take: 30,
+        select: {
+          id: true,
+          stepNumber: true,
+          dayOffset: true,
+          scheduledTime: true,
+          messageText: true,
+          channel: true,
+          customerName: true,
+          senderPsid: true,
+          status: true,
+          aiModel: true,
+          createdAt: true,
           page: {
             select: { id: true, pageName: true, channel: true },
           },
@@ -88,10 +91,20 @@ export async function GET(req: NextRequest) {
           followUpStatus: { in: ['IN_PROGRESS', 'CUSTOMER_REPLIED', 'ORDER_PLACED', 'COMPLETED', 'PAUSED'] },
         },
         orderBy: { updatedAt: 'desc' },
-        take: 50,
-        include: {
+        take: 30,
+        select: {
+          id: true,
+          customerName: true,
+          senderPsid: true,
+          channel: true,
+          followUpStatus: true,
+          currentFollowUpStep: true,
+          nextFollowUpDueAt: true,
+          lastFollowUpSentAt: true,
+          lastMessage: true,
+          lastMessageAt: true,
+          createdAt: true,
           page: { select: { id: true, pageName: true, channel: true } },
-          followUpLogs: { orderBy: { createdAt: 'desc' }, take: 5 },
         },
       }),
       prisma.page.findMany({
@@ -110,6 +123,21 @@ export async function GET(req: NextRequest) {
         },
       }),
     ]);
+
+    let totalConversations = 0;
+    let inProgressCount = 0;
+    let repliedCount = 0;
+    let convertedCount = 0;
+    let completedCount = 0;
+
+    for (const item of statusGroups) {
+      const count = item._count._all;
+      totalConversations += count;
+      if (item.followUpStatus === 'IN_PROGRESS') inProgressCount = count;
+      else if (item.followUpStatus === 'CUSTOMER_REPLIED') repliedCount = count;
+      else if (item.followUpStatus === 'ORDER_PLACED') convertedCount = count;
+      else if (item.followUpStatus === 'COMPLETED') completedCount = count;
+    }
 
     // Find specific page settings if pageId provided, or first page
     let activePageSettings = null;
