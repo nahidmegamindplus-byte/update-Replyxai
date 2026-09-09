@@ -6,7 +6,7 @@ const nextStaticDir = path.join(rootDir, '.next', 'static');
 const publicDir = path.join(rootDir, 'public');
 const underscoreNextStaticDir = path.join(rootDir, '_next', 'static');
 
-console.log('[Assets] Synchronizing static assets for Hostinger layout guarantee...');
+console.log('[Assets] Synchronizing static assets for Hostinger layout & cross-browser guarantee...');
 
 // 1. Safe Directory Copy (with symlink removal & error protection)
 function safeCopyDir(src, dest) {
@@ -41,7 +41,12 @@ function safeCopyDir(src, dest) {
   }
 }
 
-// 2. Mirror .next/static into _next/static safely
+// 2. Ensure public folder exists
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+
+// 3. Mirror .next/static into _next/static safely
 try {
   if (fs.existsSync(nextStaticDir)) {
     // Ensure parent _next exists
@@ -62,7 +67,7 @@ try {
   console.warn('[Assets Warning] Mirroring notice:', err.message);
 }
 
-// 3. Extract compiled Tailwind CSS into public/global.css & root global.css
+// 4. Extract compiled Tailwind CSS into public/global.css & root global.css
 try {
   const cssDir = path.join(nextStaticDir, 'css');
   if (fs.existsSync(cssDir)) {
@@ -83,4 +88,15 @@ try {
   console.warn('[Assets Warning] CSS extraction notice:', err.message);
 }
 
+// 5. Generate build version info
+try {
+  const buildInfo = {
+    version: '1.0.0',
+    buildTime: Date.now(),
+    buildDate: new Date().toISOString(),
+  };
+  fs.writeFileSync(path.join(publicDir, 'version.json'), JSON.stringify(buildInfo, null, 2), 'utf8');
+} catch (_) {}
+
 console.log('[Assets] Asset synchronization complete.');
+

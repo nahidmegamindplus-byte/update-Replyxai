@@ -115,14 +115,15 @@ const MIME_TYPES = {
   '.map': 'application/json',
 };
 
-function serveStaticFile(filePath, res) {
+function serveStaticFile(filePath, res, customCache) {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';
   res.setHeader('Content-Type', contentType);
-  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.setHeader('Cache-Control', customCache || 'public, max-age=31536000, immutable');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Vary', 'Accept-Encoding');
   const stream = fs.createReadStream(filePath);
   stream.on('error', () => {
     if (!res.headersSent) {
@@ -171,7 +172,7 @@ const server = createServer(async (req, res) => {
       return res.end();
     }
 
-    // A. INSTANT STATIC DELIVERY FOR /global.css
+    // A. INSTANT STATIC DELIVERY FOR /global.css (Revalidates on new build so layout never breaks)
     if (pathname === '/global.css') {
       const candidates = [
         path.join(__dirname, 'public', 'global.css'),
@@ -179,7 +180,7 @@ const server = createServer(async (req, res) => {
       ];
       for (const p of candidates) {
         if (fs.existsSync(p) && !fs.statSync(p).isDirectory()) {
-          return serveStaticFile(p, res);
+          return serveStaticFile(p, res, 'public, max-age=0, must-revalidate');
         }
       }
     }
@@ -198,12 +199,12 @@ const server = createServer(async (req, res) => {
           fs.existsSync(fullPath) &&
           !fs.statSync(fullPath).isDirectory()
         ) {
-          return serveStaticFile(fullPath, res);
+          return serveStaticFile(fullPath, res, 'public, max-age=31536000, immutable');
         }
       }
     }
 
-    // C. INSTANT STATIC DELIVERY FOR /public/ assets (favicon, images, robots)
+    // C. INSTANT STATIC DELIVERY FOR /public/ assets (favicon, icons, images, robots)
     if (pathname.length > 1 && !pathname.startsWith('/api/')) {
       const publicFilePath = path.normalize(path.join(__dirname, 'public', pathname));
       if (
@@ -211,7 +212,7 @@ const server = createServer(async (req, res) => {
         fs.existsSync(publicFilePath) &&
         !fs.statSync(publicFilePath).isDirectory()
       ) {
-        return serveStaticFile(publicFilePath, res);
+        return serveStaticFile(publicFilePath, res, 'public, max-age=86400, must-revalidate');
       }
     }
 
