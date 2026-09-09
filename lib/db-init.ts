@@ -369,12 +369,118 @@ export async function ensureDatabaseReady() {
         await prisma.$executeRawUnsafe(`ALTER TABLE "Page" ADD COLUMN "maxImagesPerReply" INTEGER NOT NULL DEFAULT 1;`);
       }
 
-      // Check Product table for multi-image column
+      // Check User table for missing columns
+      try {
+        const userColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("User");`)) as Array<{ name: string }>;
+        const existingUserCols = new Set(userColumnsRaw.map((c) => c.name));
+
+        if (!existingUserCols.has('activePackageId')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "activePackageId" TEXT;`);
+        }
+        if (!existingUserCols.has('avatarUrl')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "avatarUrl" TEXT;`);
+        }
+        if (!existingUserCols.has('facebookPageUrl')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "facebookPageUrl" TEXT;`);
+        }
+        if (!existingUserCols.has('phone')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "phone" TEXT;`);
+        }
+        if (!existingUserCols.has('planStatus')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "planStatus" TEXT NOT NULL DEFAULT 'INACTIVE';`);
+        }
+        if (!existingUserCols.has('monthlyMessageLimit')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "monthlyMessageLimit" INTEGER NOT NULL DEFAULT 500;`);
+        }
+        if (!existingUserCols.has('messagesSentThisMonth')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "messagesSentThisMonth" INTEGER NOT NULL DEFAULT 0;`);
+        }
+        if (!existingUserCols.has('planExpiresAt')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "planExpiresAt" DATETIME;`);
+        }
+      } catch (_) {}
+
+      // Check Product table for multi-image column & details
       try {
         const prodColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Product");`)) as Array<{ name: string }>;
         const existingProdCols = new Set(prodColumnsRaw.map((c) => c.name));
         if (!existingProdCols.has('images')) {
           await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "images" TEXT;`);
+        }
+        if (!existingProdCols.has('sku')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "sku" TEXT;`);
+        }
+        if (!existingProdCols.has('category')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "category" TEXT;`);
+        }
+        if (!existingProdCols.has('discountPrice')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "discountPrice" REAL;`);
+        }
+        if (!existingProdCols.has('deliveryInfo')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "deliveryInfo" TEXT;`);
+        }
+        if (!existingProdCols.has('productAiInstructions')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Product" ADD COLUMN "productAiInstructions" TEXT;`);
+        }
+      } catch (_) {}
+
+      // Check Order table for missing columns
+      try {
+        const orderColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("Order");`)) as Array<{ name: string }>;
+        const existingOrderCols = new Set(orderColumnsRaw.map((c) => c.name));
+        if (!existingOrderCols.has('productId')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "productId" TEXT;`);
+        }
+        if (!existingOrderCols.has('price')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "price" REAL NOT NULL DEFAULT 0;`);
+        }
+        if (!existingOrderCols.has('totalPrice')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "totalPrice" REAL NOT NULL DEFAULT 0;`);
+        }
+        if (!existingOrderCols.has('source')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "source" TEXT NOT NULL DEFAULT 'MESSENGER_AI';`);
+        }
+        if (!existingOrderCols.has('notes')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "notes" TEXT;`);
+        }
+        if (!existingOrderCols.has('quantity')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "quantity" INTEGER NOT NULL DEFAULT 1;`);
+        }
+      } catch (_) {}
+
+      // Check PackageOrder table for missing columns
+      try {
+        const poColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("PackageOrder");`)) as Array<{ name: string }>;
+        const existingPoCols = new Set(poColumnsRaw.map((c) => c.name));
+        if (!existingPoCols.has('paymentMethodId')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "PackageOrder" ADD COLUMN "paymentMethodId" TEXT;`);
+        }
+        if (!existingPoCols.has('paymentProofUrl')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "PackageOrder" ADD COLUMN "paymentProofUrl" TEXT;`);
+        }
+        if (!existingPoCols.has('approvedAt')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "PackageOrder" ADD COLUMN "approvedAt" DATETIME;`);
+        }
+        if (!existingPoCols.has('adminNote')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "PackageOrder" ADD COLUMN "adminNote" TEXT;`);
+        }
+      } catch (_) {}
+
+      // Check LicenseKey table for missing columns
+      try {
+        const licColumnsRaw = (await prisma.$queryRawUnsafe(`PRAGMA table_info("LicenseKey");`)) as Array<{ name: string }>;
+        const existingLicCols = new Set(licColumnsRaw.map((c) => c.name));
+        if (!existingLicCols.has('packageId')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "LicenseKey" ADD COLUMN "packageId" TEXT;`);
+        }
+        if (!existingLicCols.has('clientName')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "LicenseKey" ADD COLUMN "clientName" TEXT;`);
+        }
+        if (!existingLicCols.has('clientPhone')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "LicenseKey" ADD COLUMN "clientPhone" TEXT;`);
+        }
+        if (!existingLicCols.has('clientNote')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "LicenseKey" ADD COLUMN "clientNote" TEXT;`);
         }
       } catch (_) {}
 
@@ -495,6 +601,98 @@ export async function ensureDatabaseReady() {
             features: JSON.stringify(['১০টি ফেসবুক পেজ কানেকশন', '১০,০০০ চ্যাট অটো-রিপ্লাই', 'ভয়েস ও টেক্সট দুই চ্যাটেই রিপ্লাই', 'প্রাইওরিটি কাস্টমার সাপোর্ট']),
             isPopular: false,
             isActive: true,
+          },
+        ],
+      });
+    }
+
+    // 4. Seed default Payment Methods if empty
+    const pmCount = await prisma.paymentMethod.count();
+    if (pmCount === 0) {
+      await prisma.paymentMethod.createMany({
+        data: [
+          {
+            id: 'pm_bkash',
+            name: 'BKASH',
+            displayName: 'bKash (বিকাশ)',
+            accountType: 'PERSONAL',
+            accountNumber: '01800000000',
+            instructions: 'Send Money করুন এবং নিচে ট্রানজেকশন আইডি (TrxID) দিন।',
+            isActive: true,
+          },
+          {
+            id: 'pm_nagad',
+            name: 'NAGAD',
+            displayName: 'Nagad (নগদ)',
+            accountType: 'PERSONAL',
+            accountNumber: '01700000000',
+            instructions: 'Send Money করুন এবং নিচে ট্রানজেকশন আইডি (TrxID) দিন।',
+            isActive: true,
+          },
+          {
+            id: 'pm_rocket',
+            name: 'ROCKET',
+            displayName: 'Rocket (রকেট)',
+            accountType: 'PERSONAL',
+            accountNumber: '01900000000',
+            instructions: 'Send Money করুন এবং নিচে ট্রানজেকশন আইডি দিন।',
+            isActive: true,
+          },
+        ],
+      });
+    }
+
+    // 5. Seed default FollowUpScheduleSteps if empty
+    const stepCount = await prisma.followUpScheduleStep.count({
+      where: { isGlobalDefault: true },
+    });
+    if (stepCount === 0) {
+      await prisma.followUpScheduleStep.createMany({
+        data: [
+          {
+            stepNumber: 1,
+            dayOffset: 1,
+            timeOfDay: '10:00',
+            title: '১ম ফলো-আপ (১ দিন পর - সকাল ১০টা)',
+            guidelinePrompt: 'পছন্দের পণ্য নিয়ে কোনো জিজ্ঞাসা আছে কিনা বা অর্ডার কনফার্ম করতে কোনো সহায়তা প্রয়োজন কিনা তা অত্যন্ত আন্তরিক ও বিনম্রভাবে জানতে চান।',
+            isEnabled: true,
+            isGlobalDefault: true,
+          },
+          {
+            stepNumber: 2,
+            dayOffset: 3,
+            timeOfDay: '16:00',
+            title: '২য় ফলো-আপ (৩ দিন পর - বিকাল ৪টা)',
+            guidelinePrompt: 'পণ্যের প্রিমিয়াম কোয়ালিটি ও ক্যাশ অন ডেলিভারি (COD) সুবিধার কথা মনে করিয়ে দিয়ে অর্ডার কনফার্ম করার সহজ প্রক্রিয়া জানান।',
+            isEnabled: true,
+            isGlobalDefault: true,
+          },
+          {
+            stepNumber: 3,
+            dayOffset: 7,
+            timeOfDay: '20:00',
+            title: '৩য় ফলো-আপ (৭ দিন পর - রাত ৮টা)',
+            guidelinePrompt: 'স্টক লিমিটেড হতে পারে বা দ্রুত ডেলিভারি সার্ভিসের বন্ধুত্বপূর্ণ রিমাইন্ডার দিন। আগের মেসেজের কথা সরাসরি পুনরাবৃত্তি করবেন না।',
+            isEnabled: true,
+            isGlobalDefault: true,
+          },
+          {
+            stepNumber: 4,
+            dayOffset: 15,
+            timeOfDay: '11:00',
+            title: '৪র্থ ফলো-আপ (১৫ দিন পর - সকাল ১১টা)',
+            guidelinePrompt: 'কোনো বিশেষ ছাড় বা পছন্দের অন্য কোনো পণ্য দেখতে চান কিনা অথবা কোনো ফিডব্যাক আছে কিনা জানতে চান।',
+            isEnabled: true,
+            isGlobalDefault: true,
+          },
+          {
+            stepNumber: 5,
+            dayOffset: 25,
+            timeOfDay: '17:00',
+            title: '৫ম ফলো-আপ (২৫ দিন পর - বিকাল ৫টা)',
+            guidelinePrompt: 'মাসের সমাপনী আন্তরিক সম্ভাষণ জানান এবং ভবিষ্যতে যেকোনো পণ্য বা সেবার জন্য যোগাযোগ করতে আমন্ত্রণ জানান।',
+            isEnabled: true,
+            isGlobalDefault: true,
           },
         ],
       });
