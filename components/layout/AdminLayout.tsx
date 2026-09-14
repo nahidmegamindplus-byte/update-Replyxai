@@ -23,7 +23,28 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
   const [user, setUser] = useState<any>(cachedAdminUser);
   const [loading, setLoading] = useState(!cachedAdminUser);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+
+  // Restore sidebar minimize preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('replyx_admin_sidebar_collapsed');
+      if (saved === 'true') {
+        setIsCollapsed(true);
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('replyx_admin_sidebar_collapsed', next ? 'true' : 'false');
+      } catch (_) {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -87,7 +108,7 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           </p>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs transition-colors shadow-xs"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>ইউজার ড্যাশবোর্ডে ফিরে যান</span>
@@ -104,13 +125,17 @@ export default function AdminLayout({ children, title, subtitle }: AdminLayoutPr
           user={user}
           isOpenMobile={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={handleToggleCollapse}
         />
 
-        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen min-w-0 max-w-full">
+        <div className={`flex-1 flex flex-col min-h-screen min-w-0 max-w-full transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
           <Header
             title={title}
             subtitle={subtitle}
             onOpenMobile={() => setMobileOpen(true)}
+            isCollapsed={isCollapsed}
+            onToggleCollapse={handleToggleCollapse}
           />
 
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0 overflow-x-hidden">

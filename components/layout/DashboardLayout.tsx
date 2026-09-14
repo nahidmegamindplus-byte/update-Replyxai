@@ -6,7 +6,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { ToastProvider } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
-import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -24,7 +24,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [isImpersonated, setIsImpersonated] = useState<boolean>(cachedIsImpersonated);
   const [loading, setLoading] = useState(!cachedDashboardUser);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [exitingImpersonation, setExitingImpersonation] = useState(false);
+
+  // Restore sidebar minimize preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('replyx_sidebar_collapsed');
+      if (saved === 'true') {
+        setIsCollapsed(true);
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('replyx_sidebar_collapsed', next ? 'true' : 'false');
+      } catch (_) {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -125,13 +146,17 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           user={user}
           isOpenMobile={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={handleToggleCollapse}
         />
 
-        <div className="lg:pl-64 flex-1 flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden">
+        <div className={`flex-1 flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
           <Header
             title={title}
             subtitle={subtitle}
             onOpenMobile={() => setMobileOpen(true)}
+            isCollapsed={isCollapsed}
+            onToggleCollapse={handleToggleCollapse}
           />
 
           <main className="flex-1 p-3.5 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto min-w-0">
