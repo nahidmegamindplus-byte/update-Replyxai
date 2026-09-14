@@ -27,6 +27,8 @@ import {
   Shield,
   Plus,
   RefreshCw,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
@@ -48,6 +50,8 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState('USER');
   const [status, setStatus] = useState('ACTIVE');
   const [plan, setPlan] = useState('STARTER');
+  const [planStatus, setPlanStatus] = useState('ACTIVE');
+  const [monthlyMessageLimit, setMonthlyMessageLimit] = useState(500);
   const [aiChatEnabled, setAiChatEnabled] = useState(true);
   const [isBlocked, setIsBlocked] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -100,6 +104,8 @@ export default function AdminUsersPage() {
     setRole(user.role || 'USER');
     setStatus(user.status || 'ACTIVE');
     setPlan(user.plan || 'STARTER');
+    setPlanStatus(user.planStatus || 'ACTIVE');
+    setMonthlyMessageLimit(user.monthlyMessageLimit || 500);
     setAiChatEnabled(user.aiChatEnabled !== false);
     setIsBlocked(Boolean(user.isBlocked));
     setNewPassword('');
@@ -112,42 +118,67 @@ export default function AdminUsersPage() {
 
     setSaving(true);
     try {
+      const payload: any = {
+        userId: editingUser.id,
+        fullName: fullName.trim(),
+        businessName: businessName.trim(),
+        facebookPageUrl: facebookPageUrl.trim() || null,
+        phone: phone.trim() || null,
+        role,
+        status,
+        plan,
+        planStatus,
+        monthlyMessageLimit: Number(monthlyMessageLimit) || 500,
+        aiChatEnabled,
+        isBlocked,
+      };
+
+      if (newPassword && newPassword.trim()) {
+        payload.password = newPassword.trim();
+      }
+
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: editingUser.id,
-          fullName: fullName.trim(),
-          businessName: businessName.trim(),
-          facebookPageUrl: facebookPageUrl.trim() || null,
-          phone: phone.trim() || null,
-          role,
-          status,
-          plan,
-          aiChatEnabled,
-          isBlocked,
-          password: newPassword ? newPassword.trim() : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success) {
         toast.success(data.message || 'ব্যবহারকারীর তথ্য সফলভাবে আপডেট হয়েছে!');
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === editingUser.id
+              ? {
+                  ...u,
+                  ...payload,
+                  aiChatEnabled,
+                  isBlocked,
+                }
+              : u
+          )
+        );
         setEditingUser(null);
         fetchUsers();
       } else {
         toast.error(data.error || 'আপডেট ব্যর্থ হয়েছে।');
       }
-    } catch (e) {
-      toast.error('সার্ভার ত্রুটি।');
+    } catch (e: any) {
+      toast.error('সার্ভার যোগাযোগে ত্রুটি।');
     } finally {
       setSaving(false);
     }
   };
 
-  // Instant 1-Click AI Chat Toggle
+  // Instant 1-Click AI Chat Toggle with Optimistic UI
   const handleToggleAiChat = async (user: any) => {
-    const nextVal = !user.aiChatEnabled;
+    const nextVal = user.aiChatEnabled === false ? true : false;
+
+    // Optimistic UI update
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, aiChatEnabled: nextVal } : u))
+    );
+
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -159,21 +190,32 @@ export default function AdminUsersPage() {
       if (data.success) {
         toast.success(
           nextVal
-            ? `🤖 ${user.fullName}-এর AI চ্যাট চালু করা হয়েছে!`
-            : `🛑 ${user.fullName}-এর AI চ্যাট বন্ধ করা হয়েছে!`
+            ? `🤖 ${user.fullName}-এর AI চ্যাট চালু (ON) করা হয়েছে!`
+            : `🛑 ${user.fullName}-এর AI চ্যাট বন্ধ (OFF) করা হয়েছে!`
         );
-        fetchUsers();
       } else {
-        toast.error(data.error || 'AI চ্যাট টগল ব্যর্থ হয়েছে।');
+        // Revert on error
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, aiChatEnabled: !nextVal } : u))
+        );
+        toast.error(data.error || 'AI চ্যাট পরিবর্তন ব্যর্থ হয়েছে।');
       }
     } catch (e) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, aiChatEnabled: !nextVal } : u))
+      );
       toast.error('সার্ভার ত্রুটি।');
     }
   };
 
-  // Instant 1-Click User Account Status Toggle
+  // Instant 1-Click User Account Status Toggle with Optimistic UI
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, status: nextStatus } : u))
+    );
+
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -183,19 +225,29 @@ export default function AdminUsersPage() {
 
       const data = await res.json();
       if (data.success) {
-        toast.success(`অ্যাকাউন্ট স্ট্যাটাস আপডেট হয়েছে: ${nextStatus}`);
-        fetchUsers();
+        toast.success(`অ্যাকাউন্ট স্ট্যাটাস আপডেট হয়েছে: ${nextStatus === 'ACTIVE' ? 'সক্রিয়' : 'স্থগিত'}`);
       } else {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, status: currentStatus } : u))
+        );
         toast.error(data.error || 'স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।');
       }
     } catch (e) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status: currentStatus } : u))
+      );
       toast.error('সার্ভার ত্রুটি।');
     }
   };
 
-  // Instant 1-Click User Block Toggle
+  // Instant 1-Click User Block Toggle with Optimistic UI
   const handleToggleUserBlock = async (user: any) => {
     const nextVal = !user.isBlocked;
+
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, isBlocked: nextVal } : u))
+    );
+
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -210,11 +262,16 @@ export default function AdminUsersPage() {
             ? `🚨 ${user.fullName} (${user.email}) কে ব্লক করা হয়েছে!`
             : `✅ ${user.fullName} (${user.email}) কে আনব্লক করা হয়েছে!`
         );
-        fetchUsers();
       } else {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, isBlocked: !nextVal } : u))
+        );
         toast.error(data.error || 'ব্লক স্ট্যাটাস পরিবর্তন ব্যর্থ।');
       }
     } catch (e) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, isBlocked: !nextVal } : u))
+      );
       toast.error('সার্ভার ত্রুটি।');
     }
   };
@@ -316,7 +373,7 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('ব্যবহারকারী সফলভাবে মুছে ফেলা হয়েছে।');
-        fetchUsers();
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
       } else {
         toast.error(data.error || 'মুছতে ব্যর্থ হয়েছে।');
       }
@@ -358,7 +415,7 @@ export default function AdminUsersPage() {
               onClick={() => setActiveTab('USERS')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeTab === 'USERS'
-                  ? 'bg-white text-purple-700 shadow-xs'
+                  ? 'bg-white text-purple-700 shadow-xs ring-1 ring-purple-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -369,7 +426,7 @@ export default function AdminUsersPage() {
               onClick={() => setActiveTab('IP_BLOCKS')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeTab === 'IP_BLOCKS'
-                  ? 'bg-white text-rose-700 shadow-xs'
+                  ? 'bg-white text-rose-700 shadow-xs ring-1 ring-rose-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -406,8 +463,9 @@ export default function AdminUsersPage() {
             onClick={() => {
               fetchUsers();
               fetchBlockedIps();
+              toast.success('তথ্য রিফ্রেশ করা হয়েছে');
             }}
-            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-purple-600 shadow-xs"
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-purple-600 shadow-xs transition-colors"
             title="রিফ্রেশ করুন"
           >
             <RefreshCw className="w-4 h-4" />
@@ -447,6 +505,11 @@ export default function AdminUsersPage() {
                           <td className="py-3.5 px-4">
                             <div className="font-semibold text-slate-900 flex items-center gap-1.5">
                               <span>{u.fullName}</span>
+                              {u.role === 'ADMIN' && (
+                                <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 text-[9px] font-bold border border-purple-200">
+                                  ADMIN
+                                </span>
+                              )}
                               {u.isBlocked && (
                                 <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
                                   BLOCKED
@@ -495,7 +558,7 @@ export default function AdminUsersPage() {
                             <button
                               type="button"
                               onClick={() => handleToggleAiChat(u)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer ${
                                 u.aiChatEnabled !== false
                                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-500/20'
                                   : 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 ring-1 ring-rose-500/20'
@@ -521,7 +584,7 @@ export default function AdminUsersPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleUnblockIp(u.registrationIp)}
-                                      className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold"
+                                      className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold cursor-pointer"
                                       title="আইপি আনব্লক করুন"
                                     >
                                       🚫 ব্লকড (আনব্লক)
@@ -530,7 +593,7 @@ export default function AdminUsersPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleQuickBlockIp(u.registrationIp, u.fullName)}
-                                      className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors"
+                                      className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors cursor-pointer"
                                       title="এই আইপি ব্লক করুন"
                                     >
                                       🚫 IP ব্লক
@@ -551,7 +614,7 @@ export default function AdminUsersPage() {
                                       <button
                                         type="button"
                                         onClick={() => handleUnblockIp(u.lastLoginIp)}
-                                        className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold"
+                                        className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold cursor-pointer"
                                       >
                                         🚫 ব্লকড
                                       </button>
@@ -559,7 +622,7 @@ export default function AdminUsersPage() {
                                       <button
                                         type="button"
                                         onClick={() => handleQuickBlockIp(u.lastLoginIp, u.fullName)}
-                                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors"
+                                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors cursor-pointer"
                                       >
                                         🚫 IP ব্লক
                                       </button>
@@ -594,8 +657,9 @@ export default function AdminUsersPage() {
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col gap-1">
                               <button
+                                type="button"
                                 onClick={() => handleToggleStatus(u.id, u.status)}
-                                className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors w-fit ${
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors w-fit cursor-pointer ${
                                   u.status === 'ACTIVE'
                                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                                     : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
@@ -606,8 +670,9 @@ export default function AdminUsersPage() {
                               </button>
 
                               <button
+                                type="button"
                                 onClick={() => handleToggleUserBlock(u)}
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors w-fit ${
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors w-fit cursor-pointer ${
                                   u.isBlocked
                                     ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200'
                                     : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-700'
@@ -629,21 +694,21 @@ export default function AdminUsersPage() {
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => handleOpenEdit(u)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs"
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs cursor-pointer"
                                 title="সম্পাদনা ও সেটিংস"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleOpenEdit(u)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs"
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs cursor-pointer"
                                 title="পাসওয়ার্ড রিসেট করুন"
                               >
                                 <Key className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDeleteUser(u.id, u.email)}
-                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs"
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs cursor-pointer"
                                 title="মুছে ফেলুন"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -677,7 +742,7 @@ export default function AdminUsersPage() {
             <button
               type="button"
               onClick={() => setShowIpBlockModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-500/20 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-500/20 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>নতুন আইপি ব্লক</span>
@@ -719,7 +784,7 @@ export default function AdminUsersPage() {
                         <button
                           type="button"
                           onClick={() => handleUnblockIp(b.ipAddress)}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold transition-all shadow-2xs"
+                          className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold transition-all shadow-2xs cursor-pointer"
                         >
                           ✅ আনব্লক করুন
                         </button>
@@ -739,7 +804,7 @@ export default function AdminUsersPage() {
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setShowIpBlockModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -797,14 +862,14 @@ export default function AdminUsersPage() {
                 <button
                   type="button"
                   onClick={() => setShowIpBlockModal(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={savingBlock || !targetIp.trim()}
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-500/20 disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {savingBlock ? 'ব্লক হচ্ছে...' : 'আইপি ব্লক নিশ্চিত করুন'}
                 </button>
@@ -820,35 +885,40 @@ export default function AdminUsersPage() {
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setEditingUser(null)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-base font-bold text-slate-900 mb-1">ব্যবহারকারী তথ্য এডিট (Edit Profile)</h3>
-            <p className="text-xs text-slate-500 mb-6">{editingUser.email}</p>
+            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+              <Edit2 className="w-4 h-4 text-purple-600" />
+              <span>ব্যবহারকারী প্রোফাইল ও প্ল্যান এডিট</span>
+            </h3>
+            <p className="text-xs text-slate-500 mb-5 font-mono">{editingUser.email}</p>
 
             <form onSubmit={handleSaveUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম</label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম *</label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">ব্যবসার নাম</label>
-                <input
-                  type="text"
-                  required
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">ব্যবসার নাম *</label>
+                  <input
+                    type="text"
+                    required
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
               </div>
 
               <div>
@@ -862,18 +932,18 @@ export default function AdminUsersPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">ফোন নম্বর</label>
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="01XXXXXXXXX"
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-purple-600"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">ফোন নম্বর</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">রোল (Role)</label>
                   <select
@@ -885,23 +955,64 @@ export default function AdminUsersPage() {
                     <option value="ADMIN">ADMIN (অ্যাডমিন)</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">প্যাকেজ প্ল্যান</label>
-                  <select
-                    value={plan}
-                    onChange={(e) => setPlan(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900"
-                  >
-                    <option value="STARTER">STARTER</option>
-                    <option value="BUSINESS">BUSINESS</option>
-                    <option value="PRO">PRO</option>
-                  </select>
+              {/* Package & Plan Status Settings */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/50 border border-purple-200 space-y-3">
+                <h4 className="text-[11px] font-bold text-purple-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                  <span>সাবস্ক্রিপশন ও মেসেজ লিমিট নিয়ন্ত্রণ</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                      প্যাকেজ প্ল্যান
+                    </label>
+                    <select
+                      value={plan}
+                      onChange={(e) => setPlan(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-300 rounded-lg text-xs font-semibold text-purple-900"
+                    >
+                      <option value="FREE">FREE (ফ্রি)</option>
+                      <option value="STARTER">STARTER</option>
+                      <option value="BUSINESS">BUSINESS</option>
+                      <option value="PRO">PRO</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                      প্ল্যান স্ট্যাটাস
+                    </label>
+                    <select
+                      value={planStatus}
+                      onChange={(e) => setPlanStatus(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-300 rounded-lg text-xs font-semibold text-purple-900"
+                    >
+                      <option value="ACTIVE">✓ ACTIVE (সক্রিয়)</option>
+                      <option value="PENDING_APPROVAL">⏳ PENDING (অপেক্ষমান)</option>
+                      <option value="INACTIVE">✕ INACTIVE (নিষ্ক্রিয়)</option>
+                      <option value="EXPIRED">⚠️ EXPIRED (মেয়াদোত্তীর্ণ)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">
+                      মাসিক মেসেজ লিমিট
+                    </label>
+                    <input
+                      type="number"
+                      value={monthlyMessageLimit}
+                      onChange={(e) => setMonthlyMessageLimit(parseInt(e.target.value, 10) || 500)}
+                      className="w-full px-2.5 py-1.5 bg-white border border-purple-300 rounded-lg text-xs font-mono font-semibold"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* AI Chat & Block Controls in Edit Modal */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                   <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                     AI স্বয়ংক্রিয় চ্যাট
@@ -918,14 +1029,28 @@ export default function AdminUsersPage() {
 
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                   <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
-                    ব্যবহারকারী ব্লক স্ট্যাটাস
+                    অ্যাকাউন্ট স্ট্যাটাস
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                  >
+                    <option value="ACTIVE">🟢 সক্রিয় (Active)</option>
+                    <option value="DISABLED">⚪ স্থগিত (Disabled)</option>
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    ইউজার ব্লক
                   </label>
                   <select
                     value={isBlocked ? 'true' : 'false'}
                     onChange={(e) => setIsBlocked(e.target.value === 'true')}
                     className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
                   >
-                    <option value="false">✅ সক্রিয় (Normal)</option>
+                    <option value="false">✅ স্বাভাবিক (Normal)</option>
                     <option value="true">🚨 ব্লকড (Blocked)</option>
                   </select>
                 </div>
@@ -934,7 +1059,7 @@ export default function AdminUsersPage() {
               {/* Password Reset */}
               <div className="pt-2 border-t border-slate-200">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  নতুন পাসওয়ার্ড দিন (পরিবর্তন না করতে চাইলে খালি রাখুন)
+                  নতুন পাসওয়ার্ড সেট করুন (পরিবর্তন না করতে চাইলে খালি রাখুন)
                 </label>
                 <div className="relative">
                   <input
@@ -947,7 +1072,7 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -958,16 +1083,16 @@ export default function AdminUsersPage() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/20 disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/20 disabled:opacity-50 cursor-pointer"
                 >
-                  {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+                  {saving ? 'সংরক্ষণ হচ্ছে...' : 'সব তথ্য সেভ করুন'}
                 </button>
               </div>
             </form>
