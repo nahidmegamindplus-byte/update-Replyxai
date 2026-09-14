@@ -2,16 +2,41 @@ import prisma from './db';
 import bcrypt from 'bcryptjs';
 import { startFollowUpWorker } from './follow-up';
 
-let isDbInitialized = false;
-let initPromise: Promise<void> | null = null;
+const globalDb = globalThis as unknown as {
+  __isDbInitialized?: boolean;
+  __initPromise?: Promise<void> | null;
+  __isHealing?: boolean;
+};
+
+export async function healDatabase() {
+  if (globalDb.__isHealing) return;
+  globalDb.__isHealing = true;
+  console.log('[DB Health] Running automatic SQLite self-healing & maintenance...');
+  try {
+    try {
+      await prisma.$queryRawUnsafe(`PRAGMA wal_checkpoint(TRUNCATE);`);
+    } catch (_) {}
+    try {
+      await prisma.$queryRawUnsafe(`REINDEX;`);
+    } catch (_) {}
+    try {
+      await prisma.$queryRawUnsafe(`VACUUM;`);
+    } catch (_) {}
+    console.log('[DB Health] Database self-healing completed successfully.');
+  } catch (healErr) {
+    console.error('[DB Health] Healing warning:', healErr);
+  } finally {
+    globalDb.__isHealing = false;
+  }
+}
 
 export async function ensureDatabaseReady() {
-  if (isDbInitialized) return;
-  if (initPromise) return initPromise;
+  if (globalDb.__isDbInitialized) return;
+  if (globalDb.__initPromise) return globalDb.__initPromise;
 
-  initPromise = (async () => {
+  globalDb.__initPromise = (async () => {
     try {
-      // 0. Enable WAL mode & concurrency optimizations for SQLite to prevent 'database is locked' errors
+      // 0. Enable WAL mode & safe concurrency optimizations for SQLite
       try {
         await prisma.$queryRawUnsafe(`PRAGMA journal_mode = WAL;`);
       } catch (_) {}
@@ -22,13 +47,7 @@ export async function ensureDatabaseReady() {
         await prisma.$queryRawUnsafe(`PRAGMA synchronous = NORMAL;`);
       } catch (_) {}
       try {
-        await prisma.$queryRawUnsafe(`PRAGMA cache_size = -20000;`);
-      } catch (_) {}
-      try {
-        await prisma.$queryRawUnsafe(`PRAGMA temp_store = MEMORY;`);
-      } catch (_) {}
-      try {
-        await prisma.$queryRawUnsafe(`PRAGMA mmap_size = 268435456;`);
+        await prisma.$queryRawUnsafe(`PRAGMA foreign_keys = ON;`);
       } catch (_) {}
 
       // 1. Unconditionally ensure ALL tables exist using IF NOT EXISTS DDL
@@ -768,16 +787,20 @@ export async function ensureDatabaseReady() {
       });
     }
 
-    isDbInitialized = true;
+    globalDb.__isDbInitialized = true;
     try {
       startFollowUpWorker();
     } catch (_) {}
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error during database self-healing initialization:', err);
+    if (String(err?.message || '').includes('malformed') || String(err?.message || '').includes('SqliteError')) {
+      await healDatabase();
+    }
   } finally {
-    initPromise = null;
+    globalDb.__initPromise = null;
   }
   })();
 
-  return initPromise;
+  return globalDb.__initPromise;
 }
+
