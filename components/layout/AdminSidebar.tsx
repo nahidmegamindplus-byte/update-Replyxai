@@ -22,6 +22,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import Logo from '@/components/common/Logo';
 
 interface AdminSidebarProps {
   user?: {
@@ -79,17 +80,12 @@ export default function AdminSidebar({ user, isOpenMobile, onCloseMobile }: Admi
         }`}
       >
         <div>
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-            <Link href="/admin" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-md shadow-purple-500/20">
-                <ShieldAlert className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
-                  ReplyX <span className="text-purple-600 font-extrabold">ADMIN</span>
-                </h1>
-                <p className="text-[10px] text-purple-600 font-medium">সিস্টেম কন্ট্রোল প্যানেল</p>
-              </div>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <Link href="/admin" className="flex items-center gap-2">
+              <Logo size="sm" />
+              <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 font-extrabold text-[10px] tracking-wider uppercase border border-purple-200">
+                ADMIN
+              </span>
             </Link>
             {onCloseMobile && (
               <button

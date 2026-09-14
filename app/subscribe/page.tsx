@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
+import Logo from '@/components/common/Logo';
 
 export default function SubscribePage() {
   const router = useRouter();
@@ -180,16 +181,8 @@ export default function SubscribePage() {
       {/* Header */}
       <header className="border-b border-slate-200/80 bg-white/85 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-black text-white text-lg shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
-                ReplyX <span className="text-indigo-600">AI</span>
-              </h1>
-              <p className="text-[10px] text-slate-500">প্যাকেজ নির্বাচন</p>
-            </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="sm" showSubtitle={true} subtitle="প্যাকেজ নির্বাচন" />
           </Link>
 
           <div className="flex items-center gap-3 text-xs">
@@ -206,7 +199,7 @@ export default function SubscribePage() {
             ) : (
               <Link
                 href="/login?redirect=/subscribe"
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-xs transition-all"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-xs transition-all"
               >
                 লগইন করুন
               </Link>

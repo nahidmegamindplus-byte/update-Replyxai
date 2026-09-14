@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
+import Logo from '@/components/common/Logo';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -218,16 +219,8 @@ function CheckoutContent() {
       {/* Main Header */}
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-[41px] z-40 shadow-2xs">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-md shadow-purple-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-base font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
-                ReplyX <span className="text-purple-600 font-black">AI</span>
-              </h1>
-              <p className="text-[10px] text-slate-500">নিরাপদ ইনস্ট্যান্ট চেকআউট</p>
-            </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="sm" showSubtitle={true} subtitle="নিরাপদ ইনস্ট্যান্ট চেকআউট" />
           </Link>
 
           <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">

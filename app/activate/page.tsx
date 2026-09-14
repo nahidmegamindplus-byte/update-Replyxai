@@ -18,6 +18,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { useToast, ToastProvider } from '@/components/ui/Toast';
+import Logo from '@/components/common/Logo';
 
 function ActivateContent() {
   const router = useRouter();
@@ -85,19 +86,14 @@ function ActivateContent() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 relative overflow-hidden py-12">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="max-w-md w-full relative z-10">
         {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 mb-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900">
-              ReplyX <span className="text-indigo-600">AI</span>
-            </span>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Link href="/" className="inline-flex items-center mb-3">
+            <Logo size="lg" />
           </Link>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             লাইসেন্স কি অ্যাক্টিভেশন
@@ -110,8 +106,8 @@ function ActivateContent() {
         {/* Card */}
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden">
           {/* Badge */}
-          <div className="mb-6 p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+          <div className="mb-6 p-3.5 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
               <Zap className="w-4 h-4" />
             </div>
             <div className="text-xs">
@@ -210,7 +206,7 @@ function ActivateContent() {
             <button
               type="submit"
               disabled={loading || Boolean(successData)}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-sm shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 hover:scale-[1.01] active:scale-[0.99]"
             >
               {loading ? (
                 <>
@@ -234,7 +230,7 @@ function ActivateContent() {
 
           {/* Footer Alternatives */}
           <div className="mt-6 pt-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
-            <Link href="/login" className="text-indigo-600 font-semibold hover:underline">
+            <Link href="/login" className="text-blue-600 font-semibold hover:underline">
               ইমেইল পাসওয়ার্ড দিয়ে লগইন করুন
             </Link>
             <Link href="/pricing" className="text-slate-500 hover:text-slate-800 transition-colors">

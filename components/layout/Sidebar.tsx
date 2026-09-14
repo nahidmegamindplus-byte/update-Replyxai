@@ -19,6 +19,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import Logo from '@/components/common/Logo';
 
 interface SidebarProps {
   user?: {
@@ -77,17 +78,9 @@ export default function Sidebar({ user, isOpenMobile, onCloseMobile }: SidebarPr
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 bg-white">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-500 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
-                ReplyX <span className="text-indigo-600 font-extrabold">AI</span>
-              </h1>
-              <p className="text-[10px] text-slate-400 font-medium tracking-wide truncate">সোশ্যাল অটোমেশন প্ল্যাটফর্ম</p>
-            </div>
+        <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 shrink-0 bg-white">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Logo size="sm" showSubtitle={true} subtitle="সোশ্যাল অটোমেশন প্ল্যাটফর্ম" />
           </Link>
           {onCloseMobile && (
             <button
@@ -116,11 +109,11 @@ export default function Sidebar({ user, isOpenMobile, onCloseMobile }: SidebarPr
                 onClick={() => onCloseMobile && onCloseMobile()}
                 className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all ${
                   isActive
-                    ? 'bg-indigo-50/90 text-indigo-700 border border-indigo-200/70 shadow-xs font-semibold'
+                    ? 'bg-blue-50/90 text-blue-700 border border-blue-200/70 shadow-xs font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
                 <span className="truncate">{item.label}</span>
               </Link>
             );
@@ -131,7 +124,7 @@ export default function Sidebar({ user, isOpenMobile, onCloseMobile }: SidebarPr
         <div className="p-3 border-t border-slate-100 bg-slate-50/90 shrink-0">
           <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-              <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200/70 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
                 {user?.fullName?.charAt(0) || 'U'}
               </div>
               <div className="overflow-hidden min-w-0">

@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   TrendingUp,
 } from 'lucide-react';
+import Logo from '@/components/common/Logo';
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -95,20 +96,15 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-slate-200/80 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              ReplyX <span className="text-indigo-600">AI</span>
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="md" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
-            <a href="#features" className="hover:text-indigo-600 transition-colors">ফিচারসমূহ</a>
-            <a href="#how-it-works" className="hover:text-indigo-600 transition-colors">কীভাবে কাজ করে</a>
-            <a href="#preview" className="hover:text-indigo-600 transition-colors">লাইভ প্রিভিউ</a>
-            <a href="#faq" className="hover:text-indigo-600 transition-colors">প্রশ্নোত্তর</a>
+            <a href="#features" className="hover:text-blue-600 transition-colors">ফিচারসমূহ</a>
+            <a href="#how-it-works" className="hover:text-blue-600 transition-colors">কীভাবে কাজ করে</a>
+            <a href="#preview" className="hover:text-blue-600 transition-colors">লাইভ প্রিভিউ</a>
+            <a href="#faq" className="hover:text-blue-600 transition-colors">প্রশ্নোত্তর</a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -120,7 +116,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/signup"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm shadow-md shadow-indigo-500/20 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
             >
               ফ্রি শুরু করুন
             </Link>
@@ -131,18 +127,18 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-20 pb-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background ambient soft glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none"></div>
-        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold uppercase tracking-wider mb-6 shadow-xs">
-            <Zap className="w-3.5 h-3.5 fill-indigo-600 text-indigo-600" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-semibold uppercase tracking-wider mb-6 shadow-xs">
+            <Zap className="w-3.5 h-3.5 fill-blue-600 text-blue-600" />
             <span>AI-Powered Omnichannel Social Automation (WhatsApp, Instagram, X, Telegram & Facebook)</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.2] mb-6">
             আপনার সোশ্যাল মিডিয়ার জন্য <br />
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-teal-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 via-[#0080FF] to-cyan-400 bg-clip-text text-transparent">
               স্মার্ট ওমনিচ্যানেল AI Sales Assistant
             </span>
           </h1>
@@ -154,7 +150,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/signup"
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-base shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
             >
               <span>বিনামূল্যে শুরু করুন</span>
               <ArrowRight className="w-5 h-5" />
@@ -383,18 +379,18 @@ export default function LandingPage() {
 
       {/* Bottom CTA */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-800 rounded-3xl p-10 sm:p-16 text-center text-white shadow-2xl shadow-indigo-600/20 relative overflow-hidden">
+        <div className="bg-gradient-to-tr from-blue-700 via-blue-600 to-cyan-500 rounded-3xl p-10 sm:p-16 text-center text-white shadow-2xl shadow-blue-600/20 relative overflow-hidden">
           <div className="relative z-10 max-w-3xl mx-auto">
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
               আজই আপনার ব্যবসার সোশ্যাল চ্যানেলে <br />
-              <span className="text-emerald-300">AI সেলস অটোমেশন</span> যুক্ত করুন
+              <span className="text-cyan-200">AI সেলস অটোমেশন</span> যুক্ত করুন
             </h2>
-            <p className="text-base text-indigo-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-base text-blue-50 mb-8 max-w-2xl mx-auto">
               ReplyX AI দিয়ে ২৪/৭ কাস্টমারদের দ্রুততম সেবা দিন, সেলস বাড়ান এবং ব্যবসার সময় বাঁচান।
             </p>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 font-bold text-base shadow-xl shadow-black/10 transition-all transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white hover:bg-slate-50 text-blue-700 font-bold text-base shadow-xl shadow-black/10 transition-all transform hover:-translate-y-0.5"
             >
               <span>এখনই শুরু করুন</span>
               <ArrowRight className="w-5 h-5" />
@@ -407,9 +403,9 @@ export default function LandingPage() {
       <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-200/80 bg-white text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span className="font-bold text-slate-800">ReplyX AI</span>
-            <span>— AI-Powered Omnichannel Social Automation</span>
+            <Logo size="sm" showSubtitle={false} />
+            <span className="text-slate-400">|</span>
+            <span>AI-Powered Omnichannel Social Automation</span>
           </div>
           <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> ReplyX AI. সর্বস্বত্ব সংরক্ষিত।</p>
         </div>

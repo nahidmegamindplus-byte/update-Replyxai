@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sparkles, Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Key } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import Logo from '@/components/common/Logo';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -57,18 +58,13 @@ function LoginFormContent() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Subtle background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand Logo */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              ReplyX <span className="text-indigo-600">AI</span>
-            </span>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Link href="/" className="inline-flex items-center mb-3">
+            <Logo size="lg" />
           </Link>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">অ্যাকাউন্টে লগইন করুন</h2>
           <p className="text-sm text-slate-500 mt-1">আপনার ব্যবসার সোশ্যাল চ্যানেলের জন্য স্মার্ট AI Assistant</p>
@@ -77,17 +73,17 @@ function LoginFormContent() {
         {/* Card */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-200/50">
           {/* Quick License Access Banner */}
-          <div className="mb-5 p-3.5 rounded-xl bg-purple-50 border border-purple-200/80 flex items-center justify-between gap-3">
+          <div className="mb-5 p-3.5 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="text-lg">🔑</span>
               <div>
-                <p className="text-xs font-bold text-purple-950">লাইসেন্স কি আছে?</p>
-                <p className="text-[10px] text-purple-700">রেজিস্ট্রেশন ছাড়া সরাসরি প্রবেশ করুন</p>
+                <p className="text-xs font-bold text-blue-950">লাইসেন্স কি আছে?</p>
+                <p className="text-[10px] text-blue-700">রেজিস্ট্রেশন ছাড়া সরাসরি প্রবেশ করুন</p>
               </div>
             </div>
             <Link
               href="/activate"
-              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-xs transition-all shrink-0"
+              className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-xs shadow-xs transition-all shrink-0"
             >
               কি অ্যাক্টিভেট করুন
             </Link>
@@ -115,7 +111,7 @@ function LoginFormContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="আপনার ইমেইল দিন (ex: user@example.com)"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 transition-colors"
                 />
               </div>
             </div>
@@ -127,7 +123,7 @@ function LoginFormContent() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   পাসওয়ার্ড ভুলে গেছেন?
                 </Link>
@@ -142,7 +138,7 @@ function LoginFormContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="আপনার পাসওয়ার্ড দিন"
-                  className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/10 transition-colors"
+                  className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/10 transition-colors"
                 />
                 <button
                   type="button"
@@ -158,7 +154,7 @@ function LoginFormContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -177,7 +173,7 @@ function LoginFormContent() {
           <div className="mt-6 pt-5 border-t border-slate-200 text-center">
             <p className="text-sm text-slate-600">
               নতুন ব্যবহারকারী?{' '}
-              <Link href="/signup" className="text-indigo-600 font-semibold hover:underline">
+              <Link href="/signup" className="text-blue-600 font-semibold hover:underline">
                 বিনামূল্যে রেজিস্ট্রেশন করুন
               </Link>
             </p>
