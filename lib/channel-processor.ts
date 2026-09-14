@@ -179,13 +179,17 @@ export async function processIncomingChannelMessage(
     });
 
     // 5. Check if AI should reply
+    const user = page.user as any;
     if (
+      user?.aiChatEnabled === false ||
+      user?.isBlocked === true ||
+      user?.status === 'DISABLED' ||
       !page.autoReplyEnabled ||
       !conversation.aiEnabled ||
       conversation.status === 'HUMAN_MODE'
     ) {
       serverLogger.info(
-        `Auto-reply skipped for ${channel} conversation ${conversation.id} (Human mode or disabled)`
+        `Auto-reply skipped for ${channel} conversation ${conversation.id} (User AI disabled, blocked, or human mode)`
       );
       return { success: true, reason: 'AI_DISABLED_OR_HUMAN_MODE' };
     }

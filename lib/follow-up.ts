@@ -412,17 +412,19 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         const targetStep = scheduleSteps[currentStepIndex];
 
         // 5. Target Audience Filter: Seen vs Unseen
-        // If followUpOnlySeen is true, customer must have seen the message
+        // For Step 1: If followUpOnlySeen is true, customer must have seen the conversation
+        // For Step 2+: The lead was already confirmed seen in Step 1, so subsequent scheduled reminders proceed
         if (page.followUpOnlySeen) {
           if (!conv.lastSeenAt) {
-            // Customer hasn't seen the message yet, skip until seen
+            // Customer hasn't seen the initial conversation yet, skip until seen
             continue;
           }
-          // Ensure lastSeenAt is after or near the last outgoing message
-          const lastOutgoing = conv.messages.find((m) => m.direction === 'OUTGOING');
-          if (lastOutgoing && new Date(conv.lastSeenAt).getTime() < new Date(lastOutgoing.createdAt).getTime() - 10000) {
-            // Seen watermark is older than the last outgoing reply
-            continue;
+          if (currentStepIndex === 0) {
+            // Ensure lastSeenAt was after or close to the first shop reply
+            const firstOutgoing = [...conv.messages].reverse().find((m) => m.direction === 'OUTGOING');
+            if (firstOutgoing && new Date(conv.lastSeenAt).getTime() < new Date(firstOutgoing.createdAt).getTime() - 60000) {
+              continue;
+            }
           }
         }
 

@@ -24,6 +24,10 @@ export async function GET(req: NextRequest) {
         monthlyMessageLimit: true,
         messagesSentThisMonth: true,
         planExpiresAt: true,
+        aiChatEnabled: true,
+        isBlocked: true,
+        registrationIp: true,
+        lastLoginIp: true,
         createdAt: true,
         _count: {
           select: {
@@ -53,7 +57,20 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { userId, fullName, businessName, facebookPageUrl, phone, status, role, plan, planStatus, password } = body;
+    const {
+      userId,
+      fullName,
+      businessName,
+      facebookPageUrl,
+      phone,
+      status,
+      role,
+      plan,
+      planStatus,
+      aiChatEnabled,
+      isBlocked,
+      password,
+    } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -71,6 +88,8 @@ export async function PATCH(req: NextRequest) {
     if (role !== undefined) updateData.role = role;
     if (plan !== undefined) updateData.plan = plan;
     if (planStatus !== undefined) updateData.planStatus = planStatus;
+    if (aiChatEnabled !== undefined) updateData.aiChatEnabled = Boolean(aiChatEnabled);
+    if (isBlocked !== undefined) updateData.isBlocked = Boolean(isBlocked);
 
     let passwordChanged = false;
     if (password && typeof password === 'string' && password.trim().length > 0) {

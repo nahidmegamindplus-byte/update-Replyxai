@@ -25,6 +25,10 @@ model User {
   messagesSentThisMonth   Int           @default(0)
   planExpiresAt           DateTime?
   activePackageId         String?
+  aiChatEnabled           Boolean       @default(true) // Admin toggle to enable/disable AI auto chat for this user
+  isBlocked               Boolean       @default(false) // Admin IP/User blocking
+  registrationIp          String?       // Client IP during account registration
+  lastLoginIp             String?       // Client IP during last login
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
@@ -44,6 +48,21 @@ model User {
   @@index([email])
   @@index([role])
   @@index([planStatus])
+  @@index([aiChatEnabled])
+  @@index([isBlocked])
+  @@index([registrationIp])
+  @@index([lastLoginIp])
+}
+
+model IpBlockList {
+  id              String        @id @default(uuid())
+  ipAddress       String        @unique
+  reason          String?
+  blockedBy       String?       // Admin email or system note
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([ipAddress])
 }
 
 model Page {

@@ -3,10 +3,20 @@ import prisma from '@/lib/db';
 import { ensureDatabaseReady } from '@/lib/db-init';
 import { comparePassword, signToken, AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
+import { getClientIp, isIpBlocked } from '@/lib/ip';
 
 export async function POST(req: NextRequest) {
   try {
     await ensureDatabaseReady();
+
+    const clientIp = getClientIp(req);
+    const blocked = await isIpBlocked(clientIp);
+    if (blocked) {
+      return NextResponse.json(
+        { success: false, error: 'আপনার আইপি ঠিকানাটি ব্লক করা হয়েছে। বিস্তারিত জানতে সাপোর্টে যোগাযোগ করুন।' },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const { email, password } = body;
@@ -31,9 +41,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (user.status === 'DISABLED') {
+    if (user.status === 'DISABLED' || user.isBlocked) {
       return NextResponse.json(
-        { success: false, error: 'আপনার অ্যাকাউন্টটি স্থগিত করা হয়েছে। সাপোর্টে যোগাযোগ করুন।' },
+        { success: false, error: 'আপনার অ্যাকাউন্টটি স্থগিত অথবা ব্লক করা হয়েছে। সাপোর্টে যোগাযোগ করুন।' },
         { status: 403 }
       );
     }
@@ -46,12 +56,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Update lastLoginIp
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginIp: clientIp },
+      });
+    } catch (_) {}
+
     // Log login activity
     try {
       await logActivity({
         userId: user.id,
         action: 'USER_LOGIN',
-        description: `ব্যবহারকারী সফলভাবে লগইন করেছেন: ${user.email}`,
+        description: `ব্যবহারকারী সফলভাবে লগইন করেছেন: ${user.email} (IP: ${clientIp})`,
       });
     } catch (e) {
       console.warn('Could not log login activity:', e);

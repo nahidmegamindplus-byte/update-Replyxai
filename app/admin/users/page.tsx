@@ -22,13 +22,20 @@ import {
   Eye,
   EyeOff,
   MessageCircle,
+  Bot,
+  Ban,
+  Shield,
+  Plus,
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
 
 export default function AdminUsersPage() {
   const toast = useToast();
+  const [activeTab, setActiveTab] = useState<'USERS' | 'IP_BLOCKS'>('USERS');
   const [users, setUsers] = useState<any[]>([]);
+  const [blockedIps, setBlockedIps] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -41,9 +48,18 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState('USER');
   const [status, setStatus] = useState('ACTIVE');
   const [plan, setPlan] = useState('STARTER');
+  const [aiChatEnabled, setAiChatEnabled] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Add IP Block Modal State
+  const [showIpBlockModal, setShowIpBlockModal] = useState(false);
+  const [targetIp, setTargetIp] = useState('');
+  const [blockReason, setBlockReason] = useState('');
+  const [blockUserWithIp, setBlockUserWithIp] = useState(false);
+  const [savingBlock, setSavingBlock] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -59,8 +75,20 @@ export default function AdminUsersPage() {
     }
   };
 
+  const fetchBlockedIps = async () => {
+    try {
+      const data = await apiFetch<any>('/api/admin/ip-block', { retries: 2 });
+      if (data?.success && Array.isArray(data.blockedIps)) {
+        setBlockedIps(data.blockedIps);
+      }
+    } catch (e) {
+      // Handled safely
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchBlockedIps();
   }, []);
 
   const handleOpenEdit = (user: any) => {
@@ -72,6 +100,8 @@ export default function AdminUsersPage() {
     setRole(user.role || 'USER');
     setStatus(user.status || 'ACTIVE');
     setPlan(user.plan || 'STARTER');
+    setAiChatEnabled(user.aiChatEnabled !== false);
+    setIsBlocked(Boolean(user.isBlocked));
     setNewPassword('');
     setShowNewPassword(false);
   };
@@ -94,6 +124,8 @@ export default function AdminUsersPage() {
           role,
           status,
           plan,
+          aiChatEnabled,
+          isBlocked,
           password: newPassword ? newPassword.trim() : undefined,
         }),
       });
@@ -113,6 +145,33 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Instant 1-Click AI Chat Toggle
+  const handleToggleAiChat = async (user: any) => {
+    const nextVal = !user.aiChatEnabled;
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, aiChatEnabled: nextVal }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(
+          nextVal
+            ? `🤖 ${user.fullName}-এর AI চ্যাট চালু করা হয়েছে!`
+            : `🛑 ${user.fullName}-এর AI চ্যাট বন্ধ করা হয়েছে!`
+        );
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'AI চ্যাট টগল ব্যর্থ হয়েছে।');
+      }
+    } catch (e) {
+      toast.error('সার্ভার ত্রুটি।');
+    }
+  };
+
+  // Instant 1-Click User Account Status Toggle
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     const nextStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
     try {
@@ -134,6 +193,121 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Instant 1-Click User Block Toggle
+  const handleToggleUserBlock = async (user: any) => {
+    const nextVal = !user.isBlocked;
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isBlocked: nextVal }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(
+          nextVal
+            ? `🚨 ${user.fullName} (${user.email}) কে ব্লক করা হয়েছে!`
+            : `✅ ${user.fullName} (${user.email}) কে আনব্লক করা হয়েছে!`
+        );
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'ব্লক স্ট্যাটাস পরিবর্তন ব্যর্থ।');
+      }
+    } catch (e) {
+      toast.error('সার্ভার ত্রুটি।');
+    }
+  };
+
+  // Block an IP Directly
+  const handleQuickBlockIp = async (ip: string, userFullName?: string) => {
+    if (!ip || ip === '127.0.0.1') {
+      toast.error('বৈধ আইপি ঠিকানা প্রয়োজন।');
+      return;
+    }
+
+    if (!confirm(`আপনি কি নিশ্চিতভাবে এই আইপি (${ip}) ব্লক করতে চান? এই আইপি থেকে কেউ লগইন বা রেজিস্ট্রেশন করতে পারবে না।`)) return;
+
+    try {
+      const res = await fetch('/api/admin/ip-block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipAddress: ip,
+          reason: userFullName ? `${userFullName}-এর আইপি ব্লক করা হয়েছে` : 'অ্যাডমিন দ্বারা ব্লক করা হয়েছে',
+          blockUserWithIp: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `আইপি (${ip}) সফলভাবে ব্লক করা হয়েছে!`);
+        fetchBlockedIps();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'আইপি ব্লক করতে ব্যর্থ।');
+      }
+    } catch (e) {
+      toast.error('সার্ভার ত্রুটি।');
+    }
+  };
+
+  // Unblock IP
+  const handleUnblockIp = async (ipAddress: string) => {
+    try {
+      const res = await fetch(`/api/admin/ip-block?ipAddress=${encodeURIComponent(ipAddress)}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`আইপি (${ipAddress}) আনব্লক করা হয়েছে!`);
+        fetchBlockedIps();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'আনব্লক করতে ব্যর্থ।');
+      }
+    } catch (e) {
+      toast.error('সার্ভার ত্রুটি।');
+    }
+  };
+
+  // Submit Manual IP Block Form
+  const handleAddIpBlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetIp.trim()) return;
+
+    setSavingBlock(true);
+    try {
+      const res = await fetch('/api/admin/ip-block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipAddress: targetIp.trim(),
+          reason: blockReason.trim() || 'ম্যানুয়াল অ্যাডমিন ব্লক',
+          blockUserWithIp,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || 'আইপি সফলভাবে ব্লক করা হয়েছে!');
+        setShowIpBlockModal(false);
+        setTargetIp('');
+        setBlockReason('');
+        setBlockUserWithIp(false);
+        fetchBlockedIps();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'ব্লক করতে সমস্যা হয়েছে।');
+      }
+    } catch (e) {
+      toast.error('সার্ভার ত্রুটি।');
+    } finally {
+      setSavingBlock(false);
+    }
+  };
+
   const handleDeleteUser = async (userId: string, email: string) => {
     if (!confirm(`আপনি কি নিশ্চিতভাবে ব্যবহারকারী "${email}" এবং তার সমস্ত ডাটা মুছে ফেলতে চান?`)) return;
 
@@ -151,19 +325,24 @@ export default function AdminUsersPage() {
     }
   };
 
+  const blockedIpSet = new Set(blockedIps.map((b) => b.ipAddress));
+
   const filteredUsers = (users || []).filter(
     (u) =>
       u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       u.email?.toLowerCase().includes(search.toLowerCase()) ||
       u.businessName?.toLowerCase().includes(search.toLowerCase()) ||
+      u.registrationIp?.toLowerCase().includes(search.toLowerCase()) ||
+      u.lastLoginIp?.toLowerCase().includes(search.toLowerCase()) ||
       u.facebookPageUrl?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <AdminLayout
-      title="👥 ব্যবহারকারী পরিচালনা (User Management)"
-      subtitle="রেজিস্টার্ড ইউজার, ফেসবুক পেজ URL, রোল এবং সাবস্ক্রিপশন কন্ট্রোল করুন"
+      title="👥 ব্যবহারকারী ও আইপি সিকিউরিটি (User & IP Security)"
+      subtitle="রেজিস্টার্ড ইউজার, AI চ্যাট অন/অফ কন্ট্রোল, আইপি ট্র্যাকিং ও আইপি ব্লক ব্যবস্থাপনা"
     >
+      {/* Tab Switcher & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Link
@@ -172,164 +351,465 @@ export default function AdminUsersPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="relative min-w-[280px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="নাম, ইমেইল, ব্যবসা বা FB Page URL খুঁজুন..."
-              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 shadow-xs transition-all"
-            />
+
+          {/* Tabs */}
+          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+            <button
+              onClick={() => setActiveTab('USERS')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'USERS'
+                  ? 'bg-white text-purple-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>ব্যবহারকারী তালিকা ({users.length})</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('IP_BLOCKS')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                activeTab === 'IP_BLOCKS'
+                  ? 'bg-white text-rose-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Ban className="w-3.5 h-3.5" />
+              <span>আইপি ব্লক লিস্ট ({blockedIps.length})</span>
+            </button>
           </div>
         </div>
 
-        <div className="text-xs text-slate-500">
-          মোট ব্যবহারকারী: <strong className="text-slate-900">{filteredUsers.length}</strong> জন
+        <div className="flex items-center gap-3">
+          {activeTab === 'USERS' ? (
+            <div className="relative min-w-[280px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="নাম, ইমেইল, IP বা FB Page খুঁজুন..."
+                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 shadow-xs transition-all"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowIpBlockModal(true)}
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-500/20 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>নতুন আইপি ব্লক করুন</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              fetchUsers();
+              fetchBlockedIps();
+            }}
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-purple-600 shadow-xs"
+            title="রিফ্রেশ করুন"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="py-24 text-center text-sm text-slate-500">ব্যবহারকারী তালিকা লোড হচ্ছে...</div>
-      ) : (
+      {/* TAB 1: USERS LIST */}
+      {activeTab === 'USERS' && (
+        <>
+          {loading ? (
+            <div className="py-24 text-center text-sm text-slate-500">ব্যবহারকারী তালিকা লোড হচ্ছে...</div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="py-3.5 px-4 font-semibold">ব্যবহারকারী</th>
+                      <th className="py-3.5 px-4 font-semibold">ব্যবসা ও ফেসবুক পেজ</th>
+                      <th className="py-3.5 px-4 font-semibold">AI চ্যাট কন্ট্রোল</th>
+                      <th className="py-3.5 px-4 font-semibold">IP ট্র্যাকিং ও ব্লক</th>
+                      <th className="py-3.5 px-4 font-semibold">প্ল্যান / সাবস্ক্রিপশন</th>
+                      <th className="py-3.5 px-4 font-semibold">অ্যাকাউন্ট স্ট্যাটাস</th>
+                      <th className="py-3.5 px-4 font-semibold">তারিখ</th>
+                      <th className="py-3.5 px-4 font-semibold text-right">একশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.map((u) => {
+                      const isRegIpBlocked = u.registrationIp && blockedIpSet.has(u.registrationIp);
+                      const isLoginIpBlocked = u.lastLoginIp && blockedIpSet.has(u.lastLoginIp);
+
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                          {/* User Info */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              <span>{u.fullName}</span>
+                              {u.isBlocked && (
+                                <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 text-[9px] font-bold border border-rose-200">
+                                  BLOCKED
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
+                            {u.phone && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[10px] text-slate-500 font-mono">{u.phone}</span>
+                                <a
+                                  href={`https://wa.me/${u.phone.replace(/[^\d]/g, '').replace(/^01/, '8801')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-[9px] font-bold"
+                                  title="WhatsApp এ কথা বলুন"
+                                >
+                                  <MessageCircle className="w-2.5 h-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Business & Page */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-slate-900 mb-0.5">{u.businessName || 'N/A'}</div>
+                            {u.facebookPageUrl ? (
+                              <a
+                                href={u.facebookPageUrl.startsWith('http') ? u.facebookPageUrl : `https://${u.facebookPageUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 hover:underline max-w-[200px] truncate"
+                                title={u.facebookPageUrl}
+                              >
+                                <Globe className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{u.facebookPageUrl.replace(/^https?:\/\/(www\.)?facebook\.com\//, '')}</span>
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">পেজ লিঙ্ক নেই</span>
+                            )}
+                          </td>
+
+                          {/* AI Chat ON / OFF Toggle */}
+                          <td className="py-3.5 px-4">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAiChat(u)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                u.aiChatEnabled !== false
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-500/20'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 ring-1 ring-rose-500/20'
+                              }`}
+                              title={u.aiChatEnabled !== false ? 'AI চ্যাট বন্ধ করতে ক্লিক করুন' : 'AI চ্যাট চালু করতে ক্লিক করুন'}
+                            >
+                              <Bot className="w-3.5 h-3.5" />
+                              <span>{u.aiChatEnabled !== false ? '🟢 AI চালু (ON)' : '🔴 AI বন্ধ (OFF)'}</span>
+                            </button>
+                          </td>
+
+                          {/* IP Tracking & IP Block Button */}
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1">
+                              {/* Reg IP */}
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-slate-400">Reg:</span>
+                                <span className="font-mono text-[11px] text-slate-700 font-semibold">
+                                  {u.registrationIp || '127.0.0.1'}
+                                </span>
+                                {u.registrationIp && u.registrationIp !== '127.0.0.1' && (
+                                  isRegIpBlocked ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUnblockIp(u.registrationIp)}
+                                      className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold"
+                                      title="আইপি আনব্লক করুন"
+                                    >
+                                      🚫 ব্লকড (আনব্লক)
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuickBlockIp(u.registrationIp, u.fullName)}
+                                      className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors"
+                                      title="এই আইপি ব্লক করুন"
+                                    >
+                                      🚫 IP ব্লক
+                                    </button>
+                                  )
+                                )}
+                              </div>
+
+                              {/* Login IP */}
+                              {u.lastLoginIp && u.lastLoginIp !== u.registrationIp && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-slate-400">Last:</span>
+                                  <span className="font-mono text-[11px] text-slate-700 font-semibold">
+                                    {u.lastLoginIp}
+                                  </span>
+                                  {u.lastLoginIp !== '127.0.0.1' && (
+                                    isLoginIpBlocked ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUnblockIp(u.lastLoginIp)}
+                                        className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-[9px] font-bold"
+                                      >
+                                        🚫 ব্লকড
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleQuickBlockIp(u.lastLoginIp, u.fullName)}
+                                        className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-[9px] font-bold transition-colors"
+                                      >
+                                        🚫 IP ব্লক
+                                      </button>
+                                    )
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Plan & Subscription */}
+                          <td className="py-3.5 px-4">
+                            <div className="font-mono font-semibold text-purple-700 text-xs">{u.plan}</div>
+                            <span
+                              className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold ${
+                                u.planStatus === 'ACTIVE'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : u.planStatus === 'PENDING_APPROVAL'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+                              }`}
+                            >
+                              {u.planStatus === 'ACTIVE'
+                                ? '✓ প্যাকেজ সক্রিয়'
+                                : u.planStatus === 'PENDING_APPROVAL'
+                                ? '⏳ অপেক্ষমান'
+                                : '✕ প্যাকেজ নেই'}
+                            </span>
+                          </td>
+
+                          {/* Account Status / Block */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-col gap-1">
+                              <button
+                                onClick={() => handleToggleStatus(u.id, u.status)}
+                                className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors w-fit ${
+                                  u.status === 'ACTIVE'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200'
+                                }`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                <span>{u.status === 'ACTIVE' ? 'সক্রিয়' : 'স্থগিত'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleToggleUserBlock(u)}
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors w-fit ${
+                                  u.isBlocked
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200'
+                                    : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-rose-50 hover:text-rose-700'
+                                }`}
+                              >
+                                <Ban className="w-3 h-3" />
+                                <span>{u.isBlocked ? 'ইউজার ব্লকড' : 'ইউজার ব্লক'}</span>
+                              </button>
+                            </div>
+                          </td>
+
+                          {/* Date */}
+                          <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </td>
+
+                          {/* Action Buttons */}
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => handleOpenEdit(u)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs"
+                                title="সম্পাদনা ও সেটিংস"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenEdit(u)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs"
+                                title="পাসওয়ার্ড রিসেট করুন"
+                              >
+                                <Key className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id, u.email)}
+                                className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs"
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* TAB 2: IP BLOCKLIST MANAGEMENT */}
+      {activeTab === 'IP_BLOCKS' && (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="py-3.5 px-4 font-semibold">ব্যবহারকারী</th>
-                  <th className="py-3.5 px-4 font-semibold">ব্যবসা ও ফেসবুক পেজ</th>
-                  <th className="py-3.5 px-4 font-semibold">রোল</th>
-                  <th className="py-3.5 px-4 font-semibold">প্ল্যান ও সাবস্ক্রিপশন</th>
-                  <th className="py-3.5 px-4 font-semibold">পেজ / প্রোডাক্ট / অর্ডার</th>
-                  <th className="py-3.5 px-4 font-semibold">স্ট্যাটাস</th>
-                  <th className="py-3.5 px-4 font-semibold">তারিখ</th>
-                  <th className="py-3.5 px-4 font-semibold text-right">একশন</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">{u.fullName}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
-                      {u.phone && (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[10px] text-slate-500 font-mono">{u.phone}</span>
-                          <a
-                            href={`https://wa.me/${u.phone.replace(/[^\d]/g, '').replace(/^01/, '8801')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-[9px] font-bold"
-                            title="WhatsApp এ কথা বলুন"
-                          >
-                            <MessageCircle className="w-2.5 h-2.5" />
-                            <span>WhatsApp</span>
-                          </a>
-                        </div>
-                      )}
-                    </td>
+          <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Ban className="w-4 h-4 text-rose-600" />
+                <span>স্থায়ীভাবে ব্লককৃত আইপি তালিকা (Active Blocked IPs)</span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                এই আইপিগুলো থেকে যেকোনো লগইন, সাইনআপ বা রিকুয়েস্ট তাৎক্ষণিকভাবে 403 Forbidden দ্বারা ব্লক করা হয়।
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowIpBlockModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-rose-500/20 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>নতুন আইপি ব্লক</span>
+            </button>
+          </div>
 
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 mb-0.5">{u.businessName || 'N/A'}</div>
-                      {u.facebookPageUrl ? (
-                        <a
-                          href={u.facebookPageUrl.startsWith('http') ? u.facebookPageUrl : `https://${u.facebookPageUrl}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 hover:underline max-w-[200px] truncate"
-                          title={u.facebookPageUrl}
-                        >
-                          <Globe className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{u.facebookPageUrl.replace(/^https?:\/\/(www\.)?facebook\.com\//, '')}</span>
-                        </a>
-                      ) : (
-                        <span className="text-[10px] text-slate-400">পেজ লিঙ্ক নেই</span>
-                      )}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          u.role === 'ADMIN'
-                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}
-                      >
-                        {u.role}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="font-mono font-semibold text-purple-700 text-xs">{u.plan}</div>
-                      <span
-                        className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold ${
-                          u.planStatus === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : u.planStatus === 'PENDING_APPROVAL'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
-                        }`}
-                      >
-                        {u.planStatus === 'ACTIVE'
-                          ? '✓ প্যাকেজ সক্রিয়'
-                          : u.planStatus === 'PENDING_APPROVAL'
-                          ? '⏳ অপেক্ষমান'
-                          : '✕ প্যাকেজ নেই'}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-slate-500">
-                      {u._count.pages} পেজ • {u._count.products} প্রোডাক্ট • {u._count.orders} অর্ডার
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <button
-                        onClick={() => handleToggleStatus(u.id, u.status)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                          u.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
-                        }`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        <span>{u.status === 'ACTIVE' ? 'সক্রিয়' : 'স্থগিত'}</span>
-                      </button>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-slate-500 text-[11px]">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs"
-                          title="সম্পাদনা ও পাসওয়ার্ড সেট করুন"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs"
-                          title="পাসওয়ার্ড রিসেট করুন"
-                        >
-                          <Key className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(u.id, u.email)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs"
-                          title="মুছে ফেলুন"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          {blockedIps.length === 0 ? (
+            <div className="py-20 text-center text-slate-400 text-xs">
+              কোনো আইপি ব্লক করা নেই। সিস্টেম সম্পূর্ণ সুরক্ষিত।
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-600">
+                <thead className="bg-slate-100 text-slate-700 border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4 font-semibold">আইপি ঠিকানা (IP Address)</th>
+                    <th className="py-3 px-4 font-semibold">ব্লক করার কারণ</th>
+                    <th className="py-3 px-4 font-semibold">ব্লক করেছেন</th>
+                    <th className="py-3 px-4 font-semibold">তারিখ ও সময়</th>
+                    <th className="py-3 px-4 font-semibold text-right">একশন</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {blockedIps.map((b) => (
+                    <tr key={b.id} className="hover:bg-rose-50/40 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-rose-700 text-xs">
+                        {b.ipAddress}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-800">
+                        {b.reason || 'অ্যাডমিন একশন'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
+                        {b.blockedBy || 'ADMIN'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                        {new Date(b.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleUnblockIp(b.ipAddress)}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs font-bold transition-all shadow-2xs"
+                        >
+                          ✅ আনব্লক করুন
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Manual IP Block Modal */}
+      {showIpBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowIpBlockModal(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+              <Ban className="w-5 h-5 text-rose-600" />
+              <span>নতুন আইপি ব্লক করুন (Block IP)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mb-5">
+              নির্দিষ্ট কোনো আইপি থেকে সিস্টেমে প্রবেশ নিষিদ্ধ করতে আইপি ও কারণ লিখুন।
+            </p>
+
+            <form onSubmit={handleAddIpBlock} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  আইপি ঠিকানা (IP Address) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={targetIp}
+                  onChange={(e) => setTargetIp(e.target.value)}
+                  placeholder="যেমন: 103.145.78.22"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  ব্লক করার কারণ (Reason)
+                </label>
+                <input
+                  type="text"
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="যেমন: স্প্যামিং / অননুমোদিত অ্যাক্সেস"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+
+              <div className="p-3 bg-rose-50/80 border border-rose-200 rounded-xl flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="blockUserWithIpCheck"
+                  checked={blockUserWithIp}
+                  onChange={(e) => setBlockUserWithIp(e.target.checked)}
+                  className="w-4 h-4 accent-rose-600 rounded cursor-pointer"
+                />
+                <label htmlFor="blockUserWithIpCheck" className="text-xs text-rose-900 cursor-pointer font-medium">
+                  এই আইপি যুক্ত সমস্ত অ্যাকাউন্টও ব্লক করুন
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowIpBlockModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBlock || !targetIp.trim()}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-500/20 disabled:opacity-50"
+                >
+                  {savingBlock ? 'ব্লক হচ্ছে...' : 'আইপি ব্লক নিশ্চিত করুন'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -337,7 +817,7 @@ export default function AdminUsersPage() {
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setEditingUser(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-1 rounded-lg"
@@ -350,116 +830,68 @@ export default function AdminUsersPage() {
 
             <form onSubmit={handleSaveUser} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  নাম
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম</label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  ব্যবসার নাম
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">ব্যবসার নাম</label>
                 <input
                   type="text"
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  ফেসবুক পেজ লিঙ্ক (Facebook Page URL)
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">ফেসবুক পেজ লিঙ্ক (URL)</label>
                 <input
                   type="text"
                   value={facebookPageUrl}
                   onChange={(e) => setFacebookPageUrl(e.target.value)}
                   placeholder="https://facebook.com/yourpage"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-purple-600"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  মোবাইল / WhatsApp নম্বর (Mobile/WhatsApp Number)
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">ফোন নম্বর</label>
                 <input
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="যেমন: +8801521716613"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
+                  placeholder="01XXXXXXXXX"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:border-purple-600"
                 />
               </div>
 
-              {/* Set New Password for User */}
-              <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80">
-                <label className="block text-xs font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-purple-600" />
-                    <span>নতুন পাসওয়ার্ড সেট করুন (Set New Password)</span>
-                  </span>
-                  <span className="text-[10px] text-purple-600 font-normal">পরিবর্তন করতে চাইলে লিখুন</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)..."
-                    className="w-full pl-3.5 pr-10 py-2 bg-white border border-purple-200 rounded-xl text-slate-900 text-xs font-mono focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-500/10 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
-                    title={showNewPassword ? 'পাসওয়ার্ড লুকান' : 'পাসওয়ার্ড দেখুন'}
-                  >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">রোল (Role)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">রোল (Role)</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900"
                   >
-                    <option value="USER">USER</option>
-                    <option value="ADMIN">ADMIN</option>
+                    <option value="USER">USER (সাধারণ ইউজার)</option>
+                    <option value="ADMIN">ADMIN (অ্যাডমিন)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">স্ট্যাটাস</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="DISABLED">DISABLED</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">প্ল্যান (Plan)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">প্যাকেজ প্ল্যান</label>
                   <select
                     value={plan}
                     onChange={(e) => setPlan(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-purple-600"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900"
                   >
                     <option value="STARTER">STARTER</option>
                     <option value="BUSINESS">BUSINESS</option>
@@ -468,18 +900,72 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+              {/* AI Chat & Block Controls in Edit Modal */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    AI স্বয়ংক্রিয় চ্যাট
+                  </label>
+                  <select
+                    value={aiChatEnabled ? 'true' : 'false'}
+                    onChange={(e) => setAiChatEnabled(e.target.value === 'true')}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                  >
+                    <option value="true">🟢 চালু (Enabled)</option>
+                    <option value="false">🔴 বন্ধ (Disabled)</option>
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    ব্যবহারকারী ব্লক স্ট্যাটাস
+                  </label>
+                  <select
+                    value={isBlocked ? 'true' : 'false'}
+                    onChange={(e) => setIsBlocked(e.target.value === 'true')}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs"
+                  >
+                    <option value="false">✅ সক্রিয় (Normal)</option>
+                    <option value="true">🚨 ব্লকড (Blocked)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Password Reset */}
+              <div className="pt-2 border-t border-slate-200">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  নতুন পাসওয়ার্ড দিন (পরিবর্তন না করতে চাইলে খালি রাখুন)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="কমপক্ষে ৬ অক্ষর..."
+                    className="w-full pl-3.5 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-purple-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-colors"
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-md shadow-purple-500/20 disabled:opacity-50 transition-all"
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-purple-500/20 disabled:opacity-50"
                 >
                   {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
                 </button>

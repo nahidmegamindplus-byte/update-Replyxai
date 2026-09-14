@@ -3,11 +3,21 @@ import prisma from '@/lib/db';
 import { ensureDatabaseReady } from '@/lib/db-init';
 import { hashPassword, signToken, AUTH_COOKIE_NAME, getAuthCookieOptions } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
+import { getClientIp, isIpBlocked } from '@/lib/ip';
 
 export async function POST(req: NextRequest) {
   try {
     // Ensure DB tables exist before processing request
     await ensureDatabaseReady();
+
+    const clientIp = getClientIp(req);
+    const blocked = await isIpBlocked(clientIp);
+    if (blocked) {
+      return NextResponse.json(
+        { success: false, error: 'আপনার আইপি ঠিকানাটি ব্লক করা হয়েছে। বিস্তারিত জানতে সাপোর্টে যোগাযোগ করুন।' },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const { fullName, businessName, facebookPageUrl, email, password, confirmPassword, phone } = body;
@@ -65,6 +75,10 @@ export async function POST(req: NextRequest) {
         status: 'ACTIVE',
         plan: 'STARTER',
         planStatus: 'INACTIVE',
+        aiChatEnabled: true,
+        isBlocked: false,
+        registrationIp: clientIp,
+        lastLoginIp: clientIp,
       },
     });
 

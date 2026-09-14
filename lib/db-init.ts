@@ -50,6 +50,10 @@ export async function ensureDatabaseReady() {
         "messagesSentThisMonth" INTEGER NOT NULL DEFAULT 0,
         "planExpiresAt" DATETIME,
         "activePackageId" TEXT,
+        "aiChatEnabled" BOOLEAN NOT NULL DEFAULT 1,
+        "isBlocked" BOOLEAN NOT NULL DEFAULT 0,
+        "registrationIp" TEXT,
+        "lastLoginIp" TEXT,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -327,8 +331,24 @@ export async function ensureDatabaseReady() {
       );
     `);
 
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "IpBlockList" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "ipAddress" TEXT NOT NULL UNIQUE,
+        "reason" TEXT,
+        "blockedBy" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Performance Indexes for ultra-fast queries and zero table-scans
     try {
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_ipblock_ip" ON "IpBlockList"("ipAddress");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_user_aichat" ON "User"("aiChatEnabled");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_user_blocked" ON "User"("isBlocked");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_user_reg_ip" ON "User"("registrationIp");`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_user_login_ip" ON "User"("lastLoginIp");`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_user" ON "Conversation"("userId");`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_page" ON "Conversation"("pageId");`);
       await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_conversation_status" ON "Conversation"("followUpStatus");`);
@@ -435,6 +455,18 @@ export async function ensureDatabaseReady() {
         }
         if (!existingUserCols.has('planExpiresAt')) {
           await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "planExpiresAt" DATETIME;`);
+        }
+        if (!existingUserCols.has('aiChatEnabled')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "aiChatEnabled" BOOLEAN NOT NULL DEFAULT 1;`);
+        }
+        if (!existingUserCols.has('isBlocked')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "isBlocked" BOOLEAN NOT NULL DEFAULT 0;`);
+        }
+        if (!existingUserCols.has('registrationIp')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "registrationIp" TEXT;`);
+        }
+        if (!existingUserCols.has('lastLoginIp')) {
+          await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "lastLoginIp" TEXT;`);
         }
       } catch (_) {}
 

@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.followUpLog.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 30,
+        take: 100,
         select: {
           id: true,
           stepNumber: true,
