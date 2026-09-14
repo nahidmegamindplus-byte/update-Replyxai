@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { ToastProvider } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
+import { ShieldAlert, ArrowLeft, LogOut } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -15,12 +16,15 @@ interface DashboardLayoutProps {
 
 // In-memory module cache for instant sub-page navigation without blocking loading spinner
 let cachedDashboardUser: any = null;
+let cachedIsImpersonated: boolean = false;
 
 export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(cachedDashboardUser);
+  const [isImpersonated, setIsImpersonated] = useState<boolean>(cachedIsImpersonated);
   const [loading, setLoading] = useState(!cachedDashboardUser);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [exitingImpersonation, setExitingImpersonation] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -32,14 +36,18 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
         if (data && data.success && data.user) {
           cachedDashboardUser = data.user;
-          // Gating: If normal user does not have an active package, redirect to /subscribe
-          if (data.user.role !== 'ADMIN' && data.user.planStatus !== 'ACTIVE') {
+          cachedIsImpersonated = Boolean(data.isImpersonated);
+          setIsImpersonated(cachedIsImpersonated);
+
+          // Gating: If normal user does not have an active package and not impersonated, redirect to /subscribe
+          if (!data.isImpersonated && data.user.role !== 'ADMIN' && data.user.planStatus !== 'ACTIVE') {
             router.push('/subscribe');
             return;
           }
           setUser(data.user);
         } else {
           cachedDashboardUser = null;
+          cachedIsImpersonated = false;
           router.push('/login');
         }
       } catch (err) {
@@ -60,6 +68,23 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
     };
   }, [router]);
 
+  const handleExitImpersonation = async () => {
+    try {
+      setExitingImpersonation(true);
+      const res = await fetch('/api/admin/impersonate/exit', { method: 'POST' });
+      const data = await res.json();
+      cachedDashboardUser = null;
+      cachedIsImpersonated = false;
+      if (data?.redirect) {
+        window.location.href = data.redirect;
+      } else {
+        window.location.href = '/admin/users';
+      }
+    } catch (e) {
+      window.location.href = '/admin/users';
+    }
+  };
+
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -74,6 +99,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   return (
     <ToastProvider>
       <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col">
+        {/* Sticky Admin Impersonation Top Banner */}
+        {isImpersonated && (
+          <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-purple-900 text-white px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-3 z-50 sticky top-0 border-b border-purple-500/40">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+              <span className="p-1 rounded-md bg-amber-400 text-slate-950 flex items-center justify-center animate-bounce">
+                <ShieldAlert className="w-4 h-4" />
+              </span>
+              <span>
+                <strong>[অ্যাডমিন মোড অ্যাক্টিভ]</strong> আপনি বর্তমানে <span className="underline font-bold text-amber-300">{user?.fullName}</span> (<code className="font-mono text-xs text-purple-200">{user?.email}</code>)-এর একাউন্টে পূর্ণ অ্যাক্সেসে আছেন।
+              </span>
+            </div>
+            <button
+              onClick={handleExitImpersonation}
+              disabled={exitingImpersonation}
+              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ml-auto shrink-0"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>{exitingImpersonation ? 'ফিরে যাওয়া হচ্ছে...' : 'অ্যাডমিন প্যানেলে ফিরে যান'}</span>
+            </button>
+          </div>
+        )}
+
         <Sidebar
           user={user}
           isOpenMobile={mobileOpen}

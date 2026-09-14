@@ -29,6 +29,8 @@ import {
   RefreshCw,
   Sparkles,
   Zap,
+  LogIn,
+  ExternalLink,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { apiFetch } from '@/lib/api-client';
@@ -40,6 +42,7 @@ export default function AdminUsersPage() {
   const [blockedIps, setBlockedIps] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   // Edit Modal State
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -382,6 +385,29 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleImpersonateUser = async (user: any) => {
+    try {
+      setImpersonatingId(user.id);
+      toast.info(`${user.fullName}-এর ড্যাশবোর্ডে লগইন করা হচ্ছে...`);
+      const res = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: user.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `${user.fullName}-এর অ্যাকাউন্টে প্রবেশ সফল!`);
+        window.location.href = data.redirect || '/dashboard';
+      } else {
+        toast.error(data.error || 'লগইন ব্যর্থ হয়েছে।');
+        setImpersonatingId(null);
+      }
+    } catch (e) {
+      toast.error('সার্ভার যোগাযোগে ত্রুটি।');
+      setImpersonatingId(null);
+    }
+  };
+
   const blockedIpSet = new Set(blockedIps.map((b) => b.ipAddress));
 
   const filteredUsers = (users || []).filter(
@@ -693,6 +719,17 @@ export default function AdminUsersPage() {
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
+                                type="button"
+                                onClick={() => handleImpersonateUser(u)}
+                                disabled={impersonatingId === u.id}
+                                className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                                title="১-ক্লিকে এই ইউজারের ড্যাশবোর্ডে প্রবেশ করুন এবং সব কাজ করুন"
+                              >
+                                <LogIn className="w-3.5 h-3.5" />
+                                <span>{impersonatingId === u.id ? 'লগইন হচ্ছে...' : 'লগইন (অ্যাক্সেস)'}</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => handleOpenEdit(u)}
                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-700 transition-colors shadow-2xs cursor-pointer"
                                 title="সম্পাদনা ও সেটিংস"
@@ -700,6 +737,7 @@ export default function AdminUsersPage() {
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleOpenEdit(u)}
                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 transition-colors shadow-2xs cursor-pointer"
                                 title="পাসওয়ার্ড রিসেট করুন"
@@ -707,6 +745,7 @@ export default function AdminUsersPage() {
                                 <Key className="w-3.5 h-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteUser(u.id, u.email)}
                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-100 text-slate-400 hover:text-rose-600 transition-colors shadow-2xs cursor-pointer"
                                 title="মুছে ফেলুন"

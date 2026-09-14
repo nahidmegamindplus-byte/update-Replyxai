@@ -9,9 +9,24 @@ export async function GET(req: NextRequest) {
     return auth.response;
   }
 
+  const impersonatorToken = req.cookies.get('replyx_admin_session')?.value;
+  let isImpersonated = false;
+  let impersonatorEmail: string | undefined;
+
+  if (impersonatorToken) {
+    const { verifyToken } = await import('@/lib/auth');
+    const adminPayload = verifyToken(impersonatorToken);
+    if (adminPayload && (adminPayload.role === 'ADMIN' || adminPayload.email.toLowerCase().includes('admin'))) {
+      isImpersonated = true;
+      impersonatorEmail = adminPayload.email;
+    }
+  }
+
   return NextResponse.json({
     success: true,
     user: auth.user,
+    isImpersonated,
+    impersonatorEmail,
   });
 }
 
