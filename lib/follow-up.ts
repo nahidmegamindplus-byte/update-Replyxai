@@ -4,6 +4,7 @@ import { sendChannelMessage, SocialChannel } from '@/lib/social';
 import { serverLogger, logActivity } from '@/lib/logger';
 import { getAdminAiSettings } from '@/lib/ai';
 import { ensureDatabaseReady } from '@/lib/db-init';
+import { checkUserSubscriptionAndAiEligibility, recordAiMessageSent } from '@/lib/subscription-guard';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 
@@ -319,6 +320,12 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
         } catch (_) {}
       }
 
+      // 0. Check User Subscription / Package Expiry & AI eligibility
+      const subCheck = await checkUserSubscriptionAndAiEligibility(page.userId);
+      if (!subCheck.eligible) {
+        continue;
+      }
+
       // Fetch customized or global schedule steps for this page/user
       const scheduleSteps = await getActiveScheduleSteps(page.userId, page.id);
       if (scheduleSteps.length === 0) continue;
@@ -593,6 +600,9 @@ export async function runFollowUpAutomation(targetPageId?: string): Promise<{
               nextFollowUpDueAt: nextDueAt,
             },
           });
+
+          // Record AI message usage and auto-cutoff if quota reached
+          await recordAiMessageSent(page.userId);
 
           await logActivity({
             userId: page.userId,

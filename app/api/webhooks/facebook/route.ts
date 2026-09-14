@@ -11,6 +11,7 @@ import {
 import { generateAIReply } from '@/lib/ai';
 import { serverLogger, logActivity } from '@/lib/logger';
 import { getAppUrl } from '@/lib/url';
+import { checkUserSubscriptionAndAiEligibility, recordAiMessageSent } from '@/lib/subscription-guard';
 
 // In-memory cache for webhook message deduplication / idempotency (stores message IDs for 10 mins)
 const processedMessageIds = new Set<string>();
@@ -286,7 +287,13 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // 8. Check if AI should reply
+        // 8. Check Subscription / Package Expiry & AI eligibility
+        const subCheck = await checkUserSubscriptionAndAiEligibility(page.userId);
+        if (!subCheck.eligible) {
+          serverLogger.warn(`Auto-reply skipped for page ${page.id}: Subscription / Package inactive or expired (${subCheck.reason})`);
+          continue;
+        }
+
         if (!page.autoReplyEnabled || !conversation.aiEnabled || conversation.status === 'HUMAN_MODE') {
           serverLogger.info(`Auto-reply skipped for conversation ${conversation.id} (Human mode or disabled)`);
           continue;
@@ -445,6 +452,9 @@ export async function POST(req: NextRequest) {
               lastMessageAt: new Date(),
             },
           });
+
+          // Record AI message usage and auto-cutoff if quota reached
+          await recordAiMessageSent(page.userId);
 
           // 12. Auto-capture Order if detected by AI
           if (page.orderDetection && aiResult.detectedOrder) {

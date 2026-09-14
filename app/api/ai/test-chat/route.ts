@@ -2,10 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
 import { generateAIReply } from '@/lib/ai';
+import { checkUserSubscriptionAndAiEligibility } from '@/lib/subscription-guard';
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
+
+  // Subscription check
+  const subCheck = await checkUserSubscriptionAndAiEligibility(auth.user.id);
+  if (!subCheck.eligible) {
+    let msg = 'আপনার সাবস্ক্রিপশন প্যাকেজের মেয়াদ শেষ অথবা নিষ্ক্রিয় থাকায় AI চ্যাট বন্ধ রয়েছে। প্যাকেজ রিনিউ করুন।';
+    if (subCheck.reason === 'MESSAGE_LIMIT_REACHED') {
+      msg = 'আপনার মাসিক AI মেসেজ কোটা শেষ হয়ে গেছে। নতুন প্যাকেজ আপগ্রেড করুন।';
+    } else if (subCheck.reason === 'PLAN_EXPIRED') {
+      msg = 'আপনার প্যাকেজের মেয়াদ উত্তীর্ণ হয়ে গেছে। অনুগ্রহ করে প্যাকেজ রিনিউ করুন।';
+    } else if (subCheck.reason === 'AI_CHAT_DISABLED') {
+      msg = 'আপনার অ্যাকাউন্টে AI চ্যাট বন্ধ রাখা হয়েছে। অ্যাডমিনের সাথে যোগাযোগ করুন।';
+    }
+    return NextResponse.json(
+      { success: false, error: msg, code: subCheck.reason },
+      { status: 403 }
+    );
+  }
 
   try {
     const body = await req.json();

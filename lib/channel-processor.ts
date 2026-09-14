@@ -9,6 +9,7 @@ import {
   sendChannelMessage,
   sendChannelImage,
 } from './social';
+import { checkUserSubscriptionAndAiEligibility, recordAiMessageSent } from './subscription-guard';
 
 // In-memory cache for message deduplication across all social channels
 const processedMessageIds = new Set<string>();
@@ -178,18 +179,22 @@ export async function processIncomingChannelMessage(
       },
     });
 
-    // 5. Check if AI should reply
-    const user = page.user as any;
+    // 5. Check Subscription / Package Expiry & AI eligibility
+    const subCheck = await checkUserSubscriptionAndAiEligibility(page.userId);
+    if (!subCheck.eligible) {
+      serverLogger.warn(
+        `Auto-reply skipped for ${channel} page ${page.id}: Subscription / Package inactive or expired (${subCheck.reason})`
+      );
+      return { success: true, reason: subCheck.reason || 'SUBSCRIPTION_INELIGIBLE' };
+    }
+
     if (
-      user?.aiChatEnabled === false ||
-      user?.isBlocked === true ||
-      user?.status === 'DISABLED' ||
       !page.autoReplyEnabled ||
       !conversation.aiEnabled ||
       conversation.status === 'HUMAN_MODE'
     ) {
       serverLogger.info(
-        `Auto-reply skipped for ${channel} conversation ${conversation.id} (User AI disabled, blocked, or human mode)`
+        `Auto-reply skipped for ${channel} conversation ${conversation.id} (Page auto-reply disabled or human mode)`
       );
       return { success: true, reason: 'AI_DISABLED_OR_HUMAN_MODE' };
     }
@@ -358,6 +363,9 @@ export async function processIncomingChannelMessage(
         lastMessageAt: new Date(),
       },
     });
+
+    // Record AI message usage and auto-cutoff if quota reached
+    await recordAiMessageSent(page.userId);
 
     // 10. Auto-Capture Order if detected
     if (page.orderDetection && aiResult.detectedOrder) {
