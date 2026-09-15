@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { requireAuth, comparePassword, hashPassword } from '@/lib/auth';
+import { requireAuth, comparePassword, hashPassword, ADMIN_IMPERSONATOR_COOKIE } from '@/lib/auth';
 import { logActivity } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
@@ -9,16 +9,18 @@ export async function GET(req: NextRequest) {
     return auth.response;
   }
 
-  const impersonatorToken = req.cookies.get('replyx_admin_session')?.value;
+  const impersonatorToken = req.cookies.get(ADMIN_IMPERSONATOR_COOKIE)?.value;
   let isImpersonated = false;
   let impersonatorEmail: string | undefined;
 
   if (impersonatorToken) {
     const { verifyToken } = await import('@/lib/auth');
     const adminPayload = verifyToken(impersonatorToken);
-    if (adminPayload && (adminPayload.role === 'ADMIN' || adminPayload.email.toLowerCase().includes('admin'))) {
-      isImpersonated = true;
-      impersonatorEmail = adminPayload.email;
+    if (adminPayload && (adminPayload.role === 'ADMIN' || adminPayload.email?.toLowerCase().includes('admin'))) {
+      if (adminPayload.userId && adminPayload.userId !== auth.user.id) {
+        isImpersonated = true;
+        impersonatorEmail = adminPayload.email;
+      }
     }
   }
 

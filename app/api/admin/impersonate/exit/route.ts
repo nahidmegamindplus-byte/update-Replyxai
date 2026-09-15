@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/db';
-import { verifyToken, getAuthCookieOptions, AUTH_COOKIE_NAME } from '@/lib/auth';
-import { ADMIN_IMPERSONATOR_COOKIE } from '../route';
+import { verifyToken, getAuthCookieOptions, AUTH_COOKIE_NAME, ADMIN_IMPERSONATOR_COOKIE } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {

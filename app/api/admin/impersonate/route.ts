@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { requireAdmin, signToken, getAuthCookieOptions, extractToken, verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { requireAdmin, signToken, getAuthCookieOptions, extractToken, verifyToken, AUTH_COOKIE_NAME, ADMIN_IMPERSONATOR_COOKIE } from '@/lib/auth';
 import { ensureDatabaseReady } from '@/lib/db-init';
 import { logActivity } from '@/lib/logger';
-
-export const ADMIN_IMPERSONATOR_COOKIE = 'replyx_admin_session';
 
 export async function POST(req: NextRequest) {
   try {

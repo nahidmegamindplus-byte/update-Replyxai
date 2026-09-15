@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       ? decrypt(map.ADMIN_CLAUDE_KEY_ENCRYPTED)
       : process.env.ANTHROPIC_API_KEY || '';
 
-    let customProviders = [];
+    let customProviders: any[] = [];
     if (map.ADMIN_CUSTOM_PROVIDERS) {
       try {
         const parsed = JSON.parse(map.ADMIN_CUSTOM_PROVIDERS);

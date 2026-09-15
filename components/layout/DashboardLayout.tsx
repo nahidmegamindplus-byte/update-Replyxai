@@ -120,28 +120,6 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   return (
     <ToastProvider>
       <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col">
-        {/* Sticky Admin Impersonation Top Banner */}
-        {isImpersonated && (
-          <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-purple-900 text-white px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-3 z-50 sticky top-0 border-b border-purple-500/40">
-            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
-              <span className="p-1 rounded-md bg-amber-400 text-slate-950 flex items-center justify-center animate-bounce">
-                <ShieldAlert className="w-4 h-4" />
-              </span>
-              <span>
-                <strong>[অ্যাডমিন মোড অ্যাক্টিভ]</strong> আপনি বর্তমানে <span className="underline font-bold text-amber-300">{user?.fullName}</span> (<code className="font-mono text-xs text-purple-200">{user?.email}</code>)-এর একাউন্টে পূর্ণ অ্যাক্সেসে আছেন।
-              </span>
-            </div>
-            <button
-              onClick={handleExitImpersonation}
-              disabled={exitingImpersonation}
-              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1.5 cursor-pointer ml-auto shrink-0"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{exitingImpersonation ? 'ফিরে যাওয়া হচ্ছে...' : 'অ্যাডমিন প্যানেলে ফিরে যান'}</span>
-            </button>
-          </div>
-        )}
-
         <Sidebar
           user={user}
           isOpenMobile={mobileOpen}
@@ -151,6 +129,33 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         />
 
         <div className={`flex-1 flex flex-col min-h-screen w-full min-w-0 max-w-full overflow-x-hidden transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+          {/* Sticky Admin Impersonation Top Banner */}
+          {isImpersonated && (
+            <div className="bg-gradient-to-r from-purple-700 via-indigo-800 to-purple-900 text-white px-4 sm:px-6 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-3 z-40 sticky top-0 border-b border-purple-500/40">
+              <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold flex-1 min-w-0">
+                <span className="p-1.5 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
+                  <ShieldAlert className="w-4 h-4" />
+                </span>
+                <div className="truncate">
+                  <span className="font-extrabold text-amber-300 mr-1.5">[অ্যাডমিন মোড অ্যাক্টিভ]</span>
+                  <span className="text-white/90">
+                    আপনি বর্তমানে <strong className="underline decoration-amber-400 font-bold text-white">{user?.fullName || 'ইউজার'}</strong> (<code className="font-mono text-[11px] sm:text-xs text-purple-200 bg-purple-950/40 px-1.5 py-0.5 rounded">{user?.email}</code>)-এর একাউন্টে পূর্ণ অ্যাক্সেসে আছেন।
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleExitImpersonation}
+                disabled={exitingImpersonation}
+                className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer ml-auto shrink-0"
+                title="অ্যাডমিন প্যানেলে ফিরে যান"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>{exitingImpersonation ? 'ফিরে যাওয়া হচ্ছে...' : 'অ্যাডমিন প্যানেলে ফিরে যান'}</span>
+              </button>
+            </div>
+          )}
+
           <Header
             title={title}
             subtitle={subtitle}

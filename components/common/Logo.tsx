@@ -125,24 +125,22 @@ export default function Logo({
   return (
     <div className={`inline-flex items-center gap-2.5 select-none group ${className}`}>
       {variant !== 'text' && LogoIcon}
-      {variant !== 'icon' && (
-        <div className="flex flex-col justify-center leading-none">
-          <span className={`font-black tracking-tight font-sans ${textClasses} flex items-center`}>
-            <span className={`${replyTextColor} font-extrabold tracking-tight`}>Reply</span>
-            <span className="bg-gradient-to-r from-[#0052FF] via-[#0080FF] to-[#00D2FF] bg-clip-text text-transparent font-black">
-              X
-            </span>
-            <span className="bg-gradient-to-r from-[#0052FF] via-[#0080FF] to-[#00D2FF] bg-clip-text text-transparent font-black ml-0.5">
-              Ai
-            </span>
+      <div className="flex flex-col justify-center leading-none">
+        <span className={`font-black tracking-tight font-sans ${textClasses} flex items-center`}>
+          <span className={`${replyTextColor} font-extrabold tracking-tight`}>Reply</span>
+          <span className="bg-gradient-to-r from-[#0052FF] via-[#0080FF] to-[#00D2FF] bg-clip-text text-transparent font-black">
+            X
           </span>
-          {showSubtitle && (
-            <span className={`text-slate-400 font-medium tracking-wide mt-1 truncate ${subTextClasses}`}>
-              {subtitle}
-            </span>
-          )}
-        </div>
-      )}
+          <span className="bg-gradient-to-r from-[#0052FF] via-[#0080FF] to-[#00D2FF] bg-clip-text text-transparent font-black ml-0.5">
+            Ai
+          </span>
+        </span>
+        {showSubtitle && (
+          <span className={`text-slate-400 font-medium tracking-wide mt-1 truncate ${subTextClasses}`}>
+            {subtitle}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

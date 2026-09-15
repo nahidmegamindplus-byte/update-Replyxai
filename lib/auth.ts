@@ -6,6 +6,7 @@ import { ensureDatabaseReady } from './db-init';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replyx_ai_super_secret_jwt_key_2026_bd_secure';
 export const AUTH_COOKIE_NAME = 'replyx_session';
+export const ADMIN_IMPERSONATOR_COOKIE = 'replyx_admin_session';
 
 export interface TokenPayload {
   userId: string;
